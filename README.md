@@ -1,4 +1,4 @@
 pyFlowStat
 ==========
 
-Tools for statistical analyses of flow data
+Python tools for statistical analyses of flow data
