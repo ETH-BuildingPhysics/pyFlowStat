@@ -23,3 +23,16 @@ except ImportError, e:
         print "numpy python-package not installed. Please install numpy"
         print "\n\n"
 
+try:
+    import scipy
+except ImportError, e:
+        print "\n\n"
+        print "scipy python-package not installed. Please install scipy"
+        print "\n\n"
+
+try:
+    import matplotlib
+except ImportError, e:
+        print "\n\n"
+        print "matplotlib python-package not installed. Please install matplotlib"
+        print "\n\n"
