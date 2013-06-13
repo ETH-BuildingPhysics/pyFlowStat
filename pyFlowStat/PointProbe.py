@@ -132,6 +132,23 @@ class PointProbe(object):
         crs.close()
         
         return (np.array(probeTimes),np.array(probeVar))
+    def readFromLDA(self,probeLoc,filepath):
+        probeVar = []
+        probeTimes = []
+        
+        crs = open(filepath, 'r')
+        lineno = 0
+        for line in crs:
+            if lineno>=5:
+                data=line.split()
+                probeTimes.append(float(data[0])/1000.0)
+                probeVar.append([float(data[2]),0,0])
+            lineno = lineno+1
+        crs.close()
+        self.probeLoc=probeLoc
+        self.probeVar=np.array(probeVar)
+        self.probeTimes=np.array(probeTimes)
+        self.createDataDict()
         
     def cutData(self,indices):
         self.probeVar=self.probeVar[np.array(indices),:]
@@ -246,7 +263,10 @@ class PointProbe(object):
         
     def lengthScale(self):
         def func_exp(x, a):
-            return np.exp(-x/a)
+            np.seterr('ignore')
+            res = np.exp(-x/a)
+            #print res
+            return res
             
         corr_keys=['taur11','taur22','taur33','r11','r22','r33']
         if len(set(corr_keys) & set(self.data.keys()))!=len(corr_keys):
