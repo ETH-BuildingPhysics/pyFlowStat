@@ -7,6 +7,7 @@ import sys
 #scientific modules
 import numpy as np
 import scipy as sp
+import os
 
 # special modules
 from ctypes import *
@@ -89,7 +90,9 @@ class Surface(object):
         pass
         
     def readFromVC7(self,filename):
-        self.ReadIMX64 = cdll.LoadLibrary("ReadIMX64.dll")
+        dllpath = os.path.dirname(os.path.realpath(__file__))
+        self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+        
         self.buffer = BufferType()
         self.attributeLst = AttributeList()
         self.vx=[]
@@ -116,22 +119,64 @@ class Surface(object):
         height = self.buffer.ny;
         componentOffset = width * height;
         
-        self.vx=[]
-        self.vy=[]
-        self.vz=[]
-        for theY in range(0,width):
-            theX=149
-            mode = getMode(self.buffer,theX,theY,height,frameOffset)
-            if mode >= 0:
-                self.vx.append(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-                self.vy.append(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-                self.vz.append(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-            else:
-                self.vx.append(0)
-                self.vy.append(0)
-                self.vz.append(0)
         
+        self.vx=np.empty((width,height), dtype=float)
+        self.vx[:] = np.NAN
+        self.vy=np.empty((width,height), dtype=float)
+        self.vy[:] = np.NAN
+        self.vz=np.empty((width,height), dtype=float)
+        self.vz[:] = np.NAN
+        if self.buffer.image_sub_type == 3:
+            for theY in range(0,width):
+                for theX in range(0,height):
+                    mode = getMode(self.buffer,theX,theY,height,frameOffset)
+                    if mode >= 0:
+                        self.vx[theY,theX] = (self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                        self.vy[theY,theX] = (self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                    else:
+                        pass
+        if self.buffer.image_sub_type == 5:
+            for theY in range(0,width):
+                for theX in range(0,height):
+                    mode = getMode(self.buffer,theX,theY,height,frameOffset)
+                    if mode >= 0:
+                        self.vx[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                        self.vy[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                        self.vz[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                    else:
+                        pass
+        self.ReadIMX64.DestroyBuffer(self.buffer)
         #plot(vx)
         #plot(vy)
         #plot(vz)
+        
+#        			mode = (int) theBuffer.floatArray[ theX + theY*width + frameOffset ];
+#			if (mode<=0)
+#			{	// disabled vector
+#				return true;
+#			}
+#			if (mode>4)
+#			{	// interpolated or filled vector
+#				mode = 4;
+#			}
+#			mode--;
+#			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
+#			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
+
+def getVC7SurfaceList(directory,nr):
     
+    filelist=[]
+
+    for files in os.listdir(directory):
+        if files.endswith(".vc7"):
+            filelist.append(files)
+    filelist.sort()
+    surfaces=[]
+    surfaces=[Surface()]*min(len(filelist),nr)
+    #os.chdir(directory)
+    
+    for i in range(0,min(len(filelist),nr)):
+        print("reading " + filelist[i])
+        surfaces[i]=Surface()
+        surfaces[i].readFromVC7(os.path.join(directory,filelist[i]))
+    return surfaces
