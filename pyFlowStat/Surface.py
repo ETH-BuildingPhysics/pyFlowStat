@@ -93,13 +93,13 @@ class Surface(object):
         dllpath = os.path.dirname(os.path.realpath(__file__))
         self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
         
-        self.buffer = BufferType()
+        tmpBuffer = BufferType()
         self.attributeLst = AttributeList()
         self.vx=[]
         self.vy=[]
         self.vz=[]
         
-        res = self.ReadIMX64.ReadIM7(filename, byref(self.buffer), byref(self.attributeLst))
+        res = self.ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(self.attributeLst))
         
         print res
         if res>0:
@@ -107,16 +107,16 @@ class Surface(object):
             return
             
         print "isFloat:" 
-        print self.buffer.isFloat
+        print tmpBuffer.isFloat
         print "ny"
-        print self.buffer.ny
-        print self.buffer.nx
-        print TypeName[self.buffer.image_sub_type]
+        print tmpBuffer.ny
+        print tmpBuffer.nx
+        print TypeName[tmpBuffer.image_sub_type]
         
         theFrame=0
-        frameOffset = theFrame * self.buffer.nx * self.buffer.ny * self.buffer.nz;
-        width = self.buffer.nx;
-        height = self.buffer.ny;
+        frameOffset = theFrame * tmpBuffer.nx * tmpBuffer.ny * tmpBuffer.nz;
+        width = tmpBuffer.nx;
+        height = tmpBuffer.ny;
         componentOffset = width * height;
         
         
@@ -126,26 +126,33 @@ class Surface(object):
         self.vy[:] = np.NAN
         self.vz=np.empty((width,height), dtype=float)
         self.vz[:] = np.NAN
-        if self.buffer.image_sub_type == 3:
+        
+        if tmpBuffer.image_sub_type == 3:
             for theY in range(0,width):
                 for theX in range(0,height):
-                    mode = getMode(self.buffer,theX,theY,height,frameOffset)
+                    mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX] = (self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-                        self.vy[theY,theX] = (self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                        self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
-        if self.buffer.image_sub_type == 5:
+        if tmpBuffer.image_sub_type == 4:
             for theY in range(0,width):
                 for theX in range(0,height):
-                    mode = getMode(self.buffer,theX,theY,height,frameOffset)
+                    self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vy[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vz[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*2]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)                    
+        if tmpBuffer.image_sub_type == 5:
+            for theY in range(0,width):
+                for theX in range(0,height):
+                    mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-                        self.vy[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
-                        self.vz[theY,theX]=(self.buffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*self.buffer.scaleI.factor+self.buffer.scaleI.offset)
+                        self.vx[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vz[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
-        self.ReadIMX64.DestroyBuffer(self.buffer)
+        self.ReadIMX64.DestroyBuffer(tmpBuffer)
         #plot(vx)
         #plot(vy)
         #plot(vz)
