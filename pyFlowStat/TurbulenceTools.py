@@ -252,6 +252,6 @@ def xcorr_fft(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     else:
         res = res[lags]
     
-    res=res[(len(res)+1)/2:-1]
-    lags = np.arange(0, maxlags-1)        
+    res=res[(len(res)-1)/2:-1]
+    lags = np.arange(0, maxlags)        
     return res, lags
