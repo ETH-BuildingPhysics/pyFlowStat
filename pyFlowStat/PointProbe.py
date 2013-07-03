@@ -16,6 +16,7 @@ functions included:
 #standard modules
 import sys
 import re
+import os
 
 #scientific modules
 import numpy as np
@@ -26,6 +27,7 @@ from scipy.optimize import curve_fit
 
 #from pyFlowStat.TurbulenceTools import TurbulenceTools as tt
 import pyFlowStat.TurbulenceTools as tt
+import pyFlowStat.Surface as Surface
 
 class PointProbe(object):
     """PointProbe Class"""
@@ -395,4 +397,42 @@ def getVectorPointProbeList(filename):
         pts[i].createDataDict()
         
     return pts
+    
+def getPIVVectorPointProbeList(directory,pointlist,nr,frq):
+    filelist=Surface.getVC7filelist(directory,nr)
+
+    pts=[PointProbe()]*len(pointlist)
+    
+    for i in range(0,len(pointlist)):
+        pts[i]=PointProbe()
+        pts[i].probeLoc=pointlist[i,:]
         
+    # read file
+    
+    for i,pivfile in enumerate(filelist):
+        print("reading " + pivfile)
+        tempS=Surface.Surface()
+        tempS.readFromVC7(os.path.join(directory,pivfile))
+        
+        for j,pt in enumerate(pts):
+            pt.probeTimes.append(i*1.0/frq)
+            #print pt.probeTimes
+            
+            #print [tempS.vx[pt.probeLoc[0],pt.probeLoc[1]],tempS.vy[pt.probeLoc[0],pt.probeLoc[1]],tempS.vz[pt.probeLoc[0],pt.probeLoc[1]]]
+            vx=tempS.vx[pt.probeLoc[1],pt.probeLoc[0]]
+            vy=tempS.vy[pt.probeLoc[1],pt.probeLoc[0]]
+            vz=tempS.vz[pt.probeLoc[1],pt.probeLoc[0]]
+            if np.isnan(vx):
+                vx=0
+            if np.isnan(vy):
+                vy=0
+            if np.isnan(vz):
+                vz=0
+            pt.probeVar.append([vx,vy,vz])
+
+    for i in range(0,len(pointlist)):
+        pts[i].probeTimes = np.array(pts[i].probeTimes)
+        pts[i].probeVar = np.array(pts[i].probeVar)
+        pts[i].createDataDict()
+        
+    return pts        

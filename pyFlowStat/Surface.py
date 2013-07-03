@@ -89,7 +89,7 @@ class Surface(object):
     def __init__(self):
         pass
         
-    def readFromVC7(self,filename):
+    def readFromVC7(self,filename,v=False):
         dllpath = os.path.dirname(os.path.realpath(__file__))
         self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
         
@@ -101,17 +101,16 @@ class Surface(object):
         
         res = self.ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(self.attributeLst))
         
-        print res
+        #print res
         if res>0:
             print "Error reading image"
             return
             
-        print "isFloat:" 
-        print tmpBuffer.isFloat
-        print "ny"
-        print tmpBuffer.ny
-        print tmpBuffer.nx
-        print TypeName[tmpBuffer.image_sub_type]
+        if v:
+            print "Size (ny, nx)"
+            print tmpBuffer.ny
+            print tmpBuffer.nx
+            print TypeName[tmpBuffer.image_sub_type]
         
         theFrame=0
         frameOffset = theFrame * tmpBuffer.nx * tmpBuffer.ny * tmpBuffer.nz;
@@ -172,14 +171,10 @@ class Surface(object):
 
 def getVC7SurfaceList(directory,nr):
     
-    filelist=[]
-
-    for files in os.listdir(directory):
-        if files.endswith(".vc7"):
-            filelist.append(files)
-    filelist.sort()
+    filelist=getVC7filelist(directory,nr)
+    
     surfaces=[]
-    surfaces=[Surface()]*min(len(filelist),nr)
+    surfaces=[Surface()]*len(filelist)
     #os.chdir(directory)
     
     for i in range(0,min(len(filelist),nr)):
@@ -187,3 +182,13 @@ def getVC7SurfaceList(directory,nr):
         surfaces[i]=Surface()
         surfaces[i].readFromVC7(os.path.join(directory,filelist[i]))
     return surfaces
+    
+def getVC7filelist(directory,nr):
+    filelist=[]
+
+    for files in os.listdir(directory):
+        if files.endswith(".vc7"):
+            filelist.append(files)
+    filelist.sort()
+    filelist=filelist[0:min(len(filelist),nr)]
+    return filelist
