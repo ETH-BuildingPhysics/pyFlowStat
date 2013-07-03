@@ -164,6 +164,10 @@ class PointProbe(object):
         self.probeTimes=np.array(probeTimes)
         self.createDataDict()
         
+    def readAndAppend(self,probeLoc,filePath,fileType):
+        pass
+        
+    
     def cutData(self,indices):
         self.probeVar=self.probeVar[np.array(indices),:]
         self.probeTimes=self.probeTimes[np.array(indices),:]

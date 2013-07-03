@@ -19,19 +19,11 @@ import pylab as pl
 #from matplotlib.backends.backend_pdf import PdfPages
 
 #special modules
-
-
 from pyFlowStat.PointProbe import PointProbe as pp
-from pyFlowStat.TurbulenceTools import TurbulenceTools as tt
+#from pyFlowStat.TurbulenceTools import TurbulenceTools as tt
+import pyFlowStat.TurbulenceTools as tt
 
 # parameters for plots
-#params = {'font.family': 'serif',
-#          'axes.labelsize': 14,
-#          'text.fontsize': 14,
-#          'legend.fontsize': 14,
-#          'xtick.labelsize': 14,
-#          'ytick.labelsize': 14,
-#          'text.usetex': True,}  #latex
 params = {'font.family': 'serif',
           'axes.labelsize': 14,
           'text.fontsize': 14,
@@ -40,31 +32,23 @@ params = {'font.family': 'serif',
           'ytick.labelsize': 14,}
 pl.rcParams.update(params)
 
-# <markdowncell>
-
-# <font size="5">Generate statistics</font>
-
-# <markdowncell>
-
-# Load all 6 points and generate standard set of statistics
-
-# <codecell>
-
 #file to load and probe location
 probeFile1 = '10/U'
 probeFile2 = '19.82/U'
-probeLoc0 = np.array([-0.1,-0.3,0.1])
-probeLoc1 = np.array([-0.1,-0.3,0.3])
+probeLoc0 = [-0.1,-0.3,0.1]
+probeLoc1 = [-0.1,-0.3,0.3]
 probeLoc2 = [1.1,-0.3,0.1]
 probeLoc3 = [1.1,-0.3,0.3]
 probeLoc4 = [1.9,-0.3,0.1]
 probeLoc5 = [1.9,-0.3,0.3]
 
+
+# local function to load a point from various files 
 def loadAndGenStat(probeName,probeLoc,ofFiles):
     tseries = []
     varseries = []
     for ofFile in ofFiles:
-        t,var = pp.readOfRuntime(probeLoc=probeLoc,ofFile=ofFile,rtnType='numpy')
+        t,var = pp(probeLoc=probeLoc,ofFile=ofFile)
         tseries.append(t)
         varseries.append(var)
     pt_t = tseries[0]
