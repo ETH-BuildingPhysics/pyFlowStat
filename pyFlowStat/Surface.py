@@ -151,6 +151,20 @@ class Surface(object):
                         self.vz[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
+#        print tmpBuffer.scaleX.factor
+#        print tmpBuffer.scaleX.offset
+#        print tmpBuffer.scaleY.factor
+#        print tmpBuffer.scaleY.offset
+        #self.maxX=
+        #self.maxY=
+
+        self.dx=abs(tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid)
+        self.dy=abs(tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid)
+        self.minX=tmpBuffer.scaleX.factor*(0)+tmpBuffer.scaleX.offset
+        self.maxY=tmpBuffer.scaleY.factor*(0)+tmpBuffer.scaleY.offset
+        self.maxX=tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid*(tmpBuffer.ny-1)+tmpBuffer.scaleX.offset
+        self.minY=tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid*(tmpBuffer.nx-1)+tmpBuffer.scaleY.offset
+        
         self.ReadIMX64.DestroyBuffer(tmpBuffer)
         #plot(vx)
         #plot(vy)
