@@ -12,9 +12,19 @@ class TriSurface(object):
     """
     class TriSurface
     
-    TriSurface reads and holds a cutting plane of a 3D field. The geometry of the plane is define in the standard orthonormed
-    basis Sbasis. For plotting purpose, the plane geometry is alse defined in the view basis (xv,yv,zv). xv and yv can be use as x and y
-    for surface/contour ploting.
+    A TriSurface object "triSurf" reads and holds a cutting plane "pl" of a 3D field. "pl" must be planar (...) but can be in
+    any orientation. To plot "pl" as a contour plot "cplt", the x and y direction of "cplt" must be specified to "triSurf" with
+    xViewBasis and yViewBasis. With xViewBasis and yViewBasis, you can entirely control how "triSurf" is displayed.
+    
+    Note:
+        * Sbasis is the standard basis e1=(1,0,0), e1=(0,1,0), e1=(0,0,1). "triSurf" and the 3D fields are defined in this basis
+        * Vbasis is the view basis. Vbasis definition in Sbasis is:v1=xViewBasis, v2=yViewBasis, v3=v1 x v2. v1 and v2 must be in the plane.
+    
+    See also:
+        * matplotlib.pyplot.tricontourf: surface plot
+        * matplotlib.pyplot.tricontour:  contour plot
+        * matplotlib.pyplot.triplot:     plot mesh
+        
     """
     
     def __init__(self,storeMesh=True):
@@ -52,11 +62,16 @@ class TriSurface(object):
         Notes:
             * This function acts almost like a constructor
             * See notes of function parseFoamFile()
+            * Sbasis is the standard basis e1=(1,0,0), e1=(0,1,0), e1=(0,0,1).
+            * Vbasis is the view basis. Vbasis definition in Sbasis is:v1=xViewBasis, v2=yViewBasis, v3=v1 x v2. v1 and v2 must be in the plane.
             
         Arguments:
             * varsFile:   [str()] Path of the foamFile with variable
             * pointsFile: [str()] Path of the foamFile with points
             * facesFile:  [str()] Path of the foamFile with faces
+            * viewAnchor: [np.array or list(), shape=(3,1)] view anchor in Sbasis. The anchor will become the (0,0) in surface/coutour plot
+            * xViewBasis: [np.array or list(), shape=(3,1)] x direction of the view in Sbasis.
+            * yViewBasis: [np.array or list(), shape=(3,1)] y direction of the view in Sbasis.
 
         Modified/updated/initialised members:
             * vars:   [np.array(), vars.shape=(N*3)] list of variables
@@ -70,6 +85,7 @@ class TriSurface(object):
             * invAffMat: [np.array, affMat.shape=(4x4)] inverse of affMat
             * plDef: [np.array, plDef.shape=(4)] plane parameters (a,b,c,d). See function TriSurface.genPlaneData() for more infos.
         '''
+        # Source of datas
         self.varsFile = varsFile
         self.pointsFile = pointsFile
         self.facesFile = facesFile
@@ -98,7 +114,71 @@ class TriSurface(object):
             self.viewAnchor  = viewAnchor
             self.affMat,self.invAffMat,self.viewBasis = self.genTransData(points,self.viewAnchor,xViewBasis,yViewBasis)
                 
-   
+                
+    def constructFromArray(self,varsArray,pointsArray,facesArray,viewAnchor,xViewBasis,yViewBasis):
+        '''
+        Construct surface by passing numpy array for vars, points and faces.
+        
+        Notes:
+            * This function acts almost like a constructor
+            * Sbasis is the standard basis e1=(1,0,0), e1=(0,1,0), e1=(0,0,1).
+            * Vbasis is the view basis. Vbasis defined in Sbasis is:v1=xViewBasis, v2=yViewBasis, v3=v1 x v2. v1 and v2 must be in the plane.
+            
+        Arguments:
+            * varsFile:   [str()] list of variables
+            * pointsFile: [str()] list of pointsassociated with 
+            * facesFile:  [str()] Path of the foamFile with faces
+            * viewAnchor: [np.array or list(), shape=(3,1)] view anchor in Sbasis. The anchor will become the (0,0) in surface/coutour plot
+            * xViewBasis: [np.array or list(), shape=(3,1)] x direction of the view in Sbasis.
+            * yViewBasis: [np.array or list(), shape=(3,1)] y direction of the view in Sbasis.
+
+        Modified/updated/initialised members:
+            * vars:   [np.array(), vars.shape=(N*3)] list of variables
+            * varRank: [int()] rank of the variable stored in vars.
+            * points: [np.array(), points.shape=(N*3)] list of points
+            * faces:  [np.array(), faces.shape=(N*3)] list of faces
+            * xys: [np.array(), xys.shape=(N*2)] list of points in Vbasis. Use those x and y for contour/surface plot!
+            * viewAnchor: [np.array, viewAnchors.shape=(3)] anchor on the plane. Use to define the (0,0) for ploting.
+            * viewBasis: [np.array, viewBasis.shape=(3x3)] Vbasis defined in Sbasis
+            * affMat:    [np.array, affMat.shape=(4x4)] affine transformation matrix for transfomation from Sbasis to Vbasis
+            * invAffMat: [np.array, affMat.shape=(4x4)] inverse of affMat
+            * plDef: [np.array, plDef.shape=(4)] plane parameters (a,b,c,d). See function TriSurface.genPlaneData() for more infos.
+        '''
+        # check array length
+        if len(varsArray)!=len(pointsArray):
+            print('varsArray and pointsArray must have the same dimension. Exit')
+            exit
+        # Source of datas
+        self.varsFile = ''
+        self.pointsFile = ''
+        self.facesFile = ''
+        # read variable
+        self.vars = np.copy(varsArray)
+        self.varRank = len(self.vars[1,:])
+        # read mesh if needed and generate tansformation data (mendatory)
+        if self.storeMesh==True:
+            self.points = np.copy(pointsArray)
+            self.faces = np.copy(facesArray)
+            self.plDef = self.genPlaneData(self.points)
+            # generate transformation stuff with points, viewAnchor and view Basis
+            self.viewAnchor  = viewAnchor
+            self.affMat,self.invAffMat,self.viewBasis = self.genTransData(self.points,self.viewAnchor,xViewBasis,yViewBasis)           
+            # generate planar coordinate X and Y
+            self.xys = np.zeros((self.points.shape[0],2))
+            for i in range(self.xys.shape[0]):
+                ptInA = self.points[i,:]
+                ptInB = np.dot(self.affMat , self.affineVec(ptInA).reshape((4,1)))[0:3]
+                ptInB = np.dot(self.affMat , self.affineVec(ptInA))[0:3]
+                self.xys[i,:] = ptInB[0:2]
+        else:
+            points = np.copy(pointsArray)
+            self.plDef = self.genPlaneData(points)
+            # generate transformation stuff with points, viewAnchor and view Basis   
+            self.viewAnchor  = viewAnchor
+            self.affMat,self.invAffMat,self.viewBasis = self.genTransData(points,self.viewAnchor,xViewBasis,yViewBasis)
+        
+
+    
     def readFromVTK(self,vtkFile):
         '''
         read planar surface from OpenFOAM. In vtk format.
