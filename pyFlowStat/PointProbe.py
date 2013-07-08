@@ -224,6 +224,7 @@ class PointProbe(object):
             nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
             umag[i] = nrm2(a)
             #umag[i] = np.linalg.norm(self.data['u'][i,:])
+        
 
     def generateStatistics(self,doDetrend=True):
         '''
@@ -272,6 +273,23 @@ class PointProbe(object):
         self.data['Se11frq'],self.data['Se11'] = tt.dofft(sig=self.data['R11'],samplefrq=self.data['frq'])
         self.data['Se22frq'],self.data['Se22'] = tt.dofft(sig=self.data['R22'],samplefrq=self.data['frq'])
         self.data['Se33frq'],self.data['Se33'] = tt.dofft(sig=self.data['R33'],samplefrq=self.data['frq'])
+        
+    def generateDiagnosticStatistics(self):
+        self.data['Uoo_c']=np.zeros(self.data['U'].shape)
+        
+        self.data['Uoo_c'][0,0]=self.data['U'][0,0]
+        self.data['Uoo_c'][0,1]=self.data['U'][0,1]
+        self.data['Uoo_c'][0,2]=self.data['U'][0,2]
+        
+        for i in range(1,len(self.probeTimes)):
+            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i-1,0]+self.data['U'][i,0]
+            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i-1,1]+self.data['U'][i,1]
+            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i-1,2]+self.data['U'][i,2]
+            
+        for i in range(1,len(self.probeTimes)):
+            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i,0]/(i+1)
+            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i,1]/(i+1)
+            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i,2]/(i+1)
         
     def lengthScale(self):
         def func_exp(x, a):
