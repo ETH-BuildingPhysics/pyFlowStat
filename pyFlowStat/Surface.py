@@ -227,11 +227,11 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
 
-def getVC7SurfaceList(directory,nr):
+def getVC7SurfaceList(directory,nr,step=1):
     '''
     Get a list of Surfaces read from PIV data
     '''
-    filelist=getVC7filelist(directory,nr)
+    filelist=getVC7filelist(directory,nr,step)
     
     surfaces=[]
     surfaces=[Surface()]*len(filelist)
@@ -243,7 +243,7 @@ def getVC7SurfaceList(directory,nr):
         surfaces[i].readFromVC7(os.path.join(directory,filelist[i]))
     return surfaces
     
-def getVC7filelist(directory,nr):
+def getVC7filelist(directory,nr,step=1):
     '''
     Get a list of filenames of PIV vetor data files
     '''
@@ -253,5 +253,7 @@ def getVC7filelist(directory,nr):
         if files.endswith(".vc7"):
             filelist.append(files)
     filelist.sort()
+    filelist=filelist[0::step]
     filelist=filelist[0:min(len(filelist),nr)]
+    
     return filelist
