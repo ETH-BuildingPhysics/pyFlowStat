@@ -87,9 +87,63 @@ def getMode(buf,theX_,theY_,width_,frameOffset):
 #extern "C" int EXPORT ReadIMX ( const char* theFileName, BufferType* myBuffer, AttributeList** myList );
 class Surface(object):
     def __init__(self):
-        pass
+        self.vx=[]
+        self.vy=[]
+        self.vz=[]
+        return
+        
+    def createDataDict(self):
+        '''
+        Creates the "data" dictionnary from member variables vx, vy, vz, dx, dy
+        
+        Member variable data (python ditionary) is created.
+        
+        By default, the following keys are included in data:
+            Ux:  [numpy.array.shape=(ny,nx)] Velocity Ux
+            Uy:  [numpy.array.shape=(ny,nx)] Velocity Uy
+            Uz:  [numpy.array.shape=(ny,nx)] Velocity Uz
+            dx:    [float] spacing in x dirction
+            dy:    [float] spacing in y dirction
+        '''
+
+        self.data = dict()
+        self.data['Ux'] = self.vx
+        self.data['Uy'] = self.vy
+        self.data['Uz'] = self.vz
+        self.data['dx'] = self.dx
+        self.data['dy'] = self.dy
+        
+    def generateFields(self):
+        '''
+        Generates additional dictionary entries.
+        '''
+        Umag = np.zeros(self.data['Ux'].shape)
+        Umag2D = np.zeros(self.data['Ux'].shape)
+        Umag = np.sqrt(self.data['Ux']**2+self.data['Uy']**2+self.data['Uz']**2)
+        Umag2D = np.sqrt(self.data['Ux']**2+self.data['Uy']**2)
+        self.data['Umag']=Umag
+        self.data['Umag2D']=Umag2D
+
+        np_dudy,np_dudx=np.gradient(self.vx,-self.dy,self.dx)
+        np_dvdy,np_dvdx=np.gradient(self.vy,-self.dy,self.dx)
+        vort_z=np_dvdx-np_dudy
+        self.data['VortZ']=vort_z
+        self.data['TKE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
+        self.data['Div2D']=np_dudx+np_dvdy
+        
+    def generateStatistics(self,MeanFlowSurface):
+        '''
+        Generate statistics by loading a mean flow surface (of same size)
+        '''
+        self.data['ux']=self.data['Ux']-MeanFlowSurface.data['Ux']
+        self.data['uy']=self.data['Uy']-MeanFlowSurface.data['Uy']
+        self.data['uz']=self.data['Uz']-MeanFlowSurface.data['Uz']
+        self.data['TKE_fluct']=0.5*(self.data['ux']**2+self.data['uy']**2+self.data['uz']**2)
         
     def readFromVC7(self,filename,v=False):
+        '''
+        reads PIV vector data in tha Davis format, using the 64bit windows DLL
+        '''
         dllpath = os.path.dirname(os.path.realpath(__file__))
         self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
         
@@ -126,7 +180,7 @@ class Surface(object):
         self.vz=np.empty((width,height), dtype=float)
         self.vz[:] = np.NAN
         
-        if tmpBuffer.image_sub_type == 3:
+        if tmpBuffer.image_sub_type == 3 or tmpBuffer.image_sub_type == 1:
             for theY in range(0,width):
                 for theX in range(0,height):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
@@ -139,7 +193,7 @@ class Surface(object):
             for theY in range(0,width):
                 for theX in range(0,height):
                     self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                    self.vy[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vy[theY,theX] = -1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     self.vz[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*2]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)                    
         if tmpBuffer.image_sub_type == 5:
             for theY in range(0,width):
@@ -147,11 +201,28 @@ class Surface(object):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
                         self.vx[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                        self.vy[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX]=-1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                         self.vz[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
+#        print tmpBuffer.scaleX.factor
+#        print tmpBuffer.scaleX.offset
+#        print tmpBuffer.scaleY.factor
+#        print tmpBuffer.scaleY.offset
+        #self.maxX=
+        #self.maxY=
+        if np.isnan(self.vz).all():
+            self.vz.fill(0)
+            
+        self.dx=abs(tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid)
+        self.dy=abs(tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid)
+        self.minX=tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid*(0.5)+tmpBuffer.scaleX.offset
+        self.maxY=tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid*(0.5)+tmpBuffer.scaleY.offset
+        self.maxX=tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid*(tmpBuffer.ny-0.5)+tmpBuffer.scaleX.offset
+        self.minY=tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid*(tmpBuffer.nx-0.5)+tmpBuffer.scaleY.offset
+        self.extent=[self.minX-(self.dx/2),self.maxX+(self.dx/2),self.minY-(self.dy/2),self.maxY+(self.dy/2)]
         self.ReadIMX64.DestroyBuffer(tmpBuffer)
+        self.createDataDict()
         #plot(vx)
         #plot(vy)
         #plot(vz)
@@ -169,26 +240,36 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
 
-def getVC7SurfaceList(directory,nr):
-    
-    filelist=getVC7filelist(directory,nr)
+def getVC7SurfaceList(directory,nr=0,step=1):
+    '''
+    Get a list of Surfaces read from PIV data
+    '''
+    filelist=getVC7filelist(directory,nr,step)
     
     surfaces=[]
     surfaces=[Surface()]*len(filelist)
     #os.chdir(directory)
-    
+    if nr==0:
+        nr=len(filelist)
     for i in range(0,min(len(filelist),nr)):
         print("reading " + filelist[i])
         surfaces[i]=Surface()
         surfaces[i].readFromVC7(os.path.join(directory,filelist[i]))
     return surfaces
     
-def getVC7filelist(directory,nr):
+def getVC7filelist(directory,nr=0,step=1):
+    '''
+    Get a list of filenames of PIV vetor data files
+    '''
     filelist=[]
 
     for files in os.listdir(directory):
         if files.endswith(".vc7"):
             filelist.append(files)
     filelist.sort()
+    filelist=filelist[0::step]
+    if nr==0:
+        nr=len(filelist)
     filelist=filelist[0:min(len(filelist),nr)]
+    
     return filelist
