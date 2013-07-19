@@ -38,10 +38,10 @@ def nextpow2(i):
         >>>rtn = nextpow2(i)
         
     Arguments:
-        i = [float or int] any number...
+        * i: [float or int] any number...
         
     Returns:
-        rtn = [int] the next power of two
+        * rtn: [int] the next power of two
     """
     # do not use numpy here, math is much faster for single values
     buf = math.ceil(math.log(i)/math.log(2))
@@ -56,12 +56,12 @@ def dofft(sig,samplefrq):
         >>> frq,amp = dofft(sig=mySignal, samplefrq=mySampleFrq)
         
     Arguments:
-        sig: [numpy.array]signal
-        samplefrq: [int or float]sample frequency
+        * sig: [numpy.array] signal
+        * samplefrq: [int or float] sample frequency
         
     Returns:
-        frq: [numpy.array]frequencies
-        amp: [numpy.array]amplitudes
+        * frq: [numpy.array]frequencies
+        * amp: [numpy.array]amplitudes
     """
     siglength = sig.shape[0]
     NFFT = nextpow2(siglength)
@@ -83,11 +83,11 @@ def movingave(x, window_len):
         >>> ave = movingave(x,window_len)
     
     Arguments:
-        x: [numpy.array] signal
-        window_len: [integer] windows length
+        * x: [numpy.array] signal
+        * window_len: [integer] windows length
     
     Returns:
-        ave: [numpy.array]
+        * ave: [numpy.array]
     '''
     w = np.ones(int(window_len))/float(window_len)
     return np.convolve(x,w,'same')
@@ -140,24 +140,24 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     '''
     Cross-correlation using scipy.correlate
     
-    modified 
-    copy from
-    http://subversion.assembla.com/svn/PySpectrum/trunk/src/spectrum/correlation.py
+    copy from http://subversion.assembla.com/svn/PySpectrum/trunk/src/spectrum/correlation.py
+    and futher modified for flow analysis.
     
     Estimates the cross-correlation (and autocorrelation) sequence of a random
     process of length N. By default, there is no normalisation and the output
     sequence of the cross-correlation has a length 2*N+1. 
     
-    :param array x: first data array of length N
-    :param array y: second data array of length N. If not specified, computes the 
+    Arguments:
+        * x: first data array of length N
+        * y: second data array of length N. If not specified, computes the 
         autocorrelation. 
-    :param int maxlags: compute cross correlation between [-maxlags:maxlags]
+        * maxlags: compute cross correlation between [-maxlags:maxlags]
         when maxlags is not specified, the range of lags is [-N+1:N-1].
-    :param str option: normalisation in ['biased', 'unbiased', None, 'coeff']
+        * norm: ['biased', 'unbiased', None, 'coeff'] normalisation
+        * doDetrend: [bool()] do a data detrend. Useful from data from mesurment
      
-    The true cross-correlation sequence is
-    
-    .. math:: r_{xy}[m] = E(x[n+m].y^*[n]) = E(x[n].y^*[n-m])
+    The true cross-correlation sequence is:
+        * r_{xy}[m] = E(x[n+m].y^*[n]) = E(x[n].y^*[n-m])
 
     However, in practice, only a finite segment of one realization of the 
     infinite-length random process is available.
@@ -167,14 +167,14 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
 
         * 'biased': Biased estimate of the cross-correlation function
         * 'unbiased': Unbiased estimate of the cross-correlation function
-        * 'coeff': Normalizes the sequence so the autocorrelations at zero 
-           lag is 1.0.
+        * 'coeff': Normalizes the sequence so the autocorrelations at zero lag is 1.0.
 
-    :return:
-        * a numpy.array containing the cross-correlation sequence (length 2*N-1)
-        * lags vector
+    returns:
+        * xcorr: [np.array, shape=(N-1,1)]a numpy.array containing the cross-correlation sequence
+        * lags: [np.array, shape=(N-1,1)] lag vector
         
-    .. note:: If x and y are not the same length, the shorter vector is 
+    notes:
+        * If x and y are not the same length, the shorter vector is 
         zero-padded to the length of the longer vector.
     '''
     N = len(x)
@@ -216,7 +216,45 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
 
 def xcorr_fft(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     '''
-    test to use fft for cross correleation
+    Cross-correlation using scipy.fftconvolve. Similar returns as TurbulenceTools.xcorr()
+    but faster with fftconvolve.
+    
+    copy from http://subversion.assembla.com/svn/PySpectrum/trunk/src/spectrum/correlation.py
+    and futher modified for flow analysis.
+    
+    Estimates the cross-correlation (and autocorrelation) sequence of a random
+    process of length N. By default, there is no normalisation and the output
+    sequence of the cross-correlation has a length 2*N+1. 
+    
+    Arguments:
+        * x: first data array of length N
+        * y: second data array of length N. If not specified, computes the 
+        autocorrelation. 
+        * maxlags: compute cross correlation between [-maxlags:maxlags]
+        when maxlags is not specified, the range of lags is [-N+1:N-1].
+        * norm: ['biased', 'unbiased', None, 'coeff'] normalisation
+        * doDetrend: [bool()] do a data detrend. Useful from data from mesurment
+     
+    The true cross-correlation sequence is:
+        * r_{xy}[m] = E(x[n+m].y^*[n]) = E(x[n].y^*[n-m])
+
+    However, in practice, only a finite segment of one realization of the 
+    infinite-length random process is available.
+    
+    The correlation is estimated using numpy.correlate(x,y,'full'). 
+    Normalisation is handled by this function using the following cases:
+
+        * 'biased': Biased estimate of the cross-correlation function
+        * 'unbiased': Unbiased estimate of the cross-correlation function
+        * 'coeff': Normalizes the sequence so the autocorrelations at zero lag is 1.0.
+
+    returns:
+        * xcorr: [np.array, shape=(N-1,1)]a numpy.array containing the cross-correlation sequence
+        * lags: [np.array, shape=(N-1,1)] lag vector
+        
+    notes:
+        * If x and y are not the same length, the shorter vector is 
+        zero-padded to the length of the longer vector.
     '''
 
     N = len(x)
