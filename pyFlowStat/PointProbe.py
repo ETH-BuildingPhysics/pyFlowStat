@@ -179,11 +179,30 @@ class PointProbe(object):
         self.probeTimes=np.array(probeTimes)
         self.createDataDict()
         
-    def readAndAppend(self,probeLoc,filePath,fileType):
+    def appendData(self,probeLoc,filePath,fileType):
+        '''
+        Append data to an existing PointPorbe object from a existing PointProbe object.
+        Might be seen as overloading operation "+"
+        
+        /!\ not impemented!
+        '''
         pass
         
     
     def cutData(self,indices):
+        '''
+        Cut data according indices.
+        
+        Arguments:
+            * indices: [np.array of python list] list of int
+        
+        Example (assume pt as a PointProbe object):
+            >>> pt['U'].shape
+            [10000,3]
+            >>>pt.cutData([3,4,5,6,7]) # data from index 3 to 7
+            >>>pt.cutData(np.arange(10,1000))  # data from index 10 to 1000
+            >>>pt.cutData(np.arange(10,1000,5))  # data from index 10 to 1000 but only every 5 indices
+        '''
         self.probeVar=self.probeVar[np.array(indices),:]
         self.probeTimes=self.probeTimes[np.array(indices),:]
         self.createDataDict()
@@ -197,7 +216,7 @@ class PointProbe(object):
         type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
-        pt.data['myNewKey'] = myWiredNewEntry 
+        pt['myNewKey'] = myWiredNewEntry 
         
         By default, the following keys are included in data:
             pos:  [numpy.array. shape=(3)] Probe location
