@@ -74,6 +74,21 @@ class PointProbe(object):
         return np.mean(signal.detrend(self.uy())*signal.detrend(self.uz()))
     def TKE_bar(self):
         return 0.5*(self.uu_bar()+self.vv_bar()+self.ww_bar())
+    
+    def __iter__(self): 
+        ''' 
+        '''
+        return self.data.itervalues()
+
+    def __getitem__(self, key):
+        '''      
+        '''
+        return self.data[key]
+       
+    def __setitem__(self, key, item):
+        '''
+        '''
+        self.data[key] = item
         
     def readFromOpenFoam(self,probeLoc,filepath):
         '''
