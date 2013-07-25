@@ -17,6 +17,8 @@ functions included:
 import sys
 import re
 import os
+import csv
+import collections
 
 #scientific modules
 import numpy as np
@@ -503,3 +505,34 @@ def getPIVVectorPointProbeList(directory,pointlist,nr,frq):
         pts[i].createDataDict()
         
     return pts        
+
+
+def readcsv(csvfile,delimiter,fieldnames=None):
+    '''
+    Read a csv file with headers on the first line. If no headers, a list of headers must be specified with fieldnames.
+    csv files are  very common data file for scientists. This method is quick limited, for special cases, see standard python 
+    module "csv": http://docs.python.org/2/library/csv.html
+    
+    
+    Arguments:
+        * csvfile: [string] path to csvfile
+        * delimiter: [string] the delimiter
+        * fieldnames: [list of string] list of header if any in csvfile
+        
+    Returns:
+        * data: [collection.defaultdict(list)] Advenced python dict with headers as dict keys.
+    
+    Examples:
+        * >>> data = readcsv(data.csv,delimiter=';')   #cvs with header and ';' delimiter
+        * >>> data = readcsv(data.csv,delimiter='\t', fieldnames=['x','y','U'])   #cvs without header and a tab as delimiter
+          >>> listOfHeaders = data.keys()
+          >>> dataForHeaderA = data['A']
+    '''
+    data = collections.defaultdict(list)
+    with open(csvfile) as f:
+        reader = csv.DictReader(f,delimiter=delimiter,fieldnames=fieldnames)
+        #headers = reader.fieldnames
+        for row in reader:
+            for (k,v) in row.items():
+                data[k].append(float(v))
+    return data
