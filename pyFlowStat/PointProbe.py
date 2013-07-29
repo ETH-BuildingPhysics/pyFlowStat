@@ -17,6 +17,8 @@ functions included:
 import sys
 import re
 import os
+import csv
+import collections
 
 #scientific modules
 import numpy as np
@@ -74,6 +76,21 @@ class PointProbe(object):
         return np.mean(signal.detrend(self.uy())*signal.detrend(self.uz()))
     def TKE_bar(self):
         return 0.5*(self.uu_bar()+self.vv_bar()+self.ww_bar())
+    
+    def __iter__(self): 
+        ''' 
+        '''
+        return self.data.itervalues()
+
+    def __getitem__(self, key):
+        '''      
+        '''
+        return self.data[key]
+       
+    def __setitem__(self, key, item):
+        '''
+        '''
+        self.data[key] = item
         
     def readFromOpenFoam(self,probeLoc,filepath):
         '''
@@ -164,11 +181,30 @@ class PointProbe(object):
         self.probeTimes=np.array(probeTimes)
         self.createDataDict()
         
-    def readAndAppend(self,probeLoc,filePath,fileType):
+    def appendData(self,probeLoc,filePath,fileType):
+        '''
+        Append data to an existing PointPorbe object from a existing PointProbe object.
+        Might be seen as overloading operation "+"
+        
+        /!\ not impemented!
+        '''
         pass
         
     
     def cutData(self,indices):
+        '''
+        Cut data according indices.
+        
+        Arguments:
+            * indices: [np.array of python list] list of int
+        
+        Example (assume pt as a PointProbe object):
+            >>> pt['U'].shape
+            [10000,3]
+            >>>pt.cutData([3,4,5,6,7]) # data from index 3 to 7
+            >>>pt.cutData(np.arange(10,1000))  # data from index 10 to 1000
+            >>>pt.cutData(np.arange(10,1000,5))  # data from index 10 to 1000 but only every 5 indices
+        '''
         self.probeVar=self.probeVar[np.array(indices),:]
         self.probeTimes=self.probeTimes[np.array(indices),:]
         self.createDataDict()
@@ -182,7 +218,7 @@ class PointProbe(object):
         type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
-        pt.data['myNewKey'] = myWiredNewEntry 
+        pt['myNewKey'] = myWiredNewEntry 
         
         By default, the following keys are included in data:
             pos:  [numpy.array. shape=(3)] Probe location
@@ -512,3 +548,34 @@ def getPIVVectorPointProbeList(directory,pointlist,nr,frq):
         pts[i].createDataDict()
         
     return pts        
+
+
+def readcsv(csvfile,delimiter,fieldnames=None):
+    '''
+    Read a csv file with headers on the first line. If no headers, a list of headers must be specified with fieldnames.
+    csv files are  very common data file for scientists. This method is quick limited, for special cases, see standard python 
+    module "csv": http://docs.python.org/2/library/csv.html
+    
+    
+    Arguments:
+        * csvfile: [string] path to csvfile
+        * delimiter: [string] the delimiter
+        * fieldnames: [list of string] list of header if any in csvfile
+        
+    Returns:
+        * data: [collection.defaultdict(list)] Advenced python dict with headers as dict keys.
+    
+    Examples:
+        * >>> data = readcsv(data.csv,delimiter=';')   #cvs with header and ';' delimiter
+        * >>> data = readcsv(data.csv,delimiter='\t', fieldnames=['x','y','U'])   #cvs without header and a tab as delimiter
+          >>> listOfHeaders = data.keys()
+          >>> dataForHeaderA = data['A']
+    '''
+    data = collections.defaultdict(list)
+    with open(csvfile) as f:
+        reader = csv.DictReader(f,delimiter=delimiter,fieldnames=fieldnames)
+        #headers = reader.fieldnames
+        for row in reader:
+            for (k,v) in row.items():
+                data[k].append(float(v))
+    return data
