@@ -198,22 +198,28 @@ class Surface(object):
         self.data['ux']=self.data['Ux']-MeanFlowSurface.data['Ux']
         self.data['uy']=self.data['Uy']-MeanFlowSurface.data['Uy']
         self.data['uz']=self.data['Uz']-MeanFlowSurface.data['Uz']
-        self.data['TKE_fluct']=0.5*(self.data['ux']**2+self.data['uy']**2+self.data['uz']**2)
+        self.data['uu']=self.data['ux']**2
+        self.data['vv']=self.data['uy']**2
+        self.data['ww']=self.data['uz']**2
+        self.data['uv']=self.data['ux']*self.data['uy']
+        self.data['uw']=self.data['ux']*self.data['uz']
+        self.data['vw']=self.data['uy']*self.data['uz']
+        self.data['TKE_fluct']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
         
     def readFromVC7(self,filename,v=False):
         '''
         reads PIV vector data in tha Davis format, using the 64bit windows DLL
         '''
         dllpath = os.path.dirname(os.path.realpath(__file__))
-        self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+        ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
         
         tmpBuffer = BufferType()
-        self.attributeLst = AttributeList()
+        attributeLst = AttributeList()
         self.vx=[]
         self.vy=[]
         self.vz=[]
         
-        res = self.ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(self.attributeLst))
+        res = ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(attributeLst))
         
         #print res
         if res>0:
@@ -281,7 +287,7 @@ class Surface(object):
         self.maxX=tmpBuffer.scaleX.factor*tmpBuffer.vectorGrid*(tmpBuffer.ny-0.5)+tmpBuffer.scaleX.offset
         self.minY=tmpBuffer.scaleY.factor*tmpBuffer.vectorGrid*(tmpBuffer.nx-0.5)+tmpBuffer.scaleY.offset
         self.extent=[self.minX-(self.dx/2),self.maxX+(self.dx/2),self.minY-(self.dy/2),self.maxY+(self.dy/2)]
-        self.ReadIMX64.DestroyBuffer(tmpBuffer)
+        ReadIMX64.DestroyBuffer(tmpBuffer)
         self.createDataDict()
         #plot(vx)
         #plot(vy)
@@ -322,14 +328,14 @@ def getVC7filelist(directory,nr=0,step=1):
     Get a list of filenames of PIV vetor data files
     '''
     filelist=[]
-
-    for files in os.listdir(directory):
-        if files.endswith(".vc7"):
-            filelist.append(files)
-    filelist.sort()
-    filelist=filelist[0::step]
-    if nr==0:
-        nr=len(filelist)
-    filelist=filelist[0:min(len(filelist),nr)]
+    if os.path.exists(directory):
+        for files in os.listdir(directory):
+            if files.endswith(".vc7"):
+                filelist.append(files)
+        filelist.sort()
+        filelist=filelist[0::step]
+        if nr==0:
+            nr=len(filelist)
+        filelist=filelist[0:min(len(filelist),nr)]
     
     return filelist
