@@ -286,6 +286,8 @@ def xcorr_fft(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     elif norm == 'coeff':        
         Nf = float(N)
         rms = pl.rms_flat(x) * pl.rms_flat(y)
+        if rms==0:
+            rms=1
         #rms = (np.mean(x**2)*np.mean(y**2))**(0.5)
         res = res[lags] / rms / Nf
     else:

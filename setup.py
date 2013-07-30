@@ -13,6 +13,8 @@ setup(name='pyFlowStat',
       url='http://www.carmeliet.arch.ethz.ch/',
       author='ETH/EMPA',
       author_email='',
+	  package_data={'pyFlowStat': ['ReadIMX64.dll']},
+      include_package_data=True
       #scripts=scriptlist,
       )
 

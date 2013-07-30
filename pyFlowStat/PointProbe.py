@@ -264,6 +264,7 @@ class PointProbe(object):
             nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
             umag[i] = nrm2(a)
             #umag[i] = np.linalg.norm(self.data['u'][i,:])
+        
 
     def generateStatistics(self,doDetrend=True):
         '''
@@ -313,6 +314,23 @@ class PointProbe(object):
         self.data['Se22frq'],self.data['Se22'] = tt.dofft(sig=self.data['R22'],samplefrq=self.data['frq'])
         self.data['Se33frq'],self.data['Se33'] = tt.dofft(sig=self.data['R33'],samplefrq=self.data['frq'])
         
+    def generateDiagnosticStatistics(self):
+        self.data['Uoo_c']=np.zeros(self.data['U'].shape)
+        
+        self.data['Uoo_c'][0,0]=self.data['U'][0,0]
+        self.data['Uoo_c'][0,1]=self.data['U'][0,1]
+        self.data['Uoo_c'][0,2]=self.data['U'][0,2]
+        
+        for i in range(1,len(self.probeTimes)):
+            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i-1,0]+self.data['U'][i,0]
+            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i-1,1]+self.data['U'][i,1]
+            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i-1,2]+self.data['U'][i,2]
+            
+        for i in range(1,len(self.probeTimes)):
+            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i,0]/(i+1)
+            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i,1]/(i+1)
+            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i,2]/(i+1)
+        
     def lengthScale(self):
         '''
         Compute turbulent length scale (in time) in all three directions.
@@ -330,8 +348,16 @@ class PointProbe(object):
         def func_exp(x, a):
             np.seterr('ignore')
             res = np.exp(-x/a)
+
             #print res
             return res
+            
+        def func_gauss(x, a):
+            np.seterr('ignore')
+            res = np.exp(-(x*x)/(a*a))
+
+            #print res
+            return res    
             
         corr_keys=['taur11','taur22','taur33','r11','r22','r33']
         if len(set(corr_keys) & set(self.data.keys()))!=len(corr_keys):
@@ -340,21 +366,38 @@ class PointProbe(object):
             
         xdata=self.data['taur11']
         ydata=self.data['r11']
-        popt, pcov = curve_fit(func_exp,xdata,ydata)
-        self.data['Txx']=popt[0]*self.data['dt']
-        self.data['Lxx']=self.data['Txx']*self.Umean()
+
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
+            self.data['Txx']=popt[0]*self.data['dt']
+            self.data['Lxx']=self.data['Txx']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Txx']=0
+            self.data['Lxx']=0
         
         xdata=self.data['taur22']
         ydata=self.data['r22']
-        popt, pcov = curve_fit(func_exp,xdata,ydata)
-        self.data['Tyy']=popt[0]*self.data['dt']
-        self.data['Lyy']=self.data['Tyy']*self.Umean()
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['Tyy']=popt[0]*self.data['dt']
+            self.data['Lyy']=self.data['Tyy']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Tyy']=0
+            self.data['Lyy']=0
         
         xdata=self.data['taur33']
         ydata=self.data['r33']
-        popt, pcov = curve_fit(func_exp,xdata,ydata)
-        self.data['Tzz']=popt[0]*self.data['dt']
-        self.data['Lzz']=self.data['Tzz']*self.Umean()
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['Tzz']=popt[0]*self.data['dt']
+            self.data['Lzz']=self.data['Tzz']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Tzz']=0
+            self.data['Lzz']=0
         
     def detrend_periodic(self):
         def func_sin_u(Umean):
