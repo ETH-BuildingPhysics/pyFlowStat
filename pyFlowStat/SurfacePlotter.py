@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 import pyFlowStat.Surface as Surface
 
@@ -37,3 +38,45 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
 #    
 #    xlim([-30,130])
 #    ylim([-105,130])
+def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
+    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    yrange=np.flipud(yrange)
+    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
+#    self.OffsetXpos=xrange[self.xpos_left_wall]
+#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange=xrange-offset[0]
+    yrange=yrange-offset[1]
+    X,Y = np.meshgrid(xrange, yrange)
+    u=np.nan_to_num(np.sqrt(surface.data['Ux']**2+surface.data['Uy']**2))
+
+    cnorm=mpl.colors.Normalize(vmin=vmin,vmax=vmax)
+
+    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color='k')
+#    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
+
+def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
+    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    yrange=np.flipud(yrange)
+    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
+#    self.OffsetXpos=xrange[self.xpos_left_wall]
+#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange=xrange-offset[0]
+    yrange=yrange-offset[1]
+    X,Y = np.meshgrid(xrange, yrange)
+    
+    u=np.nan_to_num(np.sqrt(surface.data['Ux']**2+surface.data['Uy']**2))
+
+    cnorm=mpl.colors.Normalize(vmin=0,vmax=np.max(u))
+
+
+    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
+#    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
+
+def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0]):
+    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    yrange=np.flipud(yrange)
+    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
+    xrange=xrange-offset[0]
+    yrange=yrange-offset[1]
+    X,Y = np.meshgrid(xrange, yrange)
+    return plt.quiver(X,Y,surface.data['Ux'],surface.data['Uy'],scale=scale,angles='uv',units='xy',width=0.1)
