@@ -32,7 +32,11 @@ import pyFlowStat.TurbulenceTools as tt
 import pyFlowStat.Surface as Surface
 
 class PointProbe(object):
-    """PointProbe Class"""
+    '''
+    PointProbe Class
+    
+    A class to handle velocity time serie from a point.
+    '''
     
     def __init__(self):
         self.probeLoc=[]
@@ -181,14 +185,41 @@ class PointProbe(object):
         self.probeTimes=np.array(probeTimes)
         self.createDataDict()
         
-    def appendData(self,probeLoc,filePath,fileType):
+    def appendData(self,U):
         '''
-        Append data to an existing PointPorbe object from a existing PointProbe object.
-        Might be seen as overloading operation "+"
-        
-        /!\ not impemented!
+        Append velocity field U to self['U'] and extend self['t'] accordingly.
+        Low level method: The following known issues are not checked:
+            * gap: gap between U and self['U']
+            * overlap: overlap between U and self['U']. Use method "cutData" to solve such issues
+            * fequency missmatch: sampling frequency between U and self['U'] must be identical
+            * location: append datas should (must?) come from the same probe location
+         
+        Arguments:
+            * U: [np.array. shape=(N,3)] instentenous velocity fields Ux, Uy and Uz
         '''
-        pass
+        # append U        
+        self.probeVar = np.vstack((self.probeVar,U))
+        # complet self['t'] according total length of self['U']
+        t0 = self.probeTimes[0]
+        frq = self.data['frq']
+        iterable = (t0+(1/frq)*i for i in range(self.probeVar.shape[0]))
+        self.probeTimes = np.fromiter(iterable, np.float)
+        self.createDataDict()
+
+    
+    def appendProbe(self,probe):
+        '''        
+        Append "probe" (PointProbe object) to current data.
+        The following known issues are not checked:
+            * gap: gap between U and self['U']
+            * overlap: overlap between U and self['U']. Use method "cutData" to solve such issues
+            * fequency missmatch: sampling frequency between U and self['U'] must be identical
+            * location: append datas should (must?) come from the same probe location
+            
+        Arguments:
+            * probe: [PointProbe object] PointProbe object to append
+        '''
+        self.appendData(probe['U'])
         
     
     def cutData(self,indices):
