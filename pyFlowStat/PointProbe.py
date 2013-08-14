@@ -289,11 +289,11 @@ class PointProbe(object):
         # fluctuation
         self.data['u'] = self.data['U']-self.data['Uoo']
         #umag
-        umag = np.zeros(self.data['u'].shape[0])
-        for i in range(self.data['u'].shape[0]):
-            a=self.data['u'][i,:]
-            nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
-            umag[i] = nrm2(a)
+#        umag = np.zeros(self.data['u'].shape[0])
+#        for i in range(self.data['u'].shape[0]):
+#            a=self.data['u'][i,:]
+#            nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
+#            umag[i] = nrm2(a)
             #umag[i] = np.linalg.norm(self.data['u'][i,:])
         
 
@@ -320,16 +320,22 @@ class PointProbe(object):
             ux=signal.detrend(self.ux());
             uy=signal.detrend(self.uy());
             uz=signal.detrend(self.uz());
+            umag=signal.detrend(self.Umag());
         else:
             ux=self.ux();
             uy=self.uy();
             uz=self.uz();
+            umag=self.Umag();
         #ux=ux[-samples:-1]
         #uy=uy[-samples:-1]
         #uz=uz[-samples:-1]
         self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=None, norm='coeff')
         self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=None, norm='coeff')
         self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=None, norm='coeff')
+        self.data['r12'],self.data['taur12'] = tt.xcorr_fft(ux,y=uy, maxlags=None, norm='coeff')
+        self.data['r13'],self.data['taur13'] = tt.xcorr_fft(ux,y=uz, maxlags=None, norm='coeff')
+        self.data['r23'],self.data['taur23'] = tt.xcorr_fft(uy,y=uz, maxlags=None, norm='coeff')
+        self.data['rmag'],self.data['taurmag'] = tt.xcorr_fft(umag, maxlags=None, norm='coeff')
         # auto correlation of u
         self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='none')
         self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='none')
@@ -429,6 +435,50 @@ class PointProbe(object):
             print("Error - curve_fit failed")
             self.data['Tzz']=0
             self.data['Lzz']=0
+            
+        xdata=self.data['taur12']
+        ydata=self.data['r12']
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['Txy']=popt[0]*self.data['dt']
+            #self.data['Lzz']=self.data['Tzz']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Txy']=0
+            #self.data['Lzz']=0
+            
+        xdata=self.data['taur13']
+        ydata=self.data['r13']
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['Txz']=popt[0]*self.data['dt']
+            #self.data['Lzz']=self.data['Tzz']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Txz']=0
+            #self.data['Lzz']=0
+            
+        xdata=self.data['taur23']
+        ydata=self.data['r23']
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['Tyz']=popt[0]*self.data['dt']
+            #self.data['Lzz']=self.data['Tzz']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['Tyz']=0
+            #self.data['Lzz']=0
+            
+        xdata=self.data['taurmag']
+        ydata=self.data['rmag']
+        try:
+            popt, pcov = curve_fit(func_exp,xdata,ydata)
+            self.data['T']=popt[0]*self.data['dt']
+            self.data['L']=self.data['T']*self.Umean()
+        except RuntimeError:
+            print("Error - curve_fit failed")
+            self.data['T']=0
+            self.data['L']=0
         
     def detrend_periodic(self):
         def func_sin_u(Umean):

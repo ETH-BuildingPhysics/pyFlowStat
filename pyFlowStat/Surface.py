@@ -113,6 +113,21 @@ class Surface(object):
         self.data['dx'] = self.dx
         self.data['dy'] = self.dy
         
+    def emptyCopy(self):
+        s=Surface()
+        s.vx=np.zeros(self.data['Ux'].shape)
+        s.vy=np.zeros(self.data['Uy'].shape)
+        s.vz=np.zeros(self.data['Uz'].shape)
+        s.dx=self.dx
+        s.dy=self.dy
+        s.minX=self.minX
+        s.maxY=self.maxY
+        s.maxX=self.maxX
+        s.minY=self.minY
+        s.extent=self.extent
+        return s
+        
+        
     def generateFields(self):
         '''
         Generates additional dictionary entries.
@@ -128,7 +143,7 @@ class Surface(object):
         dvdy,dvdx=np.gradient(self.vy,-self.dy,self.dx)
         vort_z=dvdx-dudy
         self.data['VortZ']=vort_z
-        self.data['TKE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
+        self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         self.data['Div2D']=dudx+dvdy
         
         #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
@@ -191,9 +206,10 @@ class Surface(object):
                 lam[arow,acol]=l[1]
         return lam*-1.0
         
-    def generateStatistics(self,MeanFlowSurface):
+    def addReynoldsDecomposition(self,MeanFlowSurface):
         '''
-        Generate statistics by loading a mean flow surface (of same size)
+        Generate fluctuations by subtracting the mean flow (surface of same size)
+        Adds fluctuation fields ux,uy,uz and correleations uu,vv,ww,uv,uw and TKE
         '''
         self.data['ux']=self.data['Ux']-MeanFlowSurface.data['Ux']
         self.data['uy']=self.data['Uy']-MeanFlowSurface.data['Uy']
@@ -204,7 +220,7 @@ class Surface(object):
         self.data['uv']=self.data['ux']*self.data['uy']
         self.data['uw']=self.data['ux']*self.data['uz']
         self.data['vw']=self.data['uy']*self.data['uz']
-        self.data['TKE_fluct']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
+        self.data['TKE']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
         
     def readFromVC7(self,filename,v=False):
         '''
