@@ -207,7 +207,7 @@ class PointProbe(object):
         self.createDataDict()
 
     
-    def appendProbe(self,probe):
+    def appendProbe(self,probe,rmOverlap='none'):
         '''        
         Append "probe" (PointProbe object) to current data.
         The following known issues are not checked:
@@ -218,7 +218,36 @@ class PointProbe(object):
             
         Arguments:
             * probe: [PointProbe object] PointProbe object to append
+            * rmOverlap: ['none','self','probe'] In case of overlaping data, which side should be kept?
+                  * 'none': data are simply added without any check (default)
+                  * 'self': data from self are removed
+                  * 'probe': data from probe are removed
+              If there is non overlap, or a gap, 'none' is used.
         '''
+        # check matching. Possibilities:
+        # 'match'
+        # 'overlap'
+        # 'gap'
+        matchStatus = str()
+        if self.data['t'][-1]>=probe['t'][0]:
+            matchStatus = 'overlap'
+        elif self.data['t'][-1]<(probe['t'][0]-(1/self.data['frq'])):
+            matchStatus = 'gap'
+        else:
+            matchStatus = 'match'
+        
+        if rmOverlap=='none':
+            self.appendData(probe['U'])
+        elif rmOverlap=='self':
+            pass
+        elif rmOverlap=='probe':           
+            index = 0
+            while probe['t'][index]<self['t'][-1]:
+                index = index+1
+            ptssNew.cutData(np.arange(index,ptssNew['t'].shape[0]))
+            ptss.appendProbe(ptssNew)        
+        
+        
         self.appendData(probe['U'])
         
     
