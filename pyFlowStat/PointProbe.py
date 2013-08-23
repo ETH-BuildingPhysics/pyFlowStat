@@ -80,6 +80,35 @@ class PointProbe(object):
         return np.mean(signal.detrend(self.uy())*signal.detrend(self.uz()))
     def TKE_bar(self):
         return 0.5*(self.uu_bar()+self.vv_bar()+self.ww_bar())
+        
+    def Reij(self,store=True):
+        '''
+        Calculate and return the Reynolds stress tensor Reij defined as
+            Reij = {ui*uj}
+        with ui the velocity fluctuation from the Reynolds decomposition and {.} the averaging operator.
+        
+        Arguments:
+            * store:  [bool] Stroe Reij in self.data. Default=True
+        
+        Returns:
+            * Reij:  [numpy.array with Reij.shape=(3,3)] Reynolds stress tensor R.
+        '''        
+        Reij = np.zeros([3,3])
+        Reij[0,0] = self.uu_bar()
+        Reij[0,1] = self.uv_bar()  
+        Reij[0,2] = self.uw_bar()  
+        Reij[1,0] = self.uv_bar()  
+        Reij[1,1] = self.vv_bar()  
+        Reij[1,2] = self.vw_bar()  
+        Reij[2,0] = self.uw_bar()  
+        Reij[2,1] = self.vw_bar()  
+        Reij[2,2] = self.ww_bar()
+        
+        if store==True:
+            self.data['Reij'] = Reij                    
+        
+        return Reij
+        
     
     def __iter__(self): 
         ''' 
