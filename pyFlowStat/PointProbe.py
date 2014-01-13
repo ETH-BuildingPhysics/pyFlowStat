@@ -80,6 +80,35 @@ class PointProbe(object):
         return np.mean(signal.detrend(self.uy())*signal.detrend(self.uz()))
     def TKE_bar(self):
         return 0.5*(self.uu_bar()+self.vv_bar()+self.ww_bar())
+        
+    def Reij(self,store=True):
+        '''
+        Calculate and return the Reynolds stress tensor Reij defined as
+            Reij = {ui*uj}
+        with ui the velocity fluctuation from the Reynolds decomposition and {.} the averaging operator.
+        
+        Arguments:
+            * store:  [bool] Stroe Reij in self.data. Default=True
+        
+        Returns:
+            * Reij:  [numpy.array with Reij.shape=(3,3)] Reynolds stress tensor R.
+        '''        
+        Reij = np.zeros([3,3])
+        Reij[0,0] = self.uu_bar()
+        Reij[0,1] = self.uv_bar()  
+        Reij[0,2] = self.uw_bar()  
+        Reij[1,0] = self.uv_bar()  
+        Reij[1,1] = self.vv_bar()  
+        Reij[1,2] = self.vw_bar()  
+        Reij[2,0] = self.uw_bar()  
+        Reij[2,1] = self.vw_bar()  
+        Reij[2,2] = self.ww_bar()
+        
+        if store==True:
+            self.data['Reij'] = Reij                    
+        
+        return Reij
+        
     
     def __iter__(self): 
         ''' 
@@ -207,7 +236,7 @@ class PointProbe(object):
         self.createDataDict()
 
     
-    def appendProbe(self,probe):
+    def appendProbe(self,probe,rmOverlap='none'):
         '''        
         Append "probe" (PointProbe object) to current data.
         The following known issues are not checked:
@@ -218,7 +247,36 @@ class PointProbe(object):
             
         Arguments:
             * probe: [PointProbe object] PointProbe object to append
+            * rmOverlap: ['none','self','probe'] In case of overlaping data, which side should be kept?
+                  * 'none': data are simply added without any check (default)
+                  * 'self': data from self are removed
+                  * 'probe': data from probe are removed
+              If there is non overlap, or a gap, 'none' is used.
         '''
+        # check matching. Possibilities:
+        # 'match'
+        # 'overlap'
+        # 'gap'
+        matchStatus = str()
+        if self.data['t'][-1]>=probe['t'][0]:
+            matchStatus = 'overlap'
+        elif self.data['t'][-1]<(probe['t'][0]-(1/self.data['frq'])):
+            matchStatus = 'gap'
+        else:
+            matchStatus = 'match'
+        
+        if rmOverlap=='none':
+            self.appendData(probe['U'])
+        elif rmOverlap=='self':
+            pass
+        elif rmOverlap=='probe':           
+            index = 0
+            while probe['t'][index]<self['t'][-1]:
+                index = index+1
+            ptssNew.cutData(np.arange(index,ptssNew['t'].shape[0]))
+            ptss.appendProbe(ptssNew)        
+        
+        
         self.appendData(probe['U'])
         
     
