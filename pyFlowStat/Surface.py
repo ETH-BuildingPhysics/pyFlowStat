@@ -139,8 +139,8 @@ class Surface(object):
         self.data['Umag']=Umag
         self.data['Umag2D']=Umag2D
 
-        dudy,dudx=np.gradient(self.vx,-self.dy,self.dx)
-        dvdy,dvdx=np.gradient(self.vy,-self.dy,self.dx)
+        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
         vort_z=dvdx-dudy
         self.data['VortZ']=vort_z
         self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
