@@ -142,6 +142,10 @@ class Surface(object):
         dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
         dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
         vort_z=dvdx-dudy
+        self.data['dudy']=dudy
+        self.data['dudx']=dudx
+        self.data['dvdy']=dvdy
+        self.data['dvdx']=dvdx
         self.data['VortZ']=vort_z
         self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         self.data['Div2D']=dudx+dvdy
