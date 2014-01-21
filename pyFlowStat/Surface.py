@@ -8,6 +8,8 @@ import sys
 import numpy as np
 import scipy as sp
 import os
+import matplotlib.tri as tri
+from pyFlowStat.TriSurface import TriSurface
 
 # special modules
 from ctypes import *
@@ -325,7 +327,49 @@ class Surface(object):
 #			mode--;
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
+        
+    def readVelFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+        
+        def doInterp(triang,values,grid_x, grid_y):
+            #lin=tri.LinearTriInterpolator(triang,values)
+            cub=tri.CubicTriInterpolator(triang,values)
+            zi_ma = cub(grid_x, grid_y)
+            zi=zi_ma.filled(np.nan)
+            return zi
+            
+        s=TriSurface()
+        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
+        points=s.xys
+        if dx==None:
+            dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
+            dx=np.min(dxlist)
+        if dy==None:
+            dylist=[a for a in np.abs(np.diff(points[:,1])) if a>0]
+            dy=np.min(dylist)
+            
+        MaxX=np.max(points[:,0])
+        MinX=np.min(points[:,0])
+        MaxY=np.max(points[:,1])
+        MinY=np.min(points[:,1])
+        extent=[MinX,MaxX,MinY,MaxY]
+        #print MinX,MaxX,MinY,MaxY
+        cellsX=int((MaxX-MinX)/dx)
+        cellsY=int((MaxY-MinY)/dy)
+        #print cellsX,cellsY
+        grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+        triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+        vx_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+        vy_i=doInterp(triang,s.vars[:,1],grid_x, grid_y)
+        vz_i=doInterp(triang,s.vars[:,2],grid_x, grid_y)
 
+        self.vx=np.flipud(vx_i)
+        self.vy=np.flipud(vy_i)
+        self.vz=np.flipud(vz_i)
+        self.dx=dx
+        self.dy=dy
+        self.createDataDict()
+        self.extent=extent
+        
 def getVC7SurfaceList(directory,nr=0,step=1):
     '''
     Get a list of Surfaces read from PIV data
