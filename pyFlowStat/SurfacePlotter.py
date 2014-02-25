@@ -13,11 +13,12 @@ def PlotField(ax,surface,field,vmin,vmax,offset=[0,0]):
     return im
     
 def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
 
@@ -39,11 +40,12 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
 #    xlim([-30,130])
 #    ylim([-105,130])
 def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
@@ -55,11 +57,12 @@ def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
 def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
@@ -73,9 +76,12 @@ def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
 def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
