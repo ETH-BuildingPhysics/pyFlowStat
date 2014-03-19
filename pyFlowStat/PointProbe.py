@@ -354,6 +354,42 @@ class PointProbe(object):
 #            umag[i] = nrm2(a)
             #umag[i] = np.linalg.norm(self.data['u'][i,:])
         
+    def createScalarDict(self):
+        '''
+        Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar
+        
+        Member variable data (python ditionary) is created. It holds all the series
+        which can be generate with the t and U. To add a new entry to data,
+        type somthing like:
+        pt.PointProbe()
+        pt.readFromLDA(point,file)
+        pt['myNewKey'] = myWiredNewEntry 
+        
+        By default, the following keys are included in data:
+            pos:  [numpy.array. shape=(3)] Probe location
+            frq:  [float] Sample frequence
+            S:    [numpy.array. shape=(N,3)] Scalar S
+            t:    [numpy.array. shape=(N)]   Time t
+            s:    [numpy.array. shape=(N,3)] Scalar fluctuation u
+            Soo:  [numpy.array. shape=(N,3)] Mean velocity with infinit window size
+        '''
+        
+        self.data = dict()
+        self.data['pos'] = self.probeLoc
+        # velocity and time
+        self.data['S'] = self.probeVar
+        self.data['t'] = self.probeTimes
+        
+        # timestep, sample frequence
+        self.data['dt']=self.data['t'][1]-self.data['t'][0]
+        self.data['frq'] = 1/self.data['dt']
+        
+        #mean
+        Soo = np.zeros((self.data['S'].shape))
+        Soo = np.mean(self.data['S'])
+        self.data['Soo'] = Soo
+        # fluctuation
+        self.data['s'] = self.data['S']-self.data['Soo']
 
     def generateStatistics(self,doDetrend=True):
         '''
@@ -646,6 +682,46 @@ def getVectorPointProbeList(filename):
         pts[i].probeTimes = np.array(pts[i].probeTimes)
         pts[i].probeVar = np.array(pts[i].probeVar)
         pts[i].createDataDict()
+        
+    return pts
+    
+def getScalarPointProbeList(filename):
+    '''
+    Arguments:
+        * filename: [string] path to file which contains all the points of the line.
+        filename is normally generate by the OpenFOAM sample tool for probes.
+    Returns
+        * pts: [list] list of PointProbe object
+    '''
+    pointlist=getDataPoints(filename)
+    pts=[PointProbe()]*len(pointlist)
+    
+    for i in range(0,len(pointlist)):
+        pts[i]=PointProbe()
+        pts[i].probeLoc=pointlist[i]
+        
+    # read file 
+    crs = open(filename, 'r')
+    lineno = 0
+    for line in crs:
+        # This regex finds all numbers in a given string.
+        # It can find floats and integers writen in normal mode (10000) or with power of 10 (10e3).
+        match = np.array(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line))
+        match=match.astype(np.float)
+
+        if lineno>3 and len(match)>0:
+            for i in range(0,len(pointlist)):
+                pts[i].probeTimes.append(match[0])
+                pts[i].probeVar.append(match[1+i])
+        else:
+            pass
+        lineno = lineno+1
+    crs.close()
+    
+    for i in range(0,len(pointlist)):
+        pts[i].probeTimes = np.array(pts[i].probeTimes)
+        pts[i].probeVar = np.array(pts[i].probeVar)
+        pts[i].createScalarDict()
         
     return pts
     
