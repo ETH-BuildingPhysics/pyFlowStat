@@ -12,7 +12,7 @@ def PlotField(ax,surface,field,vmin,vmax,offset=[0,0]):
     im=ax.imshow(surface.data[field],vmin=vmin,vmax=vmax,interpolation='nearest',extent=extent)
     return im
     
-def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
+def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11):
     ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
     xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
     yrange=np.linspace(surface.minY,surface.maxY,ysteps)
@@ -23,8 +23,8 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
     yrange=yrange-offset[1]
 
     X,Y = np.meshgrid(xrange, yrange)
-    contour_levels = np.linspace(vmin, vmax, 20)
-    contour_levels_label = np.linspace(vmin, vmax, 10)
+    contour_levels = np.linspace(vmin, vmax, contourlevels)
+    contour_levels_label = np.linspace(vmin, vmax, contourlabels)
     print field
     cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=.75)
 #    ax.colorbar()
