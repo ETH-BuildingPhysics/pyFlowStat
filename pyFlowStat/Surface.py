@@ -10,6 +10,7 @@ import scipy as sp
 import os
 import matplotlib.tri as tri
 from pyFlowStat.TriSurface import TriSurface
+from pyFlowStat.TriSurface import parseFoamFile
 
 # special modules
 from ctypes import *
@@ -328,17 +329,116 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
         
+    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
+        '''
+        helper function
+        methode=linear,cubic (default)
+        '''
+        if method=='cubic':
+            itp=tri.CubicTriInterpolator(triangulation,values)
+        elif method=='linear':
+            itp=tri.LinearTriInterpolator(triangulation,values)
+        else:
+            itp=tri.CubicTriInterpolator(triangulation,values)
+        zi_ma = itp(grid_x, grid_y)
+        zi=zi_ma.filled(np.nan)
+            
+        return zi
+        
+    def readFromFoamFile(self,pointsFile,facesFile,velFile,scalarFileList=[],symTensorFileList=[],viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None,interpolationMethod='cubic'):
+        
+        points=parseFoamFile(pointsFile)
+        faces = parseFoamFile(facesFile)[:,1:4]
+        
+        print 'Creating Grid and Interpolator'
+        if dx==None:
+            dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
+            dx=np.min(dxlist)
+        if dy==None:
+            dylist=[a for a in np.abs(np.diff(points[:,1])) if a>0]
+            dy=np.min(dylist)
+            
+        MaxX=np.max(points[:,0])
+        MinX=np.min(points[:,0])
+        MaxY=np.max(points[:,1])
+        MinY=np.min(points[:,1])
+        extent=[MinX-dx/2,MaxX+dx/2,MinY-dy/2,MaxY+dy/2]
+        #extent=[MinX,MaxX,MinY,MaxY]
+
+        cellsX=int((MaxX-MinX)/dx)+1
+        cellsY=int((MaxY-MinY)/dy)+1
+
+        grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+        triang = tri.Triangulation(points[:,0], points[:,1], faces)
+        
+        print 'Reading Velocity'        
+        s=TriSurface()
+        s.storeMesh=False
+        s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
+        
+        print 'Interpolating Velocity'
+        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
+        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
+        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod)
+        self.vx=np.flipud(vx_i)
+        self.vy=np.flipud(vy_i)
+        self.vz=np.flipud(vz_i)
+        
+        self.dx=dx
+        self.dy=dy
+        self.minX=MinX
+        self.maxX=MaxX
+        self.minY=MinY
+        self.maxY=MaxY
+        self.extent=extent
+        self.createDataDict()
+        
+        for scalarFile in scalarFileList:
+            varName=os.path.basename(scalarFile)
+            print 'Reading Scalar',varName
+            s.vars=parseFoamFile(scalarFile)
+            scalar_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
+            self.data[varName]=np.flipud(scalar_i)
+            
+        for symTensorFile in symTensorFileList:
+            varName=os.path.basename(symTensorFile)
+            print 'Reading Tenstor',varName
+            s.vars=parseFoamFile(symTensorFile)
+            tensor_11=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
+            tensor_12=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
+            tensor_13=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod)
+            tensor_22=self.interpolateField(s.vars[:,3],grid_x, grid_y, triang,method=interpolationMethod)
+            tensor_23=self.interpolateField(s.vars[:,4],grid_x, grid_y, triang,method=interpolationMethod)
+            tensor_33=self.interpolateField(s.vars[:,5],grid_x, grid_y, triang,method=interpolationMethod)
+            
+            tensor_11=np.flipud(tensor_11)
+            tensor_12=np.flipud(tensor_12)
+            tensor_13=np.flipud(tensor_13)
+            tensor_22=np.flipud(tensor_22)
+            tensor_23=np.flipud(tensor_23)
+            tensor_33=np.flipud(tensor_33)
+            
+            if varName=='UPrime2Mean':
+                print 'Adding UPrime2Mean'
+                self.data['uu_bar']=tensor_11
+                self.data['uv_bar']=tensor_12
+                self.data['uw_bar']=tensor_13
+                self.data['vv_bar']=tensor_22
+                self.data['vw_bar']=tensor_23
+                self.data['ww_bar']=tensor_33
+                self.data['TKE_bar']=0.5*(self.data['uu_bar']+self.data['vv_bar']+self.data['ww_bar'])
+            else:
+                print 'Adding symTensor',varName
+                self.data[varName+'_ii']=[tensor_11,tensor_12,tensor_13,tensor_22,tensor_23,tensor_33]
+
+
+        
     def readVelFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
         
-        def doInterp(triang,values,grid_x, grid_y):
-            #lin=tri.LinearTriInterpolator(triang,values)
-            cub=tri.CubicTriInterpolator(triang,values)
-            zi_ma = cub(grid_x, grid_y)
-            zi=zi_ma.filled(np.nan)
-            return zi
-            
+        
         s=TriSurface()
         s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
+        
         points=s.xys
         if dx==None:
             dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
@@ -358,17 +458,183 @@ class Surface(object):
         #print cellsX,cellsY
         grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
         triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
-        vx_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
-        vy_i=doInterp(triang,s.vars[:,1],grid_x, grid_y)
-        vz_i=doInterp(triang,s.vars[:,2],grid_x, grid_y)
+
+        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y,triang)
+        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y,triang)
+        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y,triang)
 
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
         self.vz=np.flipud(vz_i)
         self.dx=dx
         self.dy=dy
+        self.minX=MinX
+        self.maxX=MaxX
+        self.minY=MinY
+        self.maxY=MaxY
         self.createDataDict()
         self.extent=extent
+        
+    def readScalarFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+
+            
+        varName=os.path.basename(varsFile)    
+        s=TriSurface()
+        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
+        points=s.xys
+        
+        if not hasattr(self,'data'):
+            print 'dict does not exists'
+            if dx==None:
+                dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
+                dx=np.min(dxlist)
+            if dy==None:
+                dylist=[a for a in np.abs(np.diff(points[:,1])) if a>0]
+                dy=np.min(dylist)
+            
+            MaxX=np.max(points[:,0])
+            MinX=np.min(points[:,0])
+            MaxY=np.max(points[:,1])
+            MinY=np.min(points[:,1])
+            extent=[MinX,MaxX,MinY,MaxY]
+            #print MinX,MaxX,MinY,MaxY
+
+        
+        
+            cellsX=int((MaxX-MinX)/dx)
+            cellsY=int((MaxY-MinY)/dy)
+            #print cellsX,cellsY
+            grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+            scalar_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            vx_i=np.empty(scalar_i.shape)
+            vy_i=np.empty(scalar_i.shape)
+            vz_i=np.empty(scalar_i.shape)
+            vx_i[:]=np.NAN
+            vy_i[:]=np.NAN
+            vz_i[:]=np.NAN
+    
+            self.vx=np.flipud(vx_i)
+            self.vy=np.flipud(vy_i)
+            self.vz=np.flipud(vz_i)
+            self.extent=extent
+            self.minX=MinX
+            self.maxX=MaxX
+            self.minY=MinY
+            self.maxY=MaxY
+            self.dx=dx
+            self.dy=dy
+            self.createDataDict()
+            
+            self.data[varName]=np.flipud(scalar_i)
+        else:
+            print 'dict exists'
+            MaxX=self.extent[1]
+            MinX=self.extent[0]
+            MaxY=self.extent[3]
+            MinY=self.extent[2]
+            
+            cellsX=int((MaxX-MinX)/self.dx)
+            cellsY=int((MaxY-MinY)/self.dy)
+            #print cellsX,cellsY
+            grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+            scalar_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            print 'adding scalar',varName
+            self.data[varName]=np.flipud(scalar_i)
+            
+        
+    def readReStressFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+          
+  
+        s=TriSurface()
+        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
+        points=s.xys
+        
+        if not hasattr(self,'data'):
+            print 'dict does not exists'
+            if dx==None:
+                dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
+                dx=np.min(dxlist)
+            if dy==None:
+                dylist=[a for a in np.abs(np.diff(points[:,1])) if a>0]
+                dy=np.min(dylist)
+            
+            MaxX=np.max(points[:,0])
+            MinX=np.min(points[:,0])
+            MaxY=np.max(points[:,1])
+            MinY=np.min(points[:,1])
+            extent=[MinX,MaxX,MinY,MaxY]
+            #print MinX,MaxX,MinY,MaxY
+
+        
+        
+            cellsX=int((MaxX-MinX)/dx)
+            cellsY=int((MaxY-MinY)/dy)
+            #print cellsX,cellsY
+            grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+            uu_bar=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            uv_bar=doInterp(triang,s.vars[:,1],grid_x, grid_y)
+            uw_bar=doInterp(triang,s.vars[:,2],grid_x, grid_y)
+            vv_bar=doInterp(triang,s.vars[:,3],grid_x, grid_y)
+            vw_bar=doInterp(triang,s.vars[:,4],grid_x, grid_y)
+            ww_bar=doInterp(triang,s.vars[:,5],grid_x, grid_y)
+            vx_i=np.empty(scalar_i.shape)
+            vy_i=np.empty(scalar_i.shape)
+            vz_i=np.empty(scalar_i.shape)
+            vx_i[:]=np.NAN
+            vy_i[:]=np.NAN
+            vz_i[:]=np.NAN
+    
+            self.vx=np.flipud(vx_i)
+            self.vy=np.flipud(vy_i)
+            self.vz=np.flipud(vz_i)
+            self.extent=extent
+            self.dx=dx
+            self.dy=dy
+            self.minX=MinX
+            self.maxX=MaxX
+            self.minY=MinY
+            self.maxY=MaxY
+            self.createDataDict()
+            
+            print 'adding Tensor'
+            self.data['uu_bar']=np.flipud(uu_bar)
+            self.data['uv_bar']=np.flipud(uv_bar)
+            self.data['uw_bar']=np.flipud(uw_bar)
+            self.data['vv_bar']=np.flipud(vv_bar)
+            self.data['vw_bar']=np.flipud(vw_bar)
+            self.data['ww_bar']=np.flipud(ww_bar)
+            self.data['TKE_bar']=0.5*(self.data['uu_bar']+self.data['vv_bar']+self.data['ww_bar'])
+            
+        else:
+            print 'dict exists'
+            MaxX=self.maxX
+            MinX=self.minX
+            MaxY=self.maxY
+            MinY=self.minY
+            
+            cellsX=int((MaxX-MinX)/self.dx)
+            cellsY=int((MaxY-MinY)/self.dy)
+            #print cellsX,cellsY
+            grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+            uu_bar=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            uv_bar=doInterp(triang,s.vars[:,1],grid_x, grid_y)
+            uw_bar=doInterp(triang,s.vars[:,2],grid_x, grid_y)
+            vv_bar=doInterp(triang,s.vars[:,3],grid_x, grid_y)
+            vw_bar=doInterp(triang,s.vars[:,4],grid_x, grid_y)
+            ww_bar=doInterp(triang,s.vars[:,5],grid_x, grid_y)
+            print 'adding Tensor'
+            self.data['uu_bar']=np.flipud(uu_bar)
+            self.data['uv_bar']=np.flipud(uv_bar)
+            self.data['uw_bar']=np.flipud(uw_bar)
+            self.data['vv_bar']=np.flipud(vv_bar)
+            self.data['vw_bar']=np.flipud(vw_bar)
+            self.data['ww_bar']=np.flipud(ww_bar)
+            self.data['TKE_bar']=0.5*(self.data['uu_bar']+self.data['vv_bar']+self.data['ww_bar'])
+        
         
 def getVC7SurfaceList(directory,nr=0,step=1):
     '''
