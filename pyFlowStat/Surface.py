@@ -669,3 +669,23 @@ def getVC7filelist(directory,nr=0,step=1):
         filelist=filelist[0:min(len(filelist),nr)]
     
     return filelist
+    
+class rect(object):
+    def __init__(self,x0,x1,y0,y1,name=''):
+        self.x0=x0
+        self.x1=x1
+        self.y0=y0
+        self.y1=y1
+        self.name=name
+        
+    def width(self):
+        return np.abs(self.x1-self.x0)
+    
+    def height(self):
+        return np.abs(self.y1-self.y0)
+    
+    def p1(self):
+        xmin=np.min([self.x0,self.x1])
+        ymin=np.min([self.y0,self.y1])
+        
+        return (xmin,ymin)
