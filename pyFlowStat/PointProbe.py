@@ -19,6 +19,7 @@ import re
 import os
 import csv
 import collections
+import h5py
 
 #scientific modules
 import numpy as np
@@ -805,3 +806,97 @@ def readcsv(csvfile,delimiter,fieldnames=None):
             for (k,v) in row.items():
                 data[k].append(float(v))
     return data
+
+
+def savePPlist_hdf5(ppList,hdf5file):
+    '''
+    Save a point probe list, generate py getVectorPointProbeList for example,
+    in a hdf5 data file. The hdf5 file will have the following structure:
+    
+    hdf5file
+    {
+        GROUP "pointProbe1"
+        {
+            DATASET "U"   {shape: (N,3)}
+            DATASET "t"   {shape: (N)}
+            DATASET "pos" {shape: (3)}
+        }
+        ...
+        ...
+        GROUP "pointProbe23"
+        {
+            DATASET "U"   {shape: (N,3)}
+            DATASET "t"   {shape: (N)}
+            DATASET "pos" {shape: (3)}
+        }
+        ...
+        ...
+    }
+
+
+    Arguments:
+        * ppList: [python List] List of PointPorbe object
+        * hdf5file: [str] path to target file.
+        
+    Returns:
+        * None
+    '''
+    fwm = h5py.File(hdf5file, 'w-')
+    for i in range(len(ppList)):
+        # group name
+        gName = 'pointProbe'+str(i)
+        #print('save '+str(gName))
+        gppi = fwm.create_group(gName)
+        # iter dict keys
+        keyList = ['U','t','pos']
+        for key in keyList: 
+            gppi.create_dataset(key,data=ppList[i][key])
+
+            
+def loadPPlist_hdf5(hdf5file):
+    '''
+    Load and return a point probe list from a hdf5 data file. eager evaluation
+    only. The hdf5 file must have the following structure:
+    
+    hdf5file
+    {
+        GROUP "pointProbe1"
+        {
+            DATASET "U"   {shape: (N,3)}
+            DATASET "t"   {shape: (N)}
+            DATASET "pos" {shape: (3)}
+        }
+        ...
+        ...
+        GROUP "pointProbe23"
+        {
+            DATASET "U"   {shape: (N,3)}
+            DATASET "t"   {shape: (N)}
+            DATASET "pos" {shape: (3)}
+        }
+        ...
+        ...
+    }
+
+
+    Arguments:
+        * hdf5file: [str] path to source file.
+        
+    Returns:
+        * ppList: [python list] list of PointProbe object.
+    '''    
+    
+    ppList = []
+    idx = 0
+    fr = h5py.File(hdf5file, 'r')
+    for i in range(len(fr.keys())):
+        gName = 'pointProbe'+str(i)
+        #print('load '+str(gName))
+        ppList.append(PointProbe())
+        ppList[idx].probeVar = fr[gName]['U'].value
+        ppList[idx].probeTimes = fr[gName]['t'].value
+        ppList[idx].probeLoc = fr[gName]['pos'].value
+        ppList[idx].createDataDict()
+        idx = idx+1
+    fr.close()
+    return ppList
