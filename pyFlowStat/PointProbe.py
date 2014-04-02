@@ -19,7 +19,7 @@ import re
 import os
 import csv
 import collections
-import h5py
+
 
 #scientific modules
 import numpy as np
@@ -807,77 +807,3 @@ def readcsv(csvfile,delimiter,fieldnames=None):
             for (k,v) in row.items():
                 data[k].append(float(v))
     return data
-
-
-def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
-    '''
-    Save a point probe list, generate py getVectorPointProbeList for example,
-    in a hdf5 data file. The hdf5 file will have the following structure:
-
-    Arguments:
-        * ppList: [python List] List of PointPorbe object
-        * hdf5file: [str] path to target file.
-        * keyrange: [str] keys included in the pointProbe which will be
-          saved in the hdf5 file.
-              * 'raw' = only U, t and pos (default)
-              * 'full' = U, t and pos, plus all the other keys included in ppList[i].data
-
-    Returns:
-        * None
-    '''
-    fwm = h5py.File(hdf5file, 'w-')
-    for i in range(len(ppList)):
-        # group name
-        gName = 'pointProbe'+str(i)
-        #print('save '+str(gName))
-        gppi = fwm.create_group(gName)
-        # iter dict keys
-        if keyrange=='raw':
-            keyList = ['U','t','pos']
-            for key in keyList:
-                gppi.create_dataset(key,data=ppList[i][key])
-        elif keyrange=='full':
-            for key in ppList[i].data.keys():
-                gppi.create_dataset(key,data=ppList[i][key])
-    fwm.close()
-
-
-def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
-    '''
-    Load and return a point probe list from a hdf5 data file. eager evaluation
-    only. The hdf5 file must have the following structure:
-
-    Arguments:
-        * hdf5file: [str] path to source file.
-        * keyrange: [str] keys included in the pointProbe which will be
-          saved in the hdf5 file.
-              * 'raw' = only U, t and pos (default)
-              * 'full' = U, t and pos, plus all the other keys included in ppList[i].data
-        * createDict: [bool] create data dict.
-
-    Returns:
-        * ppList: [python list] list of PointProbe object.
-    '''
-
-    ppList = []
-    fr = h5py.File(hdf5file, 'r')
-    for i in range(len(fr.keys())):
-        gName = 'pointProbe'+str(i)
-        #print('load '+str(gName))
-        ppList.append(PointProbe())
-        ppList[i].probeVar = fr[gName]['U'].value
-        ppList[i].probeTimes = fr[gName]['t'].value
-        ppList[i].probeLoc = fr[gName]['pos'].value
-
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in fr[gName].keys():
-                ppList[i].data[str(key)] = fr[gName][key].value
-
-        if createDict==False:
-            pass
-        else:
-            ppList[i].createDataDict()
-    fr.close()
-    return ppList
