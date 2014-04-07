@@ -85,8 +85,7 @@ def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
 def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
     '''
     Load and return a point probe list from a hdf5 data file. eager evaluation
-    only. The hdf5 file must have the following minimal
-    structure:
+    only. The hdf5 file must have the following minimal structure:
 
     myData.hdf5:
         * pointProbe1  (GROUP)
@@ -103,11 +102,10 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
         * keyrange: [str] keys included in the pointProbe which will be
           saved in the hdf5 file.
               * 'raw' = only U, t and pos (default)
-              * 'full' = U, t and pos, plus all the other keys included
-              in ppList[i].data
+              * 'full' = 'raw', plus all the other keys included in ppList[i].data
         * createDict: [bool] create data dict. Usefull if the hdf5 contains
-        only the raw data or if you load only the raw data from a full
-        hdf5.
+          only the raw data or if you load only the raw data from a full
+          hdf5.
 
     Returns:
         * ppList: [python list] list of PointProbe object.
