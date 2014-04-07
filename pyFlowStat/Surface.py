@@ -350,7 +350,7 @@ class Surface(object):
         print 'Reading Velocity' 
         
         s=TriSurface()
-        s.storeMesh=False
+        #s.storeMesh=False
         s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
         
         points=s.xys
