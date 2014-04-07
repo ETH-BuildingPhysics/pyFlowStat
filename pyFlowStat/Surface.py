@@ -347,8 +347,16 @@ class Surface(object):
         
     def readFromFoamFile(self,pointsFile,facesFile,velFile,scalarFileList=[],symTensorFileList=[],viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None,interpolationMethod='cubic'):
         
-        points=parseFoamFile(pointsFile)
-        faces = parseFoamFile(facesFile)[:,1:4]
+        print 'Reading Velocity' 
+        
+        s=TriSurface()
+        s.storeMesh=False
+        s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
+        
+        points=s.xys
+        faces=s.faces
+        #points=parseFoamFile(pointsFile)
+        #faces = parseFoamFile(facesFile)[:,1:4]
         
         print 'Creating Grid and Interpolator'
         if dx==None:
@@ -370,12 +378,7 @@ class Surface(object):
 
         grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
         triang = tri.Triangulation(points[:,0], points[:,1], faces)
-        
-        print 'Reading Velocity'        
-        s=TriSurface()
-        s.storeMesh=False
-        s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
-        
+ 
         print 'Interpolating Velocity'
         vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
         vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
