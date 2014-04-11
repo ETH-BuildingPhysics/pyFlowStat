@@ -93,6 +93,9 @@ class Surface(object):
         self.vx=[]
         self.vy=[]
         self.vz=[]
+        
+        self.dx = float()
+        self.dy = float()        
 
         self.minX = float()
         self.maxX = float()

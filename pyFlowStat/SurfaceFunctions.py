@@ -74,6 +74,9 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
         gsurfi.create_dataset('vx',data=surfaceList[i].vx)
         gsurfi.create_dataset('vy',data=surfaceList[i].vy)
         gsurfi.create_dataset('vz',data=surfaceList[i].vz)
+        
+        gsurfi.create_dataset('dx',data=surfaceList[i].dx)
+        gsurfi.create_dataset('dy',data=surfaceList[i].dy)
 
         dim=[surfaceList[i].minX, surfaceList[i].minY, surfaceList[i].maxX, surfaceList[i].maxY]
         gsurfi.create_dataset('dim',data=dim)
@@ -86,7 +89,10 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
         #add all data from the dictionnary
         elif keyrange=='full':
             for key in surfaceList[i].data.keys():
-                gsurfi.create_dataset(key,data=surfaceList[i].data[key])
+                if (key=='dx' or key=='dy'):
+                    pass
+                else:
+                    gsurfi.create_dataset(key,data=surfaceList[i].data[key])
     fwm.close()
 
 
@@ -130,6 +136,9 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
         surfaceList[i].vx = fr[gName]['vx'].value
         surfaceList[i].vy = fr[gName]['vy'].value
         surfaceList[i].vz = fr[gName]['vz'].value
+        
+        surfaceList[i].dx = fr[gName]['dx'].value
+        surfaceList[i].dy = fr[gName]['dy'].value
 
         dim = fr[gName]['dim'].value
         surfaceList[i].minX = dim[0]
@@ -200,6 +209,9 @@ def loadSurface_hdf5(hdf5fileObj,surfaceNo,keyrange='raw'):
     s.vx = hdf5fileObj[gName]['vx'].value
     s.vy = hdf5fileObj[gName]['vy'].value
     s.vz = hdf5fileObj[gName]['vz'].value
+    
+    s.dx = hdf5fileObj[gName]['dx'].value
+    s.dy = hdf5fileObj[gName]['dy'].value
 
     dim = hdf5fileObj[gName]['dim'].value
     s.minX = dim[0]
