@@ -74,7 +74,7 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
         gsurfi.create_dataset('vx',data=surfaceList[i].vx)
         gsurfi.create_dataset('vy',data=surfaceList[i].vy)
         gsurfi.create_dataset('vz',data=surfaceList[i].vz)
-        
+
         gsurfi.create_dataset('dx',data=surfaceList[i].dx)
         gsurfi.create_dataset('dy',data=surfaceList[i].dy)
 
@@ -89,7 +89,7 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
         #add all data from the dictionnary
         elif keyrange=='full':
             for key in surfaceList[i].data.keys():
-                if (key=='dx' or key=='dy'):
+                if (key=='dx' or key=='dy' or key=='Ux' or key=='Uy' or key=='Uz'):
                     pass
                 else:
                     gsurfi.create_dataset(key,data=surfaceList[i].data[key])
@@ -136,7 +136,7 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
         surfaceList[i].vx = fr[gName]['vx'].value
         surfaceList[i].vy = fr[gName]['vy'].value
         surfaceList[i].vz = fr[gName]['vz'].value
-        
+
         surfaceList[i].dx = fr[gName]['dx'].value
         surfaceList[i].dy = fr[gName]['dy'].value
 
@@ -153,8 +153,14 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
             pass
         elif keyrange=='full':
             for key in fr[gName].keys():
-                if (key=='vx' or key=='vy' or key=='vz' or key=='dim' or key=='dimExtent'):
+                if (key=='dim' or key=='dimExtent'):
                     pass
+                elif (key=='vx'):
+                    surfaceList[i].data[str('Ux')] = fr[gName][key].value
+                elif (key=='vy'):
+                    surfaceList[i].data[str('Uy')] = fr[gName][key].value
+                elif (key=='vz'):
+                    surfaceList[i].data[str('Uz')] = fr[gName][key].value
                 else:
                     surfaceList[i].data[str(key)] = fr[gName][key].value
 
@@ -209,7 +215,7 @@ def loadSurface_hdf5(hdf5fileObj,surfaceNo,keyrange='raw'):
     s.vx = hdf5fileObj[gName]['vx'].value
     s.vy = hdf5fileObj[gName]['vy'].value
     s.vz = hdf5fileObj[gName]['vz'].value
-    
+
     s.dx = hdf5fileObj[gName]['dx'].value
     s.dy = hdf5fileObj[gName]['dy'].value
 
@@ -226,8 +232,14 @@ def loadSurface_hdf5(hdf5fileObj,surfaceNo,keyrange='raw'):
         pass
     elif keyrange=='full':
         for key in hdf5fileObj[gName].keys():
-            if (key=='vx' or key=='vy' or key=='vz' or key=='dim' or key=='dimExtent'):
+            if ( key=='dim' or key=='dimExtent'):
                 pass
+            elif (key=='vx'):
+                s.data[str('Ux')] = hdf5fileObj[gName][key].value
+            elif (key=='vy'):
+                s.data[str('Uy')] = hdf5fileObj[gName][key].value
+            elif (key=='vz'):
+                s.data[str('Uz')] = hdf5fileObj[gName][key].value
             else:
                 s.data[str(key)] = hdf5fileObj[gName][key].value
 
