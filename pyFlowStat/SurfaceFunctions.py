@@ -246,4 +246,89 @@ def loadSurface_hdf5(hdf5fileObj,surfaceNo,keyrange='raw'):
     return s
 
 
+def loadPPfromSurf_hdf5(hdf5fileObj,pixloc,keyrange='raw',createDict=False,dt=1.0,ptloc=[0.0,0.0,0.0]):
+    '''
+    Generate a PointPorbe object from a list of surfaces saved in a hdf5.
+    The hdf5 file will have the following minimal structure:
 
+    myData.hdf5:
+        * Surface1  (GROUP)
+            * 'vx'   (DATASET)
+            * 'vy' (DATASET)
+            * 'vz'   (DATASET)
+            * 'dim'  (DATASET)
+            * 'dimExtent' (DATASET)
+        * Surfacei  (GROUP)
+            * 'vx'   (DATASET)
+            * 'vy' (DATASET)
+            * 'vz'   (DATASET)
+            * 'dim'  (DATASET)
+            * 'dimExtent' (DATASET)
+
+    Arguments:
+        * hdf5fileObj: an h5py file object.
+        * pixloc: [python list, shape=[2]] pixel location .
+        * keyrange: [string] 'raw' or 'full' (default='raw'. 'full' not implemented).
+        * createDict: [bool] create PointPorbe dictonnary (default=False).
+        * dt: [float] time step between the surfaces.
+        * ptloc: [python list, shape=[3]] point location (default=(0,0,0)).
+
+    Returns:
+        * pt: a PointProbe object (see pyFlowStat.PointProbe)
+
+
+    Examples:
+    >>> import h5py
+    >>> from pyFlowStat.Surface import surface
+    >>> from pyFlowStat.SurfaceFunctions import SurfaceFunctions
+    >>> h5obj = h5pyFile('mydata.hdf5','r')
+    >>> pt = SurfaceFunctions.loadPPfromSurf_hdf5(h5obj,(140,53),keyrange='raw',dt=0.04)
+    >>> h5obj.close()
+    '''
+    pt = pp.PointProbe()
+
+    # get number of surfaces
+    nbsurf = len(hdf5fileObj.keys())
+
+    # generate probeVar and probeTimes
+    probeVar = np.zeros((nbsurf,3))
+    probeTimes = np.zeros(nbsurf)
+
+
+    # append velocity v and time t to PointProbe. Add extra variable if requiered
+    for i in range(len(hdf5fileObj.keys())):
+        gName = 'Surface'+str(i)
+
+        vx = hdf5fileObj[gName]['vx'][pixloc[0],pixloc[1]]
+        vy = hdf5fileObj[gName]['vy'][pixloc[0],pixloc[1]]
+        vz = hdf5fileObj[gName]['vz'][pixloc[0],pixloc[1]]
+        probeVar[i,0] = vx
+        probeVar[i,1] = vy
+        probeVar[i,2] = vz
+
+        probeTimes[i] = i*dt
+
+#       crappy... needs improvement
+#        if keyrange=='raw':
+#            pass
+#        elif keyrange=='full':
+#            for key in hdf5fileObj[gName].keys():
+#                if ( key=='dim' or key=='dimExtent' or key=='vx' or key=='vy' or key=='vz'):
+#                    pass
+#                else:
+#                    pt.data[key].append( hdf5fileObj[gName][key][pixloc[0],pixloc[1]] )
+
+    # add location to PointPorbe
+    pt.probeLoc.append(ptloc[0])
+    pt.probeLoc.append(ptloc[1])
+    pt.probeLoc.append(ptloc[2])
+
+    # add probeVar and probeTimes to pt
+    pt.probeVar = probeVar
+    pt.probeTimes = probeTimes
+
+
+    if createDict==True:
+        pt.createDataDict()
+
+    return pt
