@@ -49,7 +49,6 @@ def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
-    u=np.nan_to_num(np.sqrt(surface.data['Ux']**2+surface.data['Uy']**2))
 
     cnorm=mpl.colors.Normalize(vmin=vmin,vmax=vmax)
 
@@ -75,7 +74,7 @@ def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
     return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
-def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0]):
+def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0],spacing=1):
     ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
     xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
     yrange=np.linspace(surface.minY,surface.maxY,ysteps)
@@ -85,4 +84,4 @@ def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0]):
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
-    return plt.quiver(X,Y,surface.data['Ux'],surface.data['Uy'],scale=scale,angles='uv',units='xy',width=0.1)
+    return plt.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data['Ux'][::spacing,::spacing],surface.data['Uy'][::spacing,::spacing],scale=scale,angles='uv',units='xy',width=0.1)

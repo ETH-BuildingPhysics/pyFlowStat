@@ -500,90 +500,56 @@ class PointProbe(object):
 
             #print res
             return res
-
+        
+        def checkAutoCorr(xdata,ydata,threshold=0.1):
+            ratio1=1/(ydata[0]-ydata[1])*(ydata[1]-ydata[2])
+            #ratio2=1/(ydata[1]-ydata[2])*(ydata[2]-ydata[3])
+    
+            if ratio1<threshold:
+                return False #bad correlation
+            else:
+                return True
+            
+        def doAutoCorr(xkey,ykey,Tkey,Lkey=None,threshold=0.1):
+            xdata=self.data[xkey]
+            ydata=self.data[ykey]
+            
+            if checkAutoCorr(xdata,ydata,threshold=threshold):
+                try:
+                    popt, pcov = tt.fit_exp_correlation(xdata,ydata)
+                    #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
+                    self.data[Tkey]=popt[0]*self.data['dt']
+                    if Lkey:
+                        self.data[Lkey]=self.data[Tkey]*self.Umean()
+                except RuntimeError:
+                    print("Error - curve_fit failed")
+                    self.data[Tkey]=0
+                    if Lkey:
+                        self.data[Lkey]=0
+            else:
+                self.data[Tkey]=0
+                if Lkey:
+                    self.data[Lkey]=0
+            
         corr_keys=['taur11','taur22','taur33','r11','r22','r33']
         if len(set(corr_keys) & set(self.data.keys()))!=len(corr_keys):
             self.generateStatistics()
             print "Generating Missing Statistics"
+            
+        threshold=0.1
 
-        xdata=self.data['taur11']
-        ydata=self.data['r11']
+        
+        doAutoCorr('taur11','r11','Txx','Lxx',threshold=threshold)
+        doAutoCorr('taur22','r22','Tyy','Lyy',threshold=threshold)
+        doAutoCorr('taur33','r33','Tzz','Lzz',threshold=threshold)
+        
+        doAutoCorr('taur12','r12','Txy',threshold=threshold)
+        doAutoCorr('taur13','r13','Txz',threshold=threshold)
+        
+        doAutoCorr('taur23','r23','Tyz',threshold=threshold)
+        
+        doAutoCorr('taurmag','rmag','T','L',threshold=threshold)
 
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
-            self.data['Txx']=popt[0]*self.data['dt']
-            self.data['Lxx']=self.data['Txx']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Txx']=0
-            self.data['Lxx']=0
-
-        xdata=self.data['taur22']
-        ydata=self.data['r22']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['Tyy']=popt[0]*self.data['dt']
-            self.data['Lyy']=self.data['Tyy']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Tyy']=0
-            self.data['Lyy']=0
-
-        xdata=self.data['taur33']
-        ydata=self.data['r33']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['Tzz']=popt[0]*self.data['dt']
-            self.data['Lzz']=self.data['Tzz']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Tzz']=0
-            self.data['Lzz']=0
-
-        xdata=self.data['taur12']
-        ydata=self.data['r12']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['Txy']=popt[0]*self.data['dt']
-            #self.data['Lzz']=self.data['Tzz']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Txy']=0
-            #self.data['Lzz']=0
-
-        xdata=self.data['taur13']
-        ydata=self.data['r13']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['Txz']=popt[0]*self.data['dt']
-            #self.data['Lzz']=self.data['Tzz']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Txz']=0
-            #self.data['Lzz']=0
-
-        xdata=self.data['taur23']
-        ydata=self.data['r23']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['Tyz']=popt[0]*self.data['dt']
-            #self.data['Lzz']=self.data['Tzz']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['Tyz']=0
-            #self.data['Lzz']=0
-
-        xdata=self.data['taurmag']
-        ydata=self.data['rmag']
-        try:
-            popt, pcov = curve_fit(func_exp,xdata,ydata)
-            self.data['T']=popt[0]*self.data['dt']
-            self.data['L']=self.data['T']*self.Umean()
-        except RuntimeError:
-            print("Error - curve_fit failed")
-            self.data['T']=0
-            self.data['L']=0
 
     def detrend_periodic(self):
         def func_sin_u(Umean):

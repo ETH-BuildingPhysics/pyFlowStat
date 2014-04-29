@@ -23,6 +23,7 @@ import scipy.fftpack as spfft
 import scipy.signal as spsig
 import scipy as sp
 import pylab as pl
+from scipy.optimize import curve_fit
 
 #===========================================================================#
 # functions
@@ -311,3 +312,28 @@ def xcorr_fft(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     res=res[(len(res)-1)/2:-1]
     lags = np.arange(0, maxlags)        
     return res, lags
+
+def func_exp_correlation(x, a):
+    np.seterr('ignore')
+    res = np.exp(-x/a)
+
+    #print res
+    return res
+    
+def fit_exp_correlation(xdata,ydata):
+    '''
+    Fits an exponential function of shape exp(-x/a) to the data and returns a
+    
+    Arguments:
+        * xdata: x-values (e.g lags)
+        * ydata: y-values (e.g auto correlation coefficient)
+        
+    returns:
+        * a: fitter parameter a
+        * pcov: The estimated covariance of a.
+    
+    '''
+    
+    popt, pcov = curve_fit(func_exp_correlation,xdata,ydata)
+    a=popt[0]
+    return a,pcov
