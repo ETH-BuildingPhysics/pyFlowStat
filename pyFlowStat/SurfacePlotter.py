@@ -12,18 +12,19 @@ def PlotField(ax,surface,field,vmin,vmax,offset=[0,0]):
     im=ax.imshow(surface.data[field],vmin=vmin,vmax=vmax,interpolation='nearest',extent=extent)
     return im
     
-def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11):
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
 
     X,Y = np.meshgrid(xrange, yrange)
-    contour_levels = np.linspace(vmin, vmax, 20)
-    contour_levels_label = np.linspace(vmin, vmax, 10)
+    contour_levels = np.linspace(vmin, vmax, contourlevels)
+    contour_levels_label = np.linspace(vmin, vmax, contourlabels)
     print field
     cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=.75)
 #    ax.colorbar()
@@ -39,15 +40,15 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0]):
 #    xlim([-30,130])
 #    ylim([-105,130])
 def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
-    u=np.nan_to_num(np.sqrt(surface.data['Ux']**2+surface.data['Uy']**2))
 
     cnorm=mpl.colors.Normalize(vmin=vmin,vmax=vmax)
 
@@ -55,11 +56,12 @@ def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
 def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
-#    self.OffsetXpos=xrange[self.xpos_left_wall]
-#    self.OffsetYpos=yrange[self.ypos_rooftop]
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
@@ -72,11 +74,14 @@ def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
     return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
-def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0]):
-    yrange = np.arange(surface.minY,surface.maxY+surface.dy,surface.dy)
+def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0],spacing=1):
+    ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
+    xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
+    yrange=np.linspace(surface.minY,surface.maxY,ysteps)
     yrange=np.flipud(yrange)
-    xrange = np.arange(surface.minX,surface.maxX+surface.dx,surface.dx)
+    xrange = np.linspace(surface.minX,surface.maxX,xsteps)
+    
     xrange=xrange-offset[0]
     yrange=yrange-offset[1]
     X,Y = np.meshgrid(xrange, yrange)
-    return plt.quiver(X,Y,surface.data['Ux'],surface.data['Uy'],scale=scale,angles='uv',units='xy',width=0.1)
+    return plt.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data['Ux'][::spacing,::spacing],surface.data['Uy'][::spacing,::spacing],scale=scale,angles='uv',units='xy',width=0.1)

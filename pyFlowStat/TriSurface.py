@@ -109,7 +109,7 @@ class TriSurface(object):
                 self.xys[i,:] = ptInB[0:2]
         else:
             points = parseFoamFile(pointsFile)
-            self.plDef = self.getPlaneData(points)
+            self.plDef = self.genPlaneData(points)
             # generate transformation stuff with points, viewAnchor and view Basis   
             self.viewAnchor  = viewAnchor
             self.affMat,self.invAffMat,self.viewBasis = self.genTransData(points,self.viewAnchor,xViewBasis,yViewBasis)
