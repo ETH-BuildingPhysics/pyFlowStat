@@ -457,6 +457,19 @@ class PointProbe(object):
         self.data['Se33frq'],self.data['Se33'] = tt.dofft(sig=self.data['R33'],samplefrq=self.data['frq'])
 
     def generateDiagnosticStatistics(self):
+        '''
+        Generate diagnostic statistics. Add following entries to the data
+        dictionary:
+            * Uoo_c: Cumulative velocity average
+
+        Arguments:
+            * none
+
+        Returns:
+            * none
+
+
+        '''
         self.data['Uoo_c']=np.zeros(self.data['U'].shape)
 
         self.data['Uoo_c'][0,0]=self.data['U'][0,0]
@@ -500,20 +513,20 @@ class PointProbe(object):
 
             #print res
             return res
-        
+
         def checkAutoCorr(xdata,ydata,threshold=0.1):
             ratio1=1/(ydata[0]-ydata[1])*(ydata[1]-ydata[2])
             #ratio2=1/(ydata[1]-ydata[2])*(ydata[2]-ydata[3])
-    
+
             if ratio1<threshold:
                 return False #bad correlation
             else:
                 return True
-            
+
         def doAutoCorr(xkey,ykey,Tkey,Lkey=None,threshold=0.1):
             xdata=self.data[xkey]
             ydata=self.data[ykey]
-            
+
             if checkAutoCorr(xdata,ydata,threshold=threshold):
                 try:
                     popt, pcov = tt.fit_exp_correlation(xdata,ydata)
@@ -530,24 +543,24 @@ class PointProbe(object):
                 self.data[Tkey]=0
                 if Lkey:
                     self.data[Lkey]=0
-            
+
         corr_keys=['taur11','taur22','taur33','r11','r22','r33']
         if len(set(corr_keys) & set(self.data.keys()))!=len(corr_keys):
             self.generateStatistics()
             print "Generating Missing Statistics"
-            
+
         threshold=0.1
 
-        
+
         doAutoCorr('taur11','r11','Txx','Lxx',threshold=threshold)
         doAutoCorr('taur22','r22','Tyy','Lyy',threshold=threshold)
         doAutoCorr('taur33','r33','Tzz','Lzz',threshold=threshold)
-        
+
         doAutoCorr('taur12','r12','Txy',threshold=threshold)
         doAutoCorr('taur13','r13','Txz',threshold=threshold)
-        
+
         doAutoCorr('taur23','r23','Tyz',threshold=threshold)
-        
+
         doAutoCorr('taurmag','rmag','T','L',threshold=threshold)
 
 
