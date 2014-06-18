@@ -714,7 +714,8 @@ class SurfaceTimeSeries(object):
         self.vz=[]
         
         self.dx = float()
-        self.dy = float()        
+        self.dy = float() 
+        self.dt = float()
 
         self.minX = float()
         self.maxX = float()
@@ -730,7 +731,7 @@ class SurfaceTimeSeries(object):
         self.vy=np.array([s.data['Uy'] for s in slist])
         self.vz=np.array([s.data['Uz'] for s in slist])
         self.dx=slist[0].dx
-        self.dy=slist[0].dy
+        self.dy=slist[0].dy        
         self.minX=slist[0].minX
         self.maxX=slist[0].maxX
         self.minY=slist[0].minY
@@ -738,5 +739,7 @@ class SurfaceTimeSeries(object):
         self.extent=slist[0].extent
         
         self.data['frq']=frq
-        self.data['dt']=1.0/frq
+        self.data['dt']=1.0/frq       
         self.data['t']=np.linspace(0,(self.vx.shape[0]-1)/self.data['frq'],self.vx.shape[0])
+        
+        self.dt=1.0/frq
