@@ -706,3 +706,37 @@ class rect(object):
         ymin=np.min([self.y0,self.y1])
 
         return (xmin,ymin)
+
+class SurfaceTimeSeries(object):
+    def __init__(self):
+        self.vx=[]
+        self.vy=[]
+        self.vz=[]
+        
+        self.dx = float()
+        self.dy = float()        
+
+        self.minX = float()
+        self.maxX = float()
+        self.minY = float()
+        self.maxY = float()
+        self.extent = []
+
+        self.data=dict()
+        return
+        
+    def loadFromSurfaceList(self,slist,frq):
+        self.vx=np.array([s.data['Ux'] for s in slist])
+        self.vy=np.array([s.data['Uy'] for s in slist])
+        self.vz=np.array([s.data['Uz'] for s in slist])
+        self.dx=slist[0].dx
+        self.dy=slist[0].dy
+        self.minX=slist[0].minX
+        self.maxX=slist[0].maxX
+        self.minY=slist[0].minY
+        self.maxY=slist[0].maxY
+        self.extent=slist[0].extent
+        
+        self.data['frq']=frq
+        self.data['dt']=1.0/frq
+        self.data['t']=np.linspace(0,(self.vx.shape[0]-1)/self.data['frq'],self.vx.shape[0])

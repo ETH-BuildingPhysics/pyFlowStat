@@ -135,3 +135,31 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
             ppList[i].createDataDict()
     fr.close()
     return ppList
+
+  
+def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True):
+    '''
+    Create a PointProbe from time resolved field data for a selected location i,j.
+    adds the velocity vector time series, the times, probeLoc and calls createDataDict and generateStatistics
+
+    Arguments:
+        * surfaceTimeSeries: [SurfaceTimeSeries] pyFlowStat.Surface.SurfaceTimeSeries object
+        * frq: [float]  Sample frequency
+        * i,j: [int] index of point
+        * doDetrend: [bool] apply detrending in generateStatistics()
+
+    Returns:
+        * pt: [PointProbe] PointProbe object.
+    '''
+    
+    vel=np.column_stack((surfaceTimeSeries.vx[:,i,j],surfaceTimeSeries.vy[:,i,j],surfaceTimeSeries.vz[:,i,j]))
+    
+    pt=pp.PointProbe()
+    pt.probeVar=vel
+    pt.probeTimes=surfaceTimeSeries.data['t']
+    pt.probeLoc=[i,j]
+    pt.createDataDict()
+    pt.generateStatistics(doDetrend=doDetrend)
+
+    return pt
+ 
