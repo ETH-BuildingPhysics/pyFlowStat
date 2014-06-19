@@ -156,7 +156,7 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
     
     pt=pp.PointProbe()
     pt.probeVar=vel
-    pt.probeTimes=surfaceTimeSeries.data['t']
+    pt.probeTimes=surfaceTimeSeries.t
     pt.probeLoc=[i,j]
     pt.createDataDict()
     pt.generateStatistics(doDetrend=doDetrend)
