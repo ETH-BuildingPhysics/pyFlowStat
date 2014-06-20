@@ -237,7 +237,7 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     return res, lags
 
 
-def xcorr_fft(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
+def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
     '''
     Cross-correlation using scipy.fftconvolve. Similar returns as TurbulenceTools.xcorr()
     but faster with fftconvolve.
