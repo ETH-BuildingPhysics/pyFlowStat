@@ -244,6 +244,8 @@ class PointProbe(object):
                 self.createScalarDict()
             elif self.probeVarDim()==3:           
                 self.createDataDict()
+            else:
+                pass
         else:
             pass
         
@@ -296,13 +298,9 @@ class PointProbe(object):
         '''
 
         # append var to probeVar
-        print('in appendData')
-        print('self.probeVarDim() = '+str(self.probeVarDim()))
         if self.probeVarDim()==1:
-            print('append scalar')
             self.probeVar = np.hstack((self.probeVar,var))
-        elif self.probeVarDim()==3:
-            print('append vector')
+        elif self.probeVarDim()>3:
             self.probeVar = np.vstack((self.probeVar,var))
             
         # append t to probeTimes
