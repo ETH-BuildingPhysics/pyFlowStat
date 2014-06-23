@@ -792,6 +792,95 @@ def getDataPoints(filepath):
 
     return pointlist
 
+
+def getOFPointProbeList(filename,reshape=True,createDict=True):
+    '''
+    Read OpenFOAM probe file. Ideally, the points in the file should form a line.
+    Any kind of probe can be read: scalar, vector, symmetric tensor and tensor.
+    
+    
+    Arguments:
+        * filename: [string] path to a probe file generate by OpenFOAM.
+        * reshape: [bool] rearange tensor and sym tensor in a 3x3 matrix. Default=True.
+        * createDict: [bool] run method createDataDict or createScalarDict. Default=True.
+          (dependion on the dimension of probeVar )after execution of appendData. Default=True.
+
+    Returns
+        * pts: [list] list of PointProbe object
+    '''
+    def getLongVar(match):
+        return match[1+i*varLength:(varLength+1)+i*varLength]
+        
+    pointlist=getDataPoints(filename)
+    pts=[PointProbe()]*len(pointlist)
+
+    for i in range(0,len(pointlist)):
+        pts[i]=PointProbe()
+        pts[i].probeLoc=pointlist[i]
+
+    # read file
+    crs = open(filename, 'r')
+    lineno = 0
+    varLength = 0
+    nbPts = 0
+    for line in crs:       
+        # This regex finds all numbers in a given string.
+        # It can find floats and integers writen in normal mode (10000) or with power of 10 (10e3).
+        match = np.array(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line))
+        match=match.astype(np.float)
+        if lineno==0:
+            nbPts = match.shape[0]
+        
+        if lineno>3 and len(match)>0:
+            # get variable dimension: scalar, vector, symetric tensor (upper triangle 3*3), tensor (3*3)
+            #   if varLength==1: scalar
+            #   if varLength==3: vector
+            #   if varLength==6: symtensor
+            #   if varLength==9: tensor
+            if lineno==4:
+                varLength = int((len(match)-1)/nbPts)
+                
+            for i in range(0,len(pointlist)):
+                var = []
+                pts[i].probeTimes.append(match[0])
+                # read the variable values for PointProbe i
+                if varLength==1:
+                    var = match[1+i]          
+                elif varLength==3:
+                    var = getLongVar(match)
+                elif varLength>3 and reshape==False:
+                    var = getLongVar(match)
+                elif varLength==9 and reshape==True:
+                    var = getLongVar(match).reshape(3,3)
+                elif varLength==6 and reshape==True:
+                    var = np.zeros((3,3))
+                    # very ugly code in this elif loop. You are very welcome to imporve it!!
+                    varVec = getLongVar(match)                  
+                    var[0,0] = varVec[0]
+                    var[0,1] = varVec[1]
+                    var[0,2] = varVec[2]
+                    var[1,0] = varVec[1]
+                    var[1,1] = varVec[3]
+                    var[1,2] = varVec[4]
+                    var[2,0] = varVec[2]
+                    var[2,1] = varVec[4]
+                    var[2,2] = varVec[5]
+           
+                pts[i].probeVar.append(var)
+            
+        else:
+            pass
+        lineno = lineno+1
+    crs.close()
+
+    for i in range(0,len(pointlist)):
+        pts[i].probeTimes = np.array(pts[i].probeTimes)
+        pts[i].probeVar = np.array(pts[i].probeVar)
+        pts[i].createCorrectDict(action=createDict)
+
+    return pts
+
+
 def getVectorPointProbeList(filename):
     '''
     Arguments:
