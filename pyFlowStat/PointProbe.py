@@ -184,7 +184,7 @@ class PointProbe(object):
         self.probeTimes = np.array(probeTimes)
         self.probeVar = np.array(probeVar)
         
-        # run fill data (dictionnary) depending on probeVarDim()
+        # run fill data (dictionnary) depending on probeVarType()
         self.createCorrectDict(action=True)
 
     def readFromLDA(self,probeLoc,filepath):
@@ -217,35 +217,30 @@ class PointProbe(object):
         self.probeVar=np.array(probeVar)
         self.probeTimes=np.array(probeTimes)
         self.createDataDict()
-        
-    
-    def probeVarDim(self):
-        '''
-        Get probeVar dimension.
-        
-        Arguments:
-            * none
             
-        returns:
-            * probeVarDim: [int] dimension of probeVar
+    def probeVarType(self):
         '''
-        if len(self.probeVar.shape)==1:
-            return 1
-        else:
-            return self.probeVar.shape[1]
+        '''
+        if self.probeVar[0].shape==():
+            return 'scalar'
+        elif self.probeVar[0].shape==(3,):
+            return 'vector'
+        elif self.probeVar[0].shape==(3,3):
+            return 'tensor'
 
         
-    def createCorrectDict(self,action):
+    def createCorrectDict(self,action=True):
         '''
-        Create the correct data dict depending on the dimension of probeVar.
+        Create the correct data dict depending on probeVarType.
         '''
+        
         if action==True:
-            if self.probeVarDim()==1:
+            if self.probeVarType()=='scalar':
                 self.createScalarDict()
-            elif self.probeVarDim()==3:           
+            elif self.probeVarType()=='vector':           
                 self.createDataDict()
-            else:
-                pass
+            elif self.probeVarType()=='tensor':
+                self.createTensorDict()
         else:
             pass
         
@@ -298,9 +293,9 @@ class PointProbe(object):
         '''
 
         # append var to probeVar
-        if self.probeVarDim()==1:
+        if self.probeVarType()=='scalar':
             self.probeVar = np.hstack((self.probeVar,var))
-        elif self.probeVarDim()>3:
+        elif self.probeVarType()=='vector' or self.probeVarType()=='tensor':
             self.probeVar = np.vstack((self.probeVar,var))
             
         # append t to probeTimes
@@ -388,18 +383,6 @@ class PointProbe(object):
             * createDict: [bool] run method createDataDict or createScalarDict
               (dependion on the dimension of probeVar )after execution of appendData. Default=True
         '''
-        # check matching. Possibilities:
-        # 'match'
-        # 'overlap'
-        # 'gap'
-        matchStatus = str()
-        if self.probeTimes[-1]>=probe.probeTimes[0]:
-            matchStatus = 'overlap'
-        elif self.probeTimes[-1]<(probe.probeTimes[0]-(1/self.data['frq'])):
-            matchStatus = 'gap'
-        else:
-            matchStatus = 'match'
-
         if rmOverlap=='none':  # do nothing on newU and use appendData
             self.appendData(probe.probeVar,probe.probeTimes,createDict=False)
         elif rmOverlap=='probe':    #chop "probe"
@@ -454,9 +437,9 @@ class PointProbe(object):
         '''
         self.probeTimes=self.probeTimes[np.array(indices)] 
         
-        if self.probeVarDim()==1:
+        if self.probeVarType()=='scalar':
             self.probeVar=self.probeVar[np.array(indices)]           
-        elif self.probeVarDim()==3:
+        elif self.probeVarType()!='scalar':
             self.probeVar=self.probeVar[np.array(indices),:]
                       
         self.createCorrectDict(action=createDict)
@@ -486,7 +469,7 @@ class PointProbe(object):
             umag: [numpy.array. shape=(N)]   Fluctuating velocity magnitute umag
             Uoo:  [numpy.array. shape=(N,3)] Mean velocity with infinit window size
         '''
-
+        
         self.data = dict()
         self.data['pos'] = self.probeLoc
         # velocity and time
@@ -535,10 +518,10 @@ class PointProbe(object):
         By default, the following keys are included in data:
             pos:  [numpy.array. shape=(3)] Probe location
             frq:  [float] Sample frequence
-            S:    [numpy.array. shape=(N,3)] Scalar S
-            t:    [numpy.array. shape=(N)]   Time t
-            s:    [numpy.array. shape=(N,3)] Scalar fluctuation u
-            Soo:  [numpy.array. shape=(N,3)] Mean velocity with infinit window size
+            S:    [numpy.array. shape=(N)] Scalar S
+            t:    [numpy.array. shape=(N)] Time t
+            s:    [numpy.array. shape=(N)] Scalar fluctuation u
+            Soo:  [numpy.array. shape=(N)] Scalar mean with infinit window size
         '''
 
         self.data = dict()
@@ -557,6 +540,48 @@ class PointProbe(object):
         self.data['Soo'] = Soo
         # fluctuation
         self.data['s'] = self.data['S']-self.data['Soo']
+        
+    
+    def createTensorDict(self):
+        '''
+        Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar
+
+        Member variable data (python ditionary) is created. It holds all the series
+        which can be generate with the t and M. To add a new entry to data,
+        type somthing like:
+        pt.PointProbe()
+        pt.readFromLDA(point,file)
+        pt['myNewKey'] = myWiredNewEntry
+        
+        notes:
+            The tensor is defined with 'M' (for Matrix) instead of 'T' (for Tensor).
+
+        By default, the following keys are included in data:
+            pos:  [numpy.array. shape=(3)] Probe location
+            frq:  [float] Sample frequence
+            M:    [numpy.array. shape=(N,3,3)] Tensor M
+            t:    [numpy.array. shape=(N)]     Time t
+            m:    [numpy.array. shape=(N,3,3)] Tensor fluctuation m
+            Moo:  [numpy.array. shape=(N,3,3)] Tensor mean with infinit window size
+        '''
+
+        self.data = dict()
+        self.data['pos'] = self.probeLoc
+        # velocity and time
+        self.data['M'] = self.probeVar      #M for matrix. T is for temperature and t is for time
+        self.data['t'] = self.probeTimes
+
+        # timestep, sample frequence
+        self.data['dt']=self.data['t'][1]-self.data['t'][0]
+        self.data['frq'] = 1/self.data['dt']
+
+        #mean
+        Soo = np.zeros((self.data['M'].shape))
+        Soo = np.mean(self.data['M'])
+        self.data['Moo'] = Soo
+        # fluctuation
+        self.data['m'] = self.data['M']-self.data['Moo']  #m for the fluctuating part of M
+        
 
     def generateStatistics(self,doDetrend=True):
         '''
@@ -851,18 +876,10 @@ def getOFPointProbeList(filename,reshape=True,createDict=True):
                 elif varLength==9 and reshape==True:
                     var = getLongVar(match).reshape(3,3)
                 elif varLength==6 and reshape==True:
-                    var = np.zeros((3,3))
-                    # very ugly code in this elif loop. You are very welcome to imporve it!!
-                    varVec = getLongVar(match)                  
-                    var[0,0] = varVec[0]
-                    var[0,1] = varVec[1]
-                    var[0,2] = varVec[2]
-                    var[1,0] = varVec[1]
-                    var[1,1] = varVec[3]
-                    var[1,2] = varVec[4]
-                    var[2,0] = varVec[2]
-                    var[2,1] = varVec[4]
-                    var[2,2] = varVec[5]
+                    varVec = getLongVar(match)
+                    var = np.array([[varVec[0], varVec[1], varVec[2]],
+                                    [varVec[1], varVec[3], varVec[4]],
+                                    [varVec[2], varVec[4], varVec[5]]])
            
                 pts[i].probeVar.append(var)
             
