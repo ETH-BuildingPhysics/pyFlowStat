@@ -185,7 +185,7 @@ class PointProbe(object):
         self.probeVar = np.array(probeVar)
         
         # run fill data (dictionnary) depending on probeVarType()
-        self.createCorrectDict(action=True)
+        self.createDataDict(action=True)
 
     def readFromLDA(self,probeLoc,filepath):
         '''
@@ -229,7 +229,7 @@ class PointProbe(object):
             return 'tensor'
 
         
-    def createCorrectDict(self,action=True):
+    def createDataDict(self,action=True):
         '''
         Create the correct data dict depending on probeVarType.
         '''
@@ -238,41 +238,12 @@ class PointProbe(object):
             if self.probeVarType()=='scalar':
                 self.createScalarDict()
             elif self.probeVarType()=='vector':           
-                self.createDataDict()
+                self.createVectorDict()
             elif self.probeVarType()=='tensor':
                 self.createTensorDict()
         else:
             pass
         
-
-#    def appendData(self,U,t=None,createDict=True):
-#        '''
-#        Append velocity field U to self['U'] and extend self['t'] accordingly, or
-#        append t if given.
-#        Low level method. The followings cases are not checked:
-#            * gap: gap between U and self['U']
-#            * overlap: overlap between U and self['U']. Cut U to solve such issues
-#            * fequency missmatch: sampling frequency between U and self['U'] must be identical
-#
-#        Arguments:
-#            * U: [np.array. shape=(N,3)] velocity serie Ux, Uy and Uz
-#            * t: [np.array. shape=N]  time value. Default=None
-#            * createDict: [bool] run method createDataDict after execution of appendData. Default=True
-#        '''
-#        # append U
-#        self.probeVar = np.vstack((self.probeVar,U))
-#        if t!=None:
-#            self.probeTimes = np.hstack((self.probeTimes,t))
-#        else:
-#            # complet self['t'] according total length of self['U']
-#            t0 = self.probeTimes[0]
-#            t1 = self.probeTimes[1]
-#            frq = 1/(t1-t0)
-#            iterable = (t0+(1/frq)*i for i in range(self.probeVar.shape[0]))
-#            self.probeTimes = np.fromiter(iterable, np.float)
-#        
-#        if createDict==True:
-#            self.createDataDict()
             
     def appendData(self,var,t=None,createDict=True):
         '''
@@ -288,8 +259,7 @@ class PointProbe(object):
         Arguments:
             * var: [np.array. shape=(N) for scalar or shape=(N,i) for higher dimensions] variable to append
             * t: [np.array. shape=N]  time value. Default=None
-            * createDict: [bool] run method createDataDict or createScalarDict
-              (dependion on the dimension of probeVar )after execution of appendData. Default=True
+            * createDict: [bool] run createDataDict after execution of appendData. Default=True
         '''
 
         # append var to probeVar
@@ -309,59 +279,8 @@ class PointProbe(object):
             iterable = (t0+(1/frq)*i for i in range(self.probeVar.shape[0]))
             self.probeTimes = np.fromiter(iterable, np.float)
         
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
 
-
-
-#    def appendProbe(self,probe,rmOverlap='none',createDict=True):
-#        '''
-#        Append "probe" (PointProbe object) to current data.
-#        The following known issues are not checked:
-#            * gap: gap between U and self['U']
-#            * overlap: overlap between U and self['U']. Use method "cutData" to solve such issues
-#            * fequency missmatch: sampling frequency between U and self['U'] must be identical
-#            * location: append datas should (must?) come from the same probe location
-#
-#        Arguments:
-#            * probe: [PointProbe object] PointProbe object to append
-#            * rmOverlap: ['none','self','probe'] In case of overlaping data, which side should be kept
-#              in the overlaping section?
-#                  * 'none': data are simply added without any check (default)
-#                  * 'self': data from self are removed
-#                  * 'probe': data from probe are removed
-#              If there is non overlap, or a gap, 'none' is used.
-#            * createDict: [bool] run method createDataDict after execution of appendProbe. Default=True
-#        '''
-#        # check matching. Possibilities:
-#        # 'match'
-#        # 'overlap'
-#        # 'gap'
-#        matchStatus = str()
-#        if self.data['t'][-1]>=probe['t'][0]:
-#            matchStatus = 'overlap'
-#        elif self.data['t'][-1]<(probe['t'][0]-(1/self.data['frq'])):
-#            matchStatus = 'gap'
-#        else:
-#            matchStatus = 'match'
-#
-#        if rmOverlap=='none':  # do nothing on newU and use appendData
-#            self.appendData(probe['U'],probe['t'])
-#        elif rmOverlap=='probe':    #chop "probe"
-#            index = 0
-#            while probe['t'][index]<self.data['t'][-1]:
-#                index = index+1
-#            indices = np.arange(index+1,probe['t'].shape[0])
-#            self.appendData(probe['U'][indices,:],probe['t'][indices])
-#        elif rmOverlap=='self':       #chop "self"
-#            backwardindex = -1
-#            while self.data['t'][backwardindex]> probe.data['t'][0]:
-#                backwardindex = backwardindex-1
-#            maxindex = self.data['t'].shape[0]+backwardindex
-#            self.cutData(np.arange(0,maxindex))
-#            self.appendData(probe['U'],probe['t'])
-#
-#        if createDict==True:
-#            self.createDataDict()
 
     def appendProbe(self,probe,rmOverlap='none',createDict=True):
         '''
@@ -399,25 +318,8 @@ class PointProbe(object):
             self.cutData(np.arange(0,maxindex),createDict=False)
             self.appendData(probe.probeVar,probe.probeTimes,createDict=False)
 
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
 
-#    def cutData(self,indices):
-#        '''
-#        Cut data according indices.
-#
-#        Arguments:
-#            * indices: [np.array of python list] list of int
-#
-#        Example (assume pt as a PointProbe object):
-#            >>> pt['U'].shape
-#            [10000,3]
-#            >>>pt.cutData([3,4,5,6,7]) # data from index 3 to 7
-#            >>>pt.cutData(np.arange(10,1000))  # data from index 10 to 1000
-#            >>>pt.cutData(np.arange(10,1000,5))  # data from index 10 to 1000 but only every 5 indices
-#        '''
-#        self.probeVar=self.probeVar[np.array(indices),:]
-#        self.probeTimes=self.probeTimes[np.array(indices)]
-#        self.createDataDict()
 
     def cutData(self,indices,createDict=True):
         '''
@@ -442,19 +344,18 @@ class PointProbe(object):
         elif self.probeVarType()!='scalar':
             self.probeVar=self.probeVar[np.array(indices),:]
                       
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
             
             
 
-    def createDataDict(self):
+    def createVectorDict(self):
         '''
-        Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar. This
-        method is valid ONLY if the self.probeVar is a time resolved velocity! If probeVar is a scalar,
-        use method "createScalarDict".
+        Creates the "data" dictionnary from member variable probeLoc,
+        probeTimes and probeVar. Use it only if probeVar is a vector.
 
         Member variable data (python ditionary) is created. It holds all the series
-        which can be generate with a time resolved velocity field. To add a new entry to data,
-        type somthing like:
+        which can be generate with a time resolved vector field.
+        To add a new entry to data, type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
         pt['myNewKey'] = myWiredNewEntry
@@ -462,12 +363,12 @@ class PointProbe(object):
         By default, the following keys are included in data:
             pos:  [numpy.array. shape=(3)] Probe location
             frq:  [float] Sample frequence
-            U:    [numpy.array. shape=(N,3)] Velocity U
+            U:    [numpy.array. shape=(N,3)] Vector variable U
             t:    [numpy.array. shape=(N)]   Time t
-            u:    [numpy.array. shape=(N,3)] Velocity fluctuation u
-            Umag: [numpy.array. shape=(N)]   Velocity magnitute Umag
-            umag: [numpy.array. shape=(N)]   Fluctuating velocity magnitute umag
-            Uoo:  [numpy.array. shape=(N,3)] Mean velocity with infinit window size
+            u:    [numpy.array. shape=(N,3)] variable fluctuation u
+            Umag: [numpy.array. shape=(N)]   variable magnitute Umag
+            umag: [numpy.array. shape=(N)]   Fluctuating variable magnitute umag
+            Uoo:  [numpy.array. shape=(N,3)] Mean variable with infinit window size
         '''
         
         self.data = dict()
@@ -509,8 +410,8 @@ class PointProbe(object):
         Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar
 
         Member variable data (python ditionary) is created. It holds all the series
-        which can be generate with the t and U. To add a new entry to data,
-        type somthing like:
+        which can be generate with the probeTimes and probeVar.
+        To add a new entry to data, type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
         pt['myNewKey'] = myWiredNewEntry
@@ -586,6 +487,10 @@ class PointProbe(object):
     def generateStatistics(self,doDetrend=True):
         '''
         Generates statistics and populates member variable data.
+        
+        Nots:
+            * This method makes sense only with a PointProbe object, which
+              holds a time resolved velocity serie.
 
         Arguments:
             doDetrend: detrend data bevor sigbal processing
@@ -891,7 +796,7 @@ def getOFPointProbeList(filename,reshape=True,createDict=True):
     for i in range(0,len(pointlist)):
         pts[i].probeTimes = np.array(pts[i].probeTimes)
         pts[i].probeVar = np.array(pts[i].probeVar)
-        pts[i].createCorrectDict(action=createDict)
+        pts[i].createDataDict(action=createDict)
 
     return pts
 
