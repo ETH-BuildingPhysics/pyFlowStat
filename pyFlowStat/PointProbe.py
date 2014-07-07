@@ -712,7 +712,7 @@ class PointProbe(object):
                 try:
                     popt, pcov = tt.fit_exp_correlation(xdata,ydata)
                     #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
-                    self.data[Tkey]=popt[0]*self.data['dt']
+                    self.data[Tkey]=popt*self.data['dt']
                     if Lkey:
                         self.data[Lkey]=self.data[Tkey]*self.Umean()
                 except RuntimeError:
