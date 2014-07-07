@@ -185,7 +185,7 @@ class PointProbe(object):
         self.probeVar = np.array(probeVar)
         
         # run fill data (dictionnary) depending on probeVarType()
-        self.createCorrectDict(action=True)
+        self.createDataDict(action=True)
 
     def readFromLDA(self,probeLoc,filepath):
         '''
@@ -229,7 +229,7 @@ class PointProbe(object):
             return 'tensor'
 
         
-    def createCorrectDict(self,action=True):
+    def createDataDict(self,action=True):
         '''
         Create the correct data dict depending on probeVarType.
         '''
@@ -238,7 +238,7 @@ class PointProbe(object):
             if self.probeVarType()=='scalar':
                 self.createScalarDict()
             elif self.probeVarType()=='vector':           
-                self.createDataDict()
+                self.createVectorDict()
             elif self.probeVarType()=='tensor':
                 self.createTensorDict()
         else:
@@ -288,8 +288,7 @@ class PointProbe(object):
         Arguments:
             * var: [np.array. shape=(N) for scalar or shape=(N,i) for higher dimensions] variable to append
             * t: [np.array. shape=N]  time value. Default=None
-            * createDict: [bool] run method createDataDict or createScalarDict
-              (dependion on the dimension of probeVar )after execution of appendData. Default=True
+            * createDict: [bool] run createDataDict after execution of appendData. Default=True
         '''
 
         # append var to probeVar
@@ -309,7 +308,7 @@ class PointProbe(object):
             iterable = (t0+(1/frq)*i for i in range(self.probeVar.shape[0]))
             self.probeTimes = np.fromiter(iterable, np.float)
         
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
 
 
 
@@ -399,7 +398,7 @@ class PointProbe(object):
             self.cutData(np.arange(0,maxindex),createDict=False)
             self.appendData(probe.probeVar,probe.probeTimes,createDict=False)
 
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
 
 #    def cutData(self,indices):
 #        '''
@@ -442,19 +441,18 @@ class PointProbe(object):
         elif self.probeVarType()!='scalar':
             self.probeVar=self.probeVar[np.array(indices),:]
                       
-        self.createCorrectDict(action=createDict)
+        self.createDataDict(action=createDict)
             
             
 
-    def createDataDict(self):
+    def createVectorDict(self):
         '''
-        Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar. This
-        method is valid ONLY if the self.probeVar is a time resolved velocity! If probeVar is a scalar,
-        use method "createScalarDict".
+        Creates the "data" dictionnary from member variable probeLoc,
+        probeTimes and probeVar. Use it only if probeVar is a vector.
 
         Member variable data (python ditionary) is created. It holds all the series
-        which can be generate with a time resolved velocity field. To add a new entry to data,
-        type somthing like:
+        which can be generate with a time resolved vector field.
+        To add a new entry to data, type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
         pt['myNewKey'] = myWiredNewEntry
@@ -462,12 +460,12 @@ class PointProbe(object):
         By default, the following keys are included in data:
             pos:  [numpy.array. shape=(3)] Probe location
             frq:  [float] Sample frequence
-            U:    [numpy.array. shape=(N,3)] Velocity U
+            U:    [numpy.array. shape=(N,3)] Vector variable U
             t:    [numpy.array. shape=(N)]   Time t
-            u:    [numpy.array. shape=(N,3)] Velocity fluctuation u
-            Umag: [numpy.array. shape=(N)]   Velocity magnitute Umag
-            umag: [numpy.array. shape=(N)]   Fluctuating velocity magnitute umag
-            Uoo:  [numpy.array. shape=(N,3)] Mean velocity with infinit window size
+            u:    [numpy.array. shape=(N,3)] variable fluctuation u
+            Umag: [numpy.array. shape=(N)]   variable magnitute Umag
+            umag: [numpy.array. shape=(N)]   Fluctuating variable magnitute umag
+            Uoo:  [numpy.array. shape=(N,3)] Mean variable with infinit window size
         '''
         
         self.data = dict()
@@ -509,8 +507,8 @@ class PointProbe(object):
         Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar
 
         Member variable data (python ditionary) is created. It holds all the series
-        which can be generate with the t and U. To add a new entry to data,
-        type somthing like:
+        which can be generate with the probeTimes and probeVar.
+        To add a new entry to data, type somthing like:
         pt.PointProbe()
         pt.readFromLDA(point,file)
         pt['myNewKey'] = myWiredNewEntry
@@ -586,6 +584,10 @@ class PointProbe(object):
     def generateStatistics(self,doDetrend=True):
         '''
         Generates statistics and populates member variable data.
+        
+        Nots:
+            * This method makes sense only with a PointProbe object, which
+              holds a time resolved velocity serie.
 
         Arguments:
             doDetrend: detrend data bevor sigbal processing
@@ -891,7 +893,7 @@ def getOFPointProbeList(filename,reshape=True,createDict=True):
     for i in range(0,len(pointlist)):
         pts[i].probeTimes = np.array(pts[i].probeTimes)
         pts[i].probeVar = np.array(pts[i].probeVar)
-        pts[i].createCorrectDict(action=createDict)
+        pts[i].createDataDict(action=createDict)
 
     return pts
 
