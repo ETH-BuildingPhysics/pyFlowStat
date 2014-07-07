@@ -244,35 +244,6 @@ class PointProbe(object):
         else:
             pass
         
-
-#    def appendData(self,U,t=None,createDict=True):
-#        '''
-#        Append velocity field U to self['U'] and extend self['t'] accordingly, or
-#        append t if given.
-#        Low level method. The followings cases are not checked:
-#            * gap: gap between U and self['U']
-#            * overlap: overlap between U and self['U']. Cut U to solve such issues
-#            * fequency missmatch: sampling frequency between U and self['U'] must be identical
-#
-#        Arguments:
-#            * U: [np.array. shape=(N,3)] velocity serie Ux, Uy and Uz
-#            * t: [np.array. shape=N]  time value. Default=None
-#            * createDict: [bool] run method createDataDict after execution of appendData. Default=True
-#        '''
-#        # append U
-#        self.probeVar = np.vstack((self.probeVar,U))
-#        if t!=None:
-#            self.probeTimes = np.hstack((self.probeTimes,t))
-#        else:
-#            # complet self['t'] according total length of self['U']
-#            t0 = self.probeTimes[0]
-#            t1 = self.probeTimes[1]
-#            frq = 1/(t1-t0)
-#            iterable = (t0+(1/frq)*i for i in range(self.probeVar.shape[0]))
-#            self.probeTimes = np.fromiter(iterable, np.float)
-#        
-#        if createDict==True:
-#            self.createDataDict()
             
     def appendData(self,var,t=None,createDict=True):
         '''
@@ -310,57 +281,6 @@ class PointProbe(object):
         
         self.createDataDict(action=createDict)
 
-
-
-#    def appendProbe(self,probe,rmOverlap='none',createDict=True):
-#        '''
-#        Append "probe" (PointProbe object) to current data.
-#        The following known issues are not checked:
-#            * gap: gap between U and self['U']
-#            * overlap: overlap between U and self['U']. Use method "cutData" to solve such issues
-#            * fequency missmatch: sampling frequency between U and self['U'] must be identical
-#            * location: append datas should (must?) come from the same probe location
-#
-#        Arguments:
-#            * probe: [PointProbe object] PointProbe object to append
-#            * rmOverlap: ['none','self','probe'] In case of overlaping data, which side should be kept
-#              in the overlaping section?
-#                  * 'none': data are simply added without any check (default)
-#                  * 'self': data from self are removed
-#                  * 'probe': data from probe are removed
-#              If there is non overlap, or a gap, 'none' is used.
-#            * createDict: [bool] run method createDataDict after execution of appendProbe. Default=True
-#        '''
-#        # check matching. Possibilities:
-#        # 'match'
-#        # 'overlap'
-#        # 'gap'
-#        matchStatus = str()
-#        if self.data['t'][-1]>=probe['t'][0]:
-#            matchStatus = 'overlap'
-#        elif self.data['t'][-1]<(probe['t'][0]-(1/self.data['frq'])):
-#            matchStatus = 'gap'
-#        else:
-#            matchStatus = 'match'
-#
-#        if rmOverlap=='none':  # do nothing on newU and use appendData
-#            self.appendData(probe['U'],probe['t'])
-#        elif rmOverlap=='probe':    #chop "probe"
-#            index = 0
-#            while probe['t'][index]<self.data['t'][-1]:
-#                index = index+1
-#            indices = np.arange(index+1,probe['t'].shape[0])
-#            self.appendData(probe['U'][indices,:],probe['t'][indices])
-#        elif rmOverlap=='self':       #chop "self"
-#            backwardindex = -1
-#            while self.data['t'][backwardindex]> probe.data['t'][0]:
-#                backwardindex = backwardindex-1
-#            maxindex = self.data['t'].shape[0]+backwardindex
-#            self.cutData(np.arange(0,maxindex))
-#            self.appendData(probe['U'],probe['t'])
-#
-#        if createDict==True:
-#            self.createDataDict()
 
     def appendProbe(self,probe,rmOverlap='none',createDict=True):
         '''
@@ -400,23 +320,6 @@ class PointProbe(object):
 
         self.createDataDict(action=createDict)
 
-#    def cutData(self,indices):
-#        '''
-#        Cut data according indices.
-#
-#        Arguments:
-#            * indices: [np.array of python list] list of int
-#
-#        Example (assume pt as a PointProbe object):
-#            >>> pt['U'].shape
-#            [10000,3]
-#            >>>pt.cutData([3,4,5,6,7]) # data from index 3 to 7
-#            >>>pt.cutData(np.arange(10,1000))  # data from index 10 to 1000
-#            >>>pt.cutData(np.arange(10,1000,5))  # data from index 10 to 1000 but only every 5 indices
-#        '''
-#        self.probeVar=self.probeVar[np.array(indices),:]
-#        self.probeTimes=self.probeTimes[np.array(indices)]
-#        self.createDataDict()
 
     def cutData(self,indices,createDict=True):
         '''
