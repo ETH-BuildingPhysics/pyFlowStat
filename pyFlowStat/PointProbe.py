@@ -586,22 +586,23 @@ class PointProbe(object):
             * self.data['Tii']: [np.float()]
             * self.data['Lii']: [np.float()]
         '''
-        def func_exp(x, a):
-            np.seterr('ignore')
-            res = np.exp(-x/a)
-
-            #print res
-            return res
-
-        def func_gauss(x, a):
-            np.seterr('ignore')
-            res = np.exp(-(x*x)/(a*a))
-
-            #print res
-            return res
+        
+        #def func_gauss(x, a):
+        #    np.seterr('ignore')
+        #   res = np.exp(-(x*x)/(a*a))
+        #   print res
 
         def checkAutoCorr(xdata,ydata,threshold=0.1):
-            ratio1=1/(ydata[0]-ydata[1])*(ydata[1]-ydata[2])
+            '''
+            Check shape of the first 3 points. A low value indicates possible bad data. A ratio of one means a straigh line.
+            Arguments:
+                * xdata = lags
+                * ydata = correlation
+            
+            Returns: 
+                * True if higher than threshold ratio (good correlation)
+            '''
+            ratio1=(ydata[1]-ydata[2])/(ydata[0]-ydata[1])
             #ratio2=1/(ydata[1]-ydata[2])*(ydata[2]-ydata[3])
 
             if ratio1<threshold:
