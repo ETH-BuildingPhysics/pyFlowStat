@@ -19,18 +19,100 @@ import matplotlib.tri as tri
 
 class TriSurfaceNew(tri.Triangulation):
     '''
-    class TriSurfaceNew
+    class TriSurfaceNew. New implentation of the class trisurface, which
+    derived from the matplotlib class matplotlib.tri.Triangulation.
+    
+    variables:
+        *x*: array of shape (npoints).
+         x-coordinates of grid points. From the parent class.
+
+        *y*: array of shape (npoints).
+         y-coordinates of grid points. From the parent class.
+
+        *triangles*: integer array of shape (ntri,3).
+         For each triangle, the indices of the three points that make
+         up the triangle, ordered in an anticlockwise manner. From the parent 
+         class.
+         
+        *mask*: optional boolean array of shape (ntri).
+         Which triangles are masked out. From the parent class.
+
+        *edges*: integer array of shape (?,2).
+         All edges of non-masked triangles.  Each edge is the start
+         point index and end point index.  Each edge (start,end and
+         end,start) appears only once. From the parent class.
+
+        *neighbors*: integer array of shape (ntri,3).
+         For each triangle, the indices of the three triangles that
+         share the same edges, or -1 if there is no such neighboring
+         triangle.  neighbors[i,j] is the triangle that is the neighbor
+         to the edge from point index triangles[i,j] to point index
+         triangles[i,(j+1)%3]. From the parent class.
+         
+        *z*: array of shape (npoints,dim).
+         value at the coordinate (x,y).
+             * dim=1 for scalar
+             * dim=3 for vector
+             * etc...
+         
+        *interpolator*: list of length (dim).
+         list of object from class matplotlib.tri.CubicTriInterpolator. One 
+         obejct triCubicInterpolator per element of z[i]. Examples: 3 objects
+         for a vector...
+         
+        *data*: dictionnary.
+         Storage for all kind of stuff.
+        
+         
+     Methods:
+         *__init__*: base constructor
+          Base constructor of the class. The constructor "readFrom*" should
+          be prefered to create a TriSurfaceNew object
+     
+         *readFromFoamFile*: constructor.
+          Construct from a surface saved  by OpenFOAM in foamFile format.
+          
+         *readFromVTK*: constructor.
+          Construct from a surface saved by OpenFOAM in VTK format.
+          
+         *gradient*:
+          Compute the gradient of z at location (x,y). x and y can be arrays.
+          
+         *interpolate*:
+          Compute z at location (x,y). x and y can be arrays.      
     '''
     
     def __init__(self, x, y, z, triangles=None, mask=None):
         '''
         base constructor from a list of x, y and z. list of triangles and mask 
         optional.
+        
+        Arguments:
+            *x*: array of shape (npoints).
+             x-coordinates of grid points.
+    
+            *y*: array of shape (npoints).
+             y-coordinates of grid points.
+    
+            *triangles*: integer array of shape (ntri,3).
+             For each triangle, the indices of the three points that make
+             up the triangle, ordered in an anticlockwise manner. If no
+             triangles is passed, a Delauney triangulation is computed. 
+             Default=None.
+             
+            *mask*: optional boolean array of shape (ntri).
+             Which triangles are masked out.
+             
         '''
         tri.Triangulation.__init__(self, x, y, triangles=None, mask=None)
+
         
         self.z = z
         self.data = dict()
+        
+        # interpolator. An oject of class ArrayTriInterpolator. 
+        # Created if needed
+        self.interpolator = None
         
     @classmethod
     def readFromFoamFile(cls,
@@ -53,15 +135,16 @@ class TriSurfaceNew(tri.Triangulation):
         xViewBasis = np.array(xViewBasis,dtype=float)
         yViewBasis = np.array(yViewBasis,dtype=float)
         if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
-            raise ValueError('xViewBasis.shape and yViewBasis.shape must be equal to (3,)')
+            raise ValueError('xViewBasis.shape and yViewBasis. ',
+                             'shape must be equal to (3,)')
             
         # get the basis and the transformation object
         tgtBasisSrc = np.zeros((3,3))
         tgtBasisSrc[:,0] = xViewBasis        
         tgtBasisSrc[:,1] = yViewBasis
         tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
-        afftrans = affineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
-        lintrans = linearTransformation(srcBasisSrc,tgtBasisSrc)
+        afftrans = AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+        lintrans = LinearTransformation(srcBasisSrc,tgtBasisSrc)
 
         # get x and y vector (in ptTrt)
         ptsSrc = parseFoamFile(pointsFile)
@@ -81,21 +164,58 @@ class TriSurfaceNew(tri.Triangulation):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         '''
-        raise NotImplementedError('The method is still not implemented')
+        raise NotImplementedError('The method is not implemented')
+  
     
+    def gradient(self,x,y):
+        '''
+        Return gradient at location (x,y). x,y can be arrays
+        '''
+        self.create_interpolator()
+        return np.array([self.interpolator[i].gradient(x,y) for i in range(len(self.z[0,:]))]).T
         
-#    @classmethod
-#    def test(cls, x, y, z, triangles):
-#        ts = cls(x, y, z, triangles, mask=None)
-#
-#        return ts
+        
+    def interpolate(self,x,y):
+        '''
+        Return interpolated value at location (x,y). x and y can be arrays. The
+        member variable interpolation can also be used directly.
+        '''
+        self.create_interpolator()
+        return np.array([self.interpolator[i](x,y) for i in range(len(self.z[0,:]))]).T
+
+        
+
+    def create_interpolator(self):
+        '''
+        Create the list of interpolator object.
+        '''
+        if self.interpolator==None:
+            self.interpolator  = list()
+            for i in range(len(self.z[0,:])):
+                self.interpolator.append(tri.CubicTriInterpolator(self, self.z[:,i],kind='geom'))
+            
+        
+    def __iter__(self):
+        '''
+        Iterable on member "data".
+        '''
+        return self.data.itervalues()
+
+    def __getitem__(self, key):
+        '''
+        Getter for key "key" on member dictionnary "data"
+        '''
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        '''
+        Setter for key "key" on member dictionnary "data"
+        '''
+        self.data[key] = item
 
         
     
-    
-    
-    
-class affineTransfomation(object):
+class AffineTransfomation(object):
     '''
     An affine transfomation is define as ya = A*xa, with A the affine matrix
     (shape=(4,4)), xa (shape=(4)) the augmented vector defined in the source
@@ -105,12 +225,13 @@ class affineTransfomation(object):
     invA (shape=(4,4)) the inverse of A.
     
     Arguments:
-        * srcBasisSrc: [numpy.array, shape=(3,3)] The source coordinate system
-          e1, e2 and e3 packed in matrix [e1,e2,e3].
-        * tgtBasisSrc: [numpy.array, shape=(3,3)] The target coordinate system
-          f1, f2 and f3, defined in the source basis and packed in matrix 
-          [f1,f2,f3.]
-        * 
+        *srcBasisSrc*: numpy array of shape=(3,3)
+         The source coordinate system e1, e2 and e3 packed in matrix [e1,e2,e3].
+        *tgtBasisSrc*: numpy array of shape=(3,3)
+         The target coordinate system f1, f2 and f3, defined in the source
+         basis and packed in matrix [f1,f2,f3]
+        *tgtTransSrc*: numpy array of shape=(3,)
+         Translation vector of the target basis regarding the source basis.
     '''
     
     def __init__(self,srcBasisSrc,tgtBasisSrc,tgtTransSrc):  
@@ -170,9 +291,12 @@ class affineTransfomation(object):
         return np.dot(self.invA,self.affineVec(vec))[0:3]
 
 
-class linearTransformation(object):
+class LinearTransformation(object):
     '''
-    A class which defines a linear transformation
+    A class which defines a linear transformation y = A*x, with x a vector
+    defined in the source basis, y the same vector x but defined in the target
+    basis and A the linear tranformation matrix to go from the source to the
+    taget
     '''    
     def __init__(self,srcBasisSrc,tgtBasisSrc):  
         self.A = tgtBasisSrc
@@ -194,6 +318,7 @@ def parseFoamFile(foamFile):
     Note:
         * It's a primitiv parse, do not add header in your foamFile!
         * Inline comment are allowed only from line start. c++ comment style.
+        * It's REALLY a primitive parser!!!
         
     Arguments:
         * foamFile: [str()] Path of the foamFile
