@@ -14,6 +14,8 @@ import re
 import numpy as np
 import matplotlib.tri as tri
 
+import pyFlowStat.triZinterpolator as triz
+
 
 
 
@@ -144,7 +146,7 @@ class TriSurfaceNew(tri.Triangulation):
         tgtBasisSrc[:,1] = yViewBasis
         tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
         afftrans = AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
-        lintrans = LinearTransformation(srcBasisSrc,tgtBasisSrc)
+        #lintrans = LinearTransformation(srcBasisSrc,tgtBasisSrc)
 
         # get x and y vector (in ptTrt)
         ptsSrc = parseFoamFile(pointsFile)
@@ -192,7 +194,7 @@ class TriSurfaceNew(tri.Triangulation):
         if self.interpolator==None:
             self.interpolator  = list()
             for i in range(len(self.z[0,:])):
-                self.interpolator.append(tri.CubicTriInterpolator(self, self.z[:,i],kind='geom'))
+                self.interpolator.append(triz.CubicTriZInterpolator(self, self.z[:,i]))
             
         
     def __iter__(self):
@@ -231,7 +233,7 @@ class AffineTransfomation(object):
          The target coordinate system f1, f2 and f3, defined in the source
          basis and packed in matrix [f1,f2,f3]
         *tgtTransSrc*: numpy array of shape=(3,)
-         Translation vector of the target basis regarding the source basis.
+         Translation vector of the target basis regarding the source basi
     '''
     
     def __init__(self,srcBasisSrc,tgtBasisSrc,tgtTransSrc):  
