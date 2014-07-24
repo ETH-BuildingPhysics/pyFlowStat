@@ -340,17 +340,17 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
 
-    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
+    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic',kind='min_E'):
         '''
         helper function
         methode=linear,cubic (default)
         '''
         if method=='cubic':
-            itp=tri.CubicTriInterpolator(triangulation,values)
+            itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         elif method=='linear':
-            itp=tri.LinearTriInterpolator(triangulation,values)
+            itp=tri.LinearTriInterpolator(triangulation,values,kind=kind)
         else:
-            itp=tri.CubicTriInterpolator(triangulation,values)
+            itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         zi_ma = itp(grid_x, grid_y)
         zi=zi_ma.filled(np.nan)
 

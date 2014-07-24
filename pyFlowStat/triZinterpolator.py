@@ -226,7 +226,7 @@ class TriZInterpolator(object):
             scale = [1., 1./self._unit_x, 1./self._unit_y][return_index]
 
             # Computes the interpolation
-#            ret_loc = np.empty(size_ret, dtype=np.float64)
+            ret_loc = np.empty(size_ret, dtype=np.float)
             ret_loc = np.empty(size_ret, dtype=np.float)
             ret_loc[~mask_in] = np.nan
             ret_loc[mask_in] = self._interpolate_single_key(

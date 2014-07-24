@@ -19,37 +19,12 @@ import pyFlowStat.triZinterpolator as triz
 
 
 
-class TriSurfaceNew(tri.Triangulation):
+class TriSurfaceNew(object):
     '''
     class TriSurfaceNew. New implentation of the class trisurface, which
     derived from the matplotlib class matplotlib.tri.Triangulation.
     
     variables:
-        *x*: array of shape (npoints).
-         x-coordinates of grid points. From the parent class.
-
-        *y*: array of shape (npoints).
-         y-coordinates of grid points. From the parent class.
-
-        *triangles*: integer array of shape (ntri,3).
-         For each triangle, the indices of the three points that make
-         up the triangle, ordered in an anticlockwise manner. From the parent 
-         class.
-         
-        *mask*: optional boolean array of shape (ntri).
-         Which triangles are masked out. From the parent class.
-
-        *edges*: integer array of shape (?,2).
-         All edges of non-masked triangles.  Each edge is the start
-         point index and end point index.  Each edge (start,end and
-         end,start) appears only once. From the parent class.
-
-        *neighbors*: integer array of shape (ntri,3).
-         For each triangle, the indices of the three triangles that
-         share the same edges, or -1 if there is no such neighboring
-         triangle.  neighbors[i,j] is the triangle that is the neighbor
-         to the edge from point index triangles[i,j] to point index
-         triangles[i,(j+1)%3]. From the parent class.
          
         *z*: array of shape (npoints,dim).
          value at the coordinate (x,y).
@@ -90,6 +65,9 @@ class TriSurfaceNew(tri.Triangulation):
 
     '''
     
+    # constructors #
+    #--------------#
+    
     def __init__(self, x, y, z, triangles=None, mask=None):
         '''
         base constructor from a list of x, y and z. list of triangles and mask 
@@ -116,8 +94,9 @@ class TriSurfaceNew(tri.Triangulation):
              Which triangles are masked out.
              
         '''
+        self.triangulation = None
         if mask==None:
-            tri.Triangulation.__init__(self, x, y, triangles=triangles, mask=None)
+            self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=None)
         else:
             triang = tri.Triangulation(x, y, triangles=triangles, mask=mask)
             trianalyzer = tri.TriAnalyzer(triang)
@@ -129,10 +108,8 @@ class TriSurfaceNew(tri.Triangulation):
             node_mask = (node_renum == -1)
             z[node_renum[~node_mask]] = z
             z = z[~node_mask]
-            tri.Triangulation.__init__(self, comp_x, comp_y, triangles=comp_triangles, mask=None)
-            
+            self.triangulation = tri.Triangulation(comp_x, comp_y, triangles=comp_triangles, mask=None)
 
-        
         self.z = np.asarray(z)
         self.data = dict()
         
@@ -192,20 +169,76 @@ class TriSurfaceNew(tri.Triangulation):
         '''
         raise NotImplementedError('The method is not implemented')
   
+    # getter and setter #
+    #-------------------#
+
+    def x(self):
+        '''
+        '''
+        return self.triangulation.x
+        
+        
+    def y(self):
+        '''
+        '''
+        return self.triangulation.y
+        
+        
+    def triangles(self):
+        '''
+        '''
+        return self.triangulation.triangles
+        
+    
+    # class methods #
+    #---------------#
+    def zsize(self):
+        '''
+        '''
+        return self.z[0].size
+        
+        
     def rawGrad(self):
         '''
         Calculate and save the gradient at all (self.x,self.y) locations.
+        If x and y have a shape of (npts), z a shape of (npts,dim), than
+        the gradient has a shape of (npts,2,dim).
+        Example for a scalar field s:
+            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
+            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
+        Example for a vector field (u,v,w):
+            dudx = self['grad'][:,0,0]
+            dudy = self['grad'][:,1,0]
+            dvdx = self['grad'][:,0,1]
+            dvdy = self['grad'][:,1,1]
+            dwdx = self['grad'][:,0,2]
+            dwdy = self['grad'][:,1,2]
         '''
         self.create_interpolator()
-        self.data['grad'] = np.array([self.interpolator[i].gradient(self.x,self.y) for i in range(len(self.z[0,:]))]).T
-        
+        self.data['grad'] = np.array([self.interpolator[i].gradient(self.triangulation.x,self.triangulation.y) for i in range(self.zsize())]).T
         
     def gradient(self,x,y):
         '''
-        Return gradient at location (x,y). x,y can be arrays
+        Return gradient at location (x,y). x,y can be an array.
+        If x and y have a shape of (npts), z a shape of (npts,dim), than
+        the gradient has a shape of (npts,2,dim).
+        Example for a scalar field s:
+            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
+            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
+        Example for a vector field (u,v,w):
+            dudx = self['grad'][:,0,0]
+            dudy = self['grad'][:,1,0]
+            dvdx = self['grad'][:,0,1]
+            dvdy = self['grad'][:,1,1]
+            dwdx = self['grad'][:,0,2]
+            dwdy = self['grad'][:,1,2]
         '''
+        # x and y must be numpy array
+        x = np.asarray(x, dtype=np.float)
+        y = np.asarray(y, dtype=np.float)
         self.create_interpolator()
-        return np.array([self.interpolator[i].gradient(x,y) for i in range(len(self.z[0,:]))]).T
+        return np.array([self.interpolator[i].gradient(x,y) for i in range(self.zsize())]).T
+                
         
         
     def interpolate(self,x,y):
@@ -213,8 +246,9 @@ class TriSurfaceNew(tri.Triangulation):
         Return interpolated value at location (x,y). x and y can be arrays. The
         member variable interpolation can also be used directly.
         '''
+        # no need to convert x and y in numpy array
         self.create_interpolator()
-        return np.array([self.interpolator[i](x,y) for i in range(len(self.z[0,:]))]).T
+        return np.array([self.interpolator[i](x,y) for i in range(self.zsize())]).T
 
         
 
@@ -224,8 +258,12 @@ class TriSurfaceNew(tri.Triangulation):
         '''
         if self.interpolator==None:
             self.interpolator  = list()
-            for i in range(len(self.z[0,:])):
-                self.interpolator.append(triz.CubicTriZInterpolator(self, self.z[:,i]))
+            if self.zsize()==1:
+                self.interpolator.append(triz.CubicTriZInterpolator(self.triangulation, self.z))
+            else:
+                for i in range(self.zsize()):
+                    self.interpolator.append(triz.CubicTriZInterpolator(self.triangulation, self.z[:,i]))
+
             
         
     def __iter__(self):
@@ -245,11 +283,6 @@ class TriSurfaceNew(tri.Triangulation):
         Setter for key "key" on member dictionnary "data"
         '''
         self.data[key] = item
-           
-    # New implemtations of some parent methods
-    #----------------------------------------#    
-    def set_mask(self, mask):
-        raise NotImplementedError('set_mask needs a new implementation!')
 
         
     
