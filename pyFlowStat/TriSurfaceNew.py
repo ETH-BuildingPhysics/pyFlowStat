@@ -76,12 +76,18 @@ class TriSurfaceNew(tri.Triangulation):
           
          *readFromVTK*: constructor.
           Construct from a surface saved by OpenFOAM in VTK format.
+         
+         *rawGrad*:
+          Computer the gradient at the all the x,y location of the triangulation.
+          In opposition to the methode gradient, no interpolation is done.
+          
           
          *gradient*:
           Compute the gradient of z at location (x,y). x and y can be arrays.
           
          *interpolate*:
-          Compute z at location (x,y). x and y can be arrays.      
+          Compute z at location (x,y). x and y can be arrays.
+
     '''
     
     def __init__(self, x, y, z, triangles=None, mask=None):
@@ -182,7 +188,14 @@ class TriSurfaceNew(tri.Triangulation):
         '''
         raise NotImplementedError('The method is not implemented')
   
-    
+    def rawGrad(self):
+        '''
+        Calculate and save the gradient at all (self.x,self.y) locations.
+        '''
+        self.create_interpolator()
+        self.data['grad'] = np.array([self.interpolator[i].gradient(self.x,self.y) for i in range(len(self.z[0,:]))]).T
+        
+        
     def gradient(self,x,y):
         '''
         Return gradient at location (x,y). x,y can be arrays
@@ -228,6 +241,11 @@ class TriSurfaceNew(tri.Triangulation):
         Setter for key "key" on member dictionnary "data"
         '''
         self.data[key] = item
+           
+    # New implemtations of some parent methods
+    #----------------------------------------#    
+    def set_mask(self, mask):
+        raise NotImplementedError('set_mask needs a new implementation!')
 
         
     
