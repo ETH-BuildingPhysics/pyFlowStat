@@ -106,7 +106,21 @@ class TriSurfaceNew(tri.Triangulation):
              Which triangles are masked out.
              
         '''
-        tri.Triangulation.__init__(self, x, y, triangles=None, mask=None)
+        if mask==None:
+            tri.Triangulation.__init__(self, x, y, triangles=triangles, mask=None)
+        else:
+            triang = tri.Triangulation(x, y, triangles=triangles, mask=mask)
+            trianalyzer = tri.TriAnalyzer(triang)
+            (comp_triangles,
+             comp_x,
+             comp_y,
+             tri_renum,
+             node_renum) = trianalyzer._get_compressed_triangulation(True, True)
+            node_mask = (node_renum == -1)
+            z[node_renum[~node_mask]] = z
+            z = z[~node_mask]
+            tri.Triangulation.__init__(self, comp_x, comp_y, triangles=comp_triangles, mask=None)
+            
 
         
         self.z = z

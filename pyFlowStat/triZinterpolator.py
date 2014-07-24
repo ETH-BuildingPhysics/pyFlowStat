@@ -4,9 +4,9 @@ Interpolation inside triangular grids without z as a member of the classes.
 from __future__ import print_function
 from matplotlib.tri import Triangulation
 from matplotlib.tri.trifinder import TriFinder
-from matplotlib.tri.tritools import TriAnalyzer
+#from matplotlib.tri.tritools import TriAnalyzer
 import numpy as np
-import warnings
+#import warnings
 
 __all__ = ('TriInterpolator', 'LinearTriInterpolator', 'CubicTriInterpolator')
 
@@ -14,8 +14,31 @@ __all__ = ('TriInterpolator', 'LinearTriInterpolator', 'CubicTriInterpolator')
 class TriZInterpolator(object):
     """
     Abstract base class for classes used to perform interpolation on
-    triangular grids.
-
+    triangular grids. This class is designed to be used in TirSurfaceNew and
+    TimeTriSurface. This class is derived from matplotlib.tri.TriInterpolator
+    with the following modifications:
+        * z is NOT a member of TriZInterpolator. The main idea behind this is
+          to save memory in case of huge triangulation or if z cannot be passed
+          as a reference (expected behavior of TriInterpolator)         
+        * The triangulation obect passed in the constructor must have no mask.
+          If your triangulation "triang" object has a mask, please, recreate an
+          unmasked triangulation object as follow:        
+          >>> trianalyzer = tri.TriAnalyzer(triang)
+          >>> (compressed_triangles,
+               compressed_x,
+               compressed_y,
+               tri_renum,
+               node_renum) = trianalyzer._get_compressed_triangulation(True, True)
+          >>> node_mask = (node_renum == -1)
+          >>> z[node_renum[~node_mask]] = z
+          >>> z = z[~node_mask]
+          >>> new_triang = tri.Triangulation(compressed_x,compressed_y,triangles=compressed_triangles,mask=None)        
+        * x and y, which are passed to a lot of methods must be numpy array,
+          of similar length, flatten and of dtype=float.
+          
+    All those modifications make this class very clumsy to use standalone. For
+    such usage, use the standard matplotlib.tri.TriInterpolator.
+  
     Derived classes implement the following methods:
 
         - ``__call__(x, y)`` ,
@@ -30,10 +53,7 @@ class TriZInterpolator(object):
           interpolated z values with respect to x and y).
 
     """
-    def __init__(self,
-                 triangulation,
-#                 z,
-                 trifinder=None):
+    def __init__(self,triangulation,trifinder=None):
         if not isinstance(triangulation, Triangulation):
             raise ValueError("Expected a Triangulation object")
         self._triangulation = triangulation
@@ -58,7 +78,7 @@ class TriZInterpolator(object):
         # Renumbering may be used to avoid unecessary computations
         # if complex calculations are done inside the Interpolator.
         # Please refer to :meth:`_interpolate_multikeys` for details.
-        self._tri_renum = None
+#        self._tri_renum = None
 
     # __call__ and gradient docstrings are shared by all subclasses
     # (except, if needed, relevant additions).
@@ -161,14 +181,14 @@ class TriZInterpolator(object):
         """
         # Flattening and rescaling inputs arrays x, y
         # (initial shape is stored for output)
-        x = np.asarray(x, dtype=np.float64)
-        y = np.asarray(y, dtype=np.float64)
+#        x = np.asarray(x, dtype=np.float64)
+#        y = np.asarray(y, dtype=np.float64)
         sh_ret = x.shape
-        if (x.shape != y.shape):
-            raise ValueError("x and y shall have same shapes."
-                             " Given: {0} and {1}".format(x.shape, y.shape))
-        x = np.ravel(x)
-        y = np.ravel(y)
+#        if (x.shape != y.shape):
+#            raise ValueError("x and y shall have same shapes."
+#                             " Given: {0} and {1}".format(x.shape, y.shape))
+#        x = np.ravel(x)
+#        y = np.ravel(y)
         x_scaled = x/self._unit_x
         y_scaled = y/self._unit_y
         size_ret = np.size(x_scaled)
@@ -185,10 +205,11 @@ class TriZInterpolator(object):
             tri_index = np.ravel(tri_index)
 
         mask_in = (tri_index != -1)
-        if self._tri_renum is None:
-            valid_tri_index = tri_index[mask_in]
-        else:
-            valid_tri_index = self._tri_renum[tri_index[mask_in]]
+#        if self._tri_renum is None:
+#            valid_tri_index = tri_index[mask_in]
+#        else:
+#            valid_tri_index = self._tri_renum[tri_index[mask_in]]
+        valid_tri_index = tri_index[mask_in]
         valid_x = x_scaled[mask_in]
         valid_y = y_scaled[mask_in]
 
@@ -205,7 +226,8 @@ class TriZInterpolator(object):
             scale = [1., 1./self._unit_x, 1./self._unit_y][return_index]
 
             # Computes the interpolation
-            ret_loc = np.empty(size_ret, dtype=np.float64)
+#            ret_loc = np.empty(size_ret, dtype=np.float64)
+            ret_loc = np.empty(size_ret, dtype=np.float)
             ret_loc[~mask_in] = np.nan
             ret_loc[mask_in] = self._interpolate_single_key(
                 return_key, valid_tri_index, valid_x, valid_y) * scale
@@ -376,25 +398,30 @@ class CubicTriZInterpolator(TriZInterpolator):
         #    TriFinder instance into the internal stored triangle number.
         #  - a node renum table to overwrite the self._z values into the new
         #    (used) node numbering.
-        tri_analyzer = TriAnalyzer(self._triangulation)
-        (compressed_triangles, compressed_x, compressed_y, tri_renum,
-         node_renum) = tri_analyzer._get_compressed_triangulation(True, True)
-        self._triangles = compressed_triangles
-        self._tri_renum = tri_renum
-        # Taking into account the node renumbering in self._z:
+#        tri_analyzer = TriAnalyzer(self._triangulation)
+#        (compressed_triangles, compressed_x, compressed_y, tri_renum,
+#         node_renum) = tri_analyzer._get_compressed_triangulation(True, True)
+#        self._triangles = compressed_triangles
+#        self._tri_renum = tri_renum
+#        # Taking into account the node renumbering in self._z:
+##        node_mask = (node_renum == -1)
+##        self._z[node_renum[~node_mask]] = self._z
+##        self._z = self._z[~node_mask]
+#        
 #        node_mask = (node_renum == -1)
-#        self._z[node_renum[~node_mask]] = self._z
-#        self._z = self._z[~node_mask]
-        
-        node_mask = (node_renum == -1)
-        z[node_renum[~node_mask]] = z
-        z = z[~node_mask]
+#        z[node_renum[~node_mask]] = z
+#        z = z[~node_mask]
 
         # Computing scale factors
-        self._unit_x = np.max(compressed_x) - np.min(compressed_x)
-        self._unit_y = np.max(compressed_y) - np.min(compressed_y)
-        self._pts = np.vstack((compressed_x/float(self._unit_x),
-                               compressed_y/float(self._unit_y))).T
+#        self._unit_x = np.max(compressed_x) - np.min(compressed_x)
+#        self._unit_y = np.max(compressed_y) - np.min(compressed_y)
+#        self._pts = np.vstack((compressed_x/float(self._unit_x),
+#                               compressed_y/float(self._unit_y))).T
+        self._triangles = self._triangulation.triangles
+        self._unit_x = np.max(self._triangulation.x) - np.min(self._triangulation.x)
+        self._unit_y = np.max(self._triangulation.y) - np.min(self._triangulation.y)
+        self._pts = np.vstack((self._triangulation.x/float(self._unit_x),
+                               self._triangulation.y/float(self._unit_y))).T
         # Computing triangle points
         self._tris_pts = self._pts[self._triangles]
         # Computing eccentricities
