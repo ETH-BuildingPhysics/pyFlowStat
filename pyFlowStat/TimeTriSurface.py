@@ -1,7 +1,7 @@
 '''
-TriSurfaceNew.py
+TimeTriSurface.py
 
-New version of TriSurface. TriSurfaceNew will use matplotlib.tri classes
+New version of TriSurface. TimeTriSurface will use matplotlib.tri classes
 extensively.
 
 !!! Still in alpha version !!!
@@ -19,9 +19,9 @@ import pyFlowStat.triZinterpolator as triz
 
 
 
-class TriSurfaceNew(tri.Triangulation):
+class TimeTriSurface(tri.Triangulation):
     '''
-    class TriSurfaceNew. New implentation of the class trisurface, which
+    class TimeTriSurface. New implentation of the class trisurface, which
     derived from the matplotlib class matplotlib.tri.Triangulation.
     
     variables:
@@ -69,7 +69,7 @@ class TriSurfaceNew(tri.Triangulation):
      Methods:
          *__init__*: base constructor
           Base constructor of the class. The constructor "readFrom*" should
-          be prefered to create a TriSurfaceNew object
+          be prefered to create a TimeTriSurface object
      
          *readFromFoamFile*: constructor.
           Construct from a surface saved  by OpenFOAM in foamFile format.
