@@ -24,6 +24,7 @@ import scipy.signal as spsig
 import scipy as sp
 import pylab as pl
 from scipy.optimize import curve_fit
+from scipy.integrate import simps
 
 #===========================================================================#
 # functions
@@ -318,10 +319,43 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
     res=res[(len(res)-1)/2:-1]
     lags = np.arange(0, maxlags)
     return res, lags
-
+    
+def twoPointCorr(x,y,subtractMean=True,norm=False):
+    '''
+    dot product of two vectors to claculate two point correlation
+    '''
+    #return np.dot(x,y)/(rms(x)*rms(y))/len(x)
+    if subtractMean==True:
+        x_prime=x-np.mean(x)
+        y_prime=y-np.mean(y)
+        #x_prime=scipy.signal.detrend(np.nan_to_num(x))
+        #y_prime=scipy.signal.detrend(np.nan_to_num(y))
+    else:
+        x_prime=x
+        y_prime=y
+    
+    #cc=np.correlate(x_prime,y_prime)
+    #print x_prime.shape
+    
+    #cc=np.dot(smooth(x_prime,window_len=11),smooth(y_prime,window_len=11))
+    cc=np.dot(x_prime,y_prime)
+    #print cc.shape
+    if norm==True:
+        return cc/np.std(x_prime)/np.std(y_prime)/len(x)
+    else:
+        return cc
+    #return np.correlate(x_prime,y_prime)
+        
 def func_exp_correlation(x, a):
     np.seterr('ignore')
     res = np.exp(-x/a)
+
+    #print res
+    return res
+    
+def func_gauss_correlation(x, a):
+    np.seterr('ignore')
+    res = np.exp(-np.pi*x**2/(a**2*4))
 
     #print res
     return res
@@ -343,3 +377,39 @@ def fit_exp_correlation(xdata,ydata):
     popt, pcov = curve_fit(func_exp_correlation,xdata,ydata)
     a=popt[0]
     return a,pcov
+    
+def calcInegralScale_expFit(rho_i,dx):
+    lags=np.arange(len(rho_i))
+    try:
+        popt, pcov = fit_exp_correlation(lags,rho_i)
+        #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
+        L=popt*dx
+    except RuntimeError:
+        print("Error - curve_fit failed")
+        L=np.nan
+    return L,(pcov)
+    
+def calcInegralScale_trapz(rho_i,dx):
+    L=np.trapz(y=rho_i, x=None, dx=dx, axis=-1)
+    return L,()
+    
+def calcInegralScale_simps(rho_i,dx):
+    L=simps(rho_i,dx=dx)
+    return L,()
+    
+def calcIntegralScale(rho_i,dx=1.0,method=None):
+    '''
+    calculates the integral scale
+    
+    Arguments:
+        * rho_i: [array] Normalized autocorrelation coefficients, starting with lag=0, and rho_i=1.0
+        * method: [string] Speciefies the method to be used.
+        
+    returns:
+        * L: integral scale
+        * params: [tuple] additional output parameters
+    '''
+    rho_i=np.array(rho_i)
+    #lags = np.linspace(0,(len(rho_i)-1.0)*dx,len(rho_i))
+    L,params=method(rho_i,dx)
+    return L,params
