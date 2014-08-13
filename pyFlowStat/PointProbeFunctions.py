@@ -163,3 +163,24 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
 
     return pt
  
+def createFromArray(dt,u,v,w,doDetrend=True):
+    '''
+    Create a PointProbe from three scalar arrays (velocity components)
+    adds the velocity vector time series, the times, and calls createDataDict and generateStatistics
+
+    Arguments:
+        * u,v,w:   [numpy.array shape=(N)] Coordinate of probe (must be included in ofFile)
+        * dt: [float]  Time step
+        * doDetrend: [bool] apply detrending in generateStatistics()
+
+    Returns:
+        * pt: [PointProbe] PointProbe object.
+    '''
+    pt=pp.PointProbe()
+    pt.probeVar=np.transpose(np.vstack((u,v,w)))
+    nrpoints=len(u)
+    endtime=(len(u)-1)*dt
+    pt.probeTimes=np.linspace(0,endtime,nrpoints)
+    pt.createDataDict()
+    pt.generateStatistics(doDetrend=doDetrend)
+    return pt
