@@ -574,17 +574,27 @@ class PointProbe(object):
 
     def lengthScale(self):
         '''
-        Compute turbulent length scale (in time) in all three directions.
+        Compute turbulent length scale Lii  and time scale Tii.
 
         Arguments:
-            * none
+            No arguments
 
         Returns:
-            * none
+            This methods create the following entries in data:
 
-        Member modifications:
-            * self.data['Tii']: [np.float()]
-            * self.data['Lii']: [np.float()]
+            *T*: python float. 
+            Turbulent time scale T calculated with the auto-correlation of umag
+            
+            *L*: python float
+             TUrbulent length scale L caluculated using T.
+            
+            *Tij*: python float. i and j can be x, y or z.
+             Turbulent Time scale Tij.
+            
+            *Lii*: python float. i can be x, y or z
+             Turbulent Length scale calulated with the turbulent time scale Tii
+             and the "Taylor Frozen Turbulence" theory. Umean[i] is used as
+             convective velocity.
         '''
         
         #def func_gauss(x, a):
@@ -594,7 +604,8 @@ class PointProbe(object):
 
         def checkAutoCorr(xdata,ydata,threshold=0.1):
             '''
-            Check shape of the first 3 points. A low value indicates possible bad data. A ratio of one means a straigh line.
+            Check shape of the first 3 points. A low value indicates possible 
+            bad data. A ratio of one means a straigh line.
             Arguments:
                 * xdata = lags
                 * ydata = correlation
