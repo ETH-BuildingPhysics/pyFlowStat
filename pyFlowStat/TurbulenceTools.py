@@ -1,22 +1,72 @@
 '''
 TurbulenceTools.py
 
-Collection of tools/functions to do spectral analysis from time series extracted from
-a turbulent flow field
+Collection of tools/functions to do spectral analysis from time series
+extracted from a turbulent flow field
 
 Functions included:
-    nextpow2(i)
-    dofft(sig,samplefrq)
-    movingave(x, window_len)
-    movingavesmart(x,window_len,window='flat')  #disabled!!
-    xcorr(x, y=None, maxlags=None, norm='ceoff')
+    *nextpow2*
+     calculate the next power of 2. 
+      
+    *dofft*
+     do an fft.
+      
+    *movingave*
+     Moving average on a signal x with a user defined window size.
+      
+    *xcorr*
+     Cross-corelation of two signal x and y. If x=y, then the auto correlation
+     is computed.
+    
+    *xcorr_fft*
+     Same as xcorr but much faster by using a fft.
+    
+    *twoPointCorr*
+    
+    *func_exp_correlation*
+    
+    *func_gauss_correlation*
+    
+    *fit_exp_correlation*
+    
+    *calcInegarlScale_expFit*
+    
+    *calcInegarlScale_trapz*
+    
+    *calcInegarlScale_simps*
+    
+    *calcIntegarlScale*
+    
+    *bandpass*
+     Butterworth-Bandpass Filter.
+     
+    
+    *bandstop*
+     Butterworth-Bandstop Filter.
+    
+    *lowpass*
+     Butterworth-Lowpass Filter.
+    
+    *highpass*
+    Butterworth-Lowpass Filter.
+    
+
+Notes:
+    *The functions "bandpass", "bandstop", "lowpass" and "highpass" are copied
+     from the python library ObsPy". ObsPy is an open-source project dedicated
+     to provide a Python framework for processing seismological data. See the
+     following links:
+     opspy website: https://github.com/obspy/obspy/wiki
+     opspy.filter: http://docs.obspy.org/_modules/obspy/signal/filter.html
 '''
 
 #===========================================================================#
 # load modules
 #===========================================================================#
 #standard modules
+import warnings
 import math
+
 #scientific modules
 import numpy as np
 import scipy.fftpack as spfft
@@ -413,3 +463,144 @@ def calcIntegralScale(rho_i,dx=1.0,method=None):
     #lags = np.linspace(0,(len(rho_i)-1.0)*dx,len(rho_i))
     L,params=method(rho_i,dx)
     return L,params
+
+
+#-----------------------------------------------------------------------------#
+def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False):
+    """
+    Butterworth-Bandpass Filter.
+
+    Filter data from ``freqmin`` to ``freqmax`` using ``corners`` corners.
+
+    :param data: Data to filter, type numpy.ndarray.
+    :param freqmin: Pass band low corner frequency.
+    :param freqmax: Pass band high corner frequency.
+    :param df: Sampling rate in Hz.
+    :param corners: Filter corners / orders.
+    :param zerophase: If True, apply filter once forwards and once backwards.
+        This results in twice the number of corners but zero phase shift in
+        the resulting filtered trace.
+    :return: Filtered data.
+    """
+    fe = 0.5 * df
+    low = freqmin / fe
+    high = freqmax / fe
+    # raise for some bad scenarios
+    if high > 1:
+        high = 1.0
+        msg = "Selected high corner frequency is above Nyquist. " + \
+              "Setting Nyquist as high corner."
+        warnings.warn(msg)
+    if low > 1:
+        msg = "Selected low corner frequency is above Nyquist."
+        raise ValueError(msg)
+    [b, a] = spsig.iirfilter(corners, [low, high], btype='band',
+                       ftype='butter', output='ba')
+    if zerophase:
+        firstpass = spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+    else:
+        return spsig.lfilter(b, a, data)
+
+
+def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False):
+    """
+    Butterworth-Bandstop Filter.
+
+    Filter data removing data between frequencies ``freqmin`` and ``freqmax``
+    using ``corners`` corners.
+
+    :param data: Data to filter, type numpy.ndarray.
+    :param freqmin: Stop band low corner frequency.
+    :param freqmax: Stop band high corner frequency.
+    :param df: Sampling rate in Hz.
+    :param corners: Filter corners / orders.
+    :param zerophase: If True, apply filter once forwards and once backwards.
+        This results in twice the number of corners but zero phase shift in
+        the resulting filtered trace.
+    :return: Filtered data.
+    """
+    fe = 0.5 * df
+    low = freqmin / fe
+    high = freqmax / fe
+    # raise for some bad scenarios
+    if high > 1:
+        high = 1.0
+        msg = "Selected high corner frequency is above Nyquist. " + \
+              "Setting Nyquist as high corner."
+        warnings.warn(msg)
+    if low > 1:
+        msg = "Selected low corner frequency is above Nyquist."
+        raise ValueError(msg)
+    [b, a] = spsig.iirfilter(corners, [low, high],
+                       btype='bandstop', ftype='butter', output='ba')
+    if zerophase:
+        firstpass = spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+    else:
+        return spsig.lfilter(b, a, data)
+
+
+def lowpass(data, freq, df, corners=4, zerophase=False):
+    """
+    Butterworth-Lowpass Filter.
+
+    Filter data removing data over certain frequency ``freq`` using ``corners``
+    corners.
+
+    :param data: Data to filter, type numpy.ndarray.
+    :param freq: Filter corner frequency.
+    :param df: Sampling rate in Hz.
+    :param corners: Filter corners / orders.
+    :param zerophase: If True, apply filter once forwards and once backwards.
+        This results in twice the number of corners but zero phase shift in
+        the resulting filtered trace.
+    :return: Filtered data.
+    """
+    fe = 0.5 * df
+    f = freq / fe
+    # raise for some bad scenarios
+    if f > 1:
+        f = 1.0
+        msg = "Selected corner frequency is above Nyquist. " + \
+              "Setting Nyquist as high corner."
+        warnings.warn(msg)
+    [b, a] = spsig.iirfilter(corners, f, btype='lowpass', ftype='butter',
+                       output='ba')
+    if zerophase:
+        firstpass = spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+    else:
+        return spsig.lfilter(b, a, data)
+
+
+def highpass(data, freq, df, corners=4, zerophase=False):
+    """
+    Butterworth-Highpass Filter.
+
+    Filter data removing data below certain frequency ``freq`` using
+    ``corners`` corners.
+
+    :param data: Data to filter, type numpy.ndarray.
+    :param freq: Filter corner frequency.
+    :param df: Sampling rate in Hz.
+    :param corners: Filter corners / orders.
+    :param zerophase: If True, apply filter once forwards and once backwards.
+        This results in twice the number of corners but zero phase shift in
+        the resulting filtered trace.
+    :return: Filtered data.
+    """
+    fe = 0.5 * df
+    f = freq / fe
+    # raise for some bad scenarios
+    if f > 1:
+        msg = "Selected corner frequency is above Nyquist."
+        raise ValueError(msg)
+    [b, a] = spsig.iirfilter(corners, f, btype='highpass', ftype='butter',
+                       output='ba')
+    if zerophase:
+        firstpass = spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+    else:
+        return spsig.lfilter(b, a, data)
+#-----------------------------------------------------------------------------#
