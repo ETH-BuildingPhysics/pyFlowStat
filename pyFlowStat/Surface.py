@@ -285,23 +285,23 @@ class Surface(object):
                 for theX in range(0,height):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                        self.vy[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vx[theY,theX] = np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX] = np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
         if tmpBuffer.image_sub_type == 4:
             for theY in range(0,width):
                 for theX in range(0,height):
-                    self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                    self.vy[theY,theX] = -1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vx[theY,theX] = np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vy[theY,theX] = np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     self.vz[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*2]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
         if tmpBuffer.image_sub_type == 5:
             for theY in range(0,width):
                 for theX in range(0,height):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                        self.vy[theY,theX]=-1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vx[theY,theX]=np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX]=np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                         self.vz[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
