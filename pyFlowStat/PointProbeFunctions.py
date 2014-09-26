@@ -146,10 +146,11 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
     Arguments:
         * surfaceTimeSeries: [SurfaceTimeSeries] pyFlowStat.Surface.SurfaceTimeSeries object
         * frq: [float]  Sample frequency
-        * i,j: [int] index of point
-        * doDetrend: [bool] apply detrending in generateStatistics()
-        * createDict: [bool] call createDataDict. The default bool is True
-        * genStat: [bool] call generateStatistics. The default bool is True
+        * i: [int] Row of the point (in pixel).
+        * j: [int] Column of the point (in pixel).
+        * doDetrend: [bool] apply detrending in generateStatistics(). Default=True
+        * createDict: [bool] call createDataDict. Default=True
+        * genStat: [bool] call generateStatistics. Default=True
 
     Returns:
         * pt: [PointProbe] PointProbe object.
