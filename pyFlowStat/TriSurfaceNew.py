@@ -14,10 +14,6 @@ import re
 import numpy as np
 import matplotlib.tri as tri
 
-import pyFlowStat.triZinterpolator as triz
-
-
-
 
 class TriSurfaceNew(object):
     '''
@@ -26,11 +22,7 @@ class TriSurfaceNew(object):
     
     variables:
          
-        *z*: array of shape (npoints,dim).
-         value at the coordinate (x,y).
-             * dim=1 for scalar
-             * dim=3 for vector
-             * etc...
+        *
          
         *interpolator*: list of length (dim).
          list of object from class matplotlib.tri.CubicTriInterpolator. One 
@@ -68,7 +60,7 @@ class TriSurfaceNew(object):
     # constructors #
     #--------------#
     
-    def __init__(self, x, y, z, triangles=None, mask=None):
+    def __init__(self, x, y, vx, vy, vz, triangles=None, mask=None, create_velInterpolator=True):
         '''
         base constructor from a list of x, y and z. list of triangles and mask 
         optional.
@@ -80,9 +72,12 @@ class TriSurfaceNew(object):
             *y*: numpy array of shape (npoints).
              y-coordinates of grid points.
              
-            *z*: numpy array of shape (npoints,ndim).
-             value at points (x,y). z can be scalar (ndim=1), vector (ndim=3),
-             etc...
+            *vz*: numpy array of shape (npoints).
+             Velocity componant in z direction
+             
+             *vz*: numpy array of shape (npoints).
+             Velocity componant in z direction
+
     
             *triangles*: integer array of shape (ntri,3).
              For each triangle, the indices of the three points that make
@@ -94,178 +89,160 @@ class TriSurfaceNew(object):
              Which triangles are masked out.
              
         '''
-        self.triangulation = None
-        if mask==None:
-            self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=None)
-        else:
-            triang = tri.Triangulation(x, y, triangles=triangles, mask=mask)
-            trianalyzer = tri.TriAnalyzer(triang)
-            (comp_triangles,
-             comp_x,
-             comp_y,
-             tri_renum,
-             node_renum) = trianalyzer._get_compressed_triangulation(True, True)
-            node_mask = (node_renum == -1)
-            z[node_renum[~node_mask]] = z
-            z = z[~node_mask]
-            self.triangulation = tri.Triangulation(comp_x, comp_y, triangles=comp_triangles, mask=None)
+        self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=None)
 
-        self.z = np.asarray(z)
-        self.data = dict()
+        self.vx=np.asarray(vx)
+        self.vy=np.asarray(vy)
+        self.vz=np.asarray(vz)
+        self.data = dict()  
         
-        # interpolator. An oject of class ArrayTriInterpolator. 
-        # Created if needed
-        self.interpolator = None
+        self.interpolators = dict()
+        if create_velInterpolator==True:
+            pass
+ 
         
-    @classmethod
-    def readFromFoamFile(cls,
-                         varsFile,
-                         pointsFile,
-                         facesFile,
-                         viewAnchor,
-                         xViewBasis,
-                         yViewBasis,
-                         srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                         mask=None):
-        '''
-        Construct from a surface saved  by OpenFOAM in foamFile format.
-        '''
-        # check and convert arguments
-        srcBasisSrc = np.array(srcBasisSrc,dtype=float)
-        if srcBasisSrc.shape!=(3,3):
-            raise ValueError('srcBasis must be a 3x3 matrix')
-            
-        xViewBasis = np.array(xViewBasis,dtype=float)
-        yViewBasis = np.array(yViewBasis,dtype=float)
-        if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
-            raise ValueError('xViewBasis.shape and yViewBasis. ',
-                             'shape must be equal to (3,)')
-            
-        # get the basis and the transformation object
-        tgtBasisSrc = np.zeros((3,3))
-        tgtBasisSrc[:,0] = xViewBasis        
-        tgtBasisSrc[:,1] = yViewBasis
-        tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
-        afftrans = AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
-        #lintrans = LinearTransformation(srcBasisSrc,tgtBasisSrc)
-
-        # get x and y vector (in ptTrt)
-        ptsSrc = parseFoamFile(pointsFile)
-        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-        for i in range(ptsSrc.shape[0]):
-            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
-            
-        #get triangles
-        triangles = parseFoamFile(facesFile)[:,1:4]
-
-        # feed x, y and triangles to the base constructor
-        return cls(ptsTgt[:,0],ptsTgt[:,1],parseFoamFile(varsFile),triangles,mask)
+#    @classmethod
+#    def readFromFoamFile(cls,
+#                         varsFile,
+#                         pointsFile,
+#                         facesFile,
+#                         viewAnchor,
+#                         xViewBasis,
+#                         yViewBasis,
+#                         srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
+#                         mask=None):
+#        '''
+#        Construct from a surface saved  by OpenFOAM in foamFile format.
+#        '''
+#        # check and convert arguments
+#        srcBasisSrc = np.array(srcBasisSrc,dtype=float)
+#        if srcBasisSrc.shape!=(3,3):
+#            raise ValueError('srcBasis must be a 3x3 matrix')
+#            
+#        xViewBasis = np.array(xViewBasis,dtype=float)
+#        yViewBasis = np.array(yViewBasis,dtype=float)
+#        if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
+#            raise ValueError('xViewBasis.shape and yViewBasis. ',
+#                             'shape must be equal to (3,)')
+#            
+#        # get the basis and the transformation object
+#        tgtBasisSrc = np.zeros((3,3))
+#        tgtBasisSrc[:,0] = xViewBasis        
+#        tgtBasisSrc[:,1] = yViewBasis
+#        tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
+#        afftrans = AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+#        #lintrans = LinearTransformation(srcBasisSrc,tgtBasisSrc)
+#
+#        # get x and y vector (in ptTrt)
+#        ptsSrc = parseFoamFile(pointsFile)
+#        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
+#        for i in range(ptsSrc.shape[0]):
+#            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+#            
+#        #get triangles
+#        triangles = parseFoamFile(facesFile)[:,1:4]
+#
+#        # feed x, y and triangles to the base constructor
+#        return cls(ptsTgt[:,0],ptsTgt[:,1],parseFoamFile(varsFile),triangles,mask)
  
        
-    @classmethod
-    def readFromVTK(cls):
-        '''
-        Construct from a surface saved by OpenFOAM in VTK format.
-        '''
-        raise NotImplementedError('The method is not implemented')
-  
-    # getter and setter #
-    #-------------------#
+#    @classmethod
+#    def readFromVTK(cls):
+#        '''
+#        Construct from a surface saved by OpenFOAM in VTK format.
+#        '''
+#        raise NotImplementedError('The method is not implemented')
+#  
+#    # getter and setter #
+#    #-------------------#
+#
+#    def x(self):
+#        '''
+#        '''
+#        return self.triangulation.x
+#        
+#        
+#    def y(self):
+#        '''
+#        '''
+#        return self.triangulation.y
+#        
+#        
+#    def triangles(self):
+#        '''
+#        '''
+#        return self.triangulation.triangles
+#        
+#    
+#    # class methods #
+#    #---------------#
+#    def zsize(self):
+#        '''
+#        '''
+#        return self.z[0].size
+#        
+#        
+#    def rawGrad(self):
+#        '''
+#        Calculate and save the gradient at all (self.x,self.y) locations.
+#        If x and y have a shape of (npts), z a shape of (npts,dim), than
+#        the gradient has a shape of (npts,2,dim).
+#        Example for a scalar field s:
+#            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
+#            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
+#        Example for a vector field (u,v,w):
+#            dudx = self['grad'][:,0,0]
+#            dudy = self['grad'][:,1,0]
+#            dvdx = self['grad'][:,0,1]
+#            dvdy = self['grad'][:,1,1]
+#            dwdx = self['grad'][:,0,2]
+#            dwdy = self['grad'][:,1,2]
+#        '''
+#        self.create_interpolator()
+#        self.data['grad'] = np.array([self.interpolator[i].gradient(self.triangulation.x,self.triangulation.y) for i in range(self.zsize())]).T
 
-    def x(self):
-        '''
-        '''
-        return self.triangulation.x
-        
-        
-    def y(self):
-        '''
-        '''
-        return self.triangulation.y
-        
-        
-    def triangles(self):
-        '''
-        '''
-        return self.triangulation.triangles
-        
-    
-    # class methods #
-    #---------------#
-    def zsize(self):
-        '''
-        '''
-        return self.z[0].size
-        
-        
-    def rawGrad(self):
-        '''
-        Calculate and save the gradient at all (self.x,self.y) locations.
-        If x and y have a shape of (npts), z a shape of (npts,dim), than
-        the gradient has a shape of (npts,2,dim).
-        Example for a scalar field s:
-            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
-            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
-        Example for a vector field (u,v,w):
-            dudx = self['grad'][:,0,0]
-            dudy = self['grad'][:,1,0]
-            dvdx = self['grad'][:,0,1]
-            dvdy = self['grad'][:,1,1]
-            dwdx = self['grad'][:,0,2]
-            dwdy = self['grad'][:,1,2]
-        '''
-        self.create_interpolator()
-        self.data['grad'] = np.array([self.interpolator[i].gradient(self.triangulation.x,self.triangulation.y) for i in range(self.zsize())]).T
-        
-    def gradient(self,x,y):
-        '''
-        Return gradient at location (x,y). x,y can be an array.
-        If x and y have a shape of (npts), z a shape of (npts,dim), than
-        the gradient has a shape of (npts,2,dim).
-        Example for a scalar field s:
-            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
-            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
-        Example for a vector field (u,v,w):
-            dudx = self['grad'][:,0,0]
-            dudy = self['grad'][:,1,0]
-            dvdx = self['grad'][:,0,1]
-            dvdy = self['grad'][:,1,1]
-            dwdx = self['grad'][:,0,2]
-            dwdy = self['grad'][:,1,2]
-        '''
-        # x and y must be numpy array
-        x = np.asarray(x, dtype=np.float)
-        y = np.asarray(y, dtype=np.float)
-        self.create_interpolator()
-        return np.array([self.interpolator[i].gradient(x,y) for i in range(self.zsize())]).T
+#    def gradient(self,x,y):
+#        '''
+#        Return gradient at location (x,y). x,y can be an array.
+#        If x and y have a shape of (npts), z a shape of (npts,dim), than
+#        the gradient has a shape of (npts,2,dim).
+#        Example for a scalar field s:
+#            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
+#            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
+#        Example for a vector field (u,v,w):
+#            dudx = self['grad'][:,0,0]
+#            dudy = self['grad'][:,1,0]
+#            dvdx = self['grad'][:,0,1]
+#            dvdy = self['grad'][:,1,1]
+#            dwdx = self['grad'][:,0,2]
+#            dwdy = self['grad'][:,1,2]
+#        '''
+#        # x and y must be numpy array
+#        x = np.asarray(x, dtype=np.float)
+#        y = np.asarray(y, dtype=np.float)
+#        self.create_interpolator()
+#        return np.array([self.interpolator[i].gradient(x,y) for i in range(self.zsize())]).T
                 
         
         
-    def interpolate(self,x,y):
-        '''
-        Return interpolated value at location (x,y). x and y can be arrays. The
-        member variable interpolation can also be used directly.
-        '''
-        # no need to convert x and y in numpy array
-        self.create_interpolator()
-        return np.array([self.interpolator[i](x,y) for i in range(self.zsize())]).T
+#    def interpolate(self,x,y):
+#        '''
+#        Return interpolated value at location (x,y). x and y can be arrays. The
+#        member variable interpolation can also be used directly.
+#        '''
+#        # no need to convert x and y in numpy array
+#        self.create_interpolator()
+#        return np.array([self.interpolator[i](x,y) for i in range(self.zsize())]).T
 
         
 
-    def create_interpolator(self):
+    def create_velocityInterpolator(self):
         '''
         Create the list of interpolator object.
         '''
-        if self.interpolator==None:
-            self.interpolator  = list()
-            if self.zsize()==1:
-                self.interpolator.append(triz.CubicTriZInterpolator(self.triangulation, self.z))
-            else:
-                for i in range(self.zsize()):
-                    self.interpolator.append(triz.CubicTriZInterpolator(self.triangulation, self.z[:,i]))
-
+        pass
             
-        
+
     def __iter__(self):
         '''
         Iterable on member "data".
