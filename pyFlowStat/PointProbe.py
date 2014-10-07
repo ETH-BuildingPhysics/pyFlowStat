@@ -938,24 +938,32 @@ def getPIVVectorPointProbeList(directory,pointlist,nr,frq):
 
 def readcsv(csvfile,delimiter,fieldnames=None):
     '''
-    Read a csv file with headers on the first line. If no headers, a list of headers must be specified with fieldnames.
-    csv files are  very common data file for scientists. This method is quick limited, for special cases, see standard python
-    module "csv": http://docs.python.org/2/library/csv.html
-
+    Read a csv file with headers on the first line. If no headers, a list of 
+    headers must be specified with fieldnames. csv files are  very common data
+    file for scientists. This method might become quickly limited, for special
+    cases, see standard python module "csv": 
+    http://docs.python.org/2/library/csv.html
 
     Arguments:
-        * csvfile: [string] path to csvfile
-        * delimiter: [string] the delimiter
-        * fieldnames: [list of string] list of header if any in csvfile
+        *csvfile*: python string.
+         Path to the CVS file. It can be absolute or relative.
+         
+        *delimiter*: python string.
+         Delimiter use in the csv file. For tabs, use '\t'. For semicolon, use 
+         ';'. For comma, use ','.           
+        
+        *fieldnames*: python list of strings.
+         list of header if any in the csv file.
 
     Returns:
-        * data: [collection.defaultdict(list)] Advenced python dict with headers as dict keys.
+        *data*: python collection.defaultdict.
+         Advenced python dict with headers as dict keys.
 
     Examples:
-        * >>> data = readcsv(data.csv,delimiter=';')   #cvs with header and ';' delimiter
-        * >>> data = readcsv(data.csv,delimiter='\t', fieldnames=['x','y','U'])   #cvs without header and a tab as delimiter
-          >>> listOfHeaders = data.keys()
-          >>> dataForHeaderA = data['A']
+        >>> data = readcsv(data.csv,delimiter=';')   #cvs with header and ';' as delimiter
+        >>> data = readcsv(data.csv,delimiter='\t', fieldnames=['x','y','U'])   #cvs without header and a tab as delimiter
+        >>> listOfHeaders = data.keys()
+        >>> dataForHeaderA = data['A']
     '''
     data = collections.defaultdict(list)
     with open(csvfile) as f:
