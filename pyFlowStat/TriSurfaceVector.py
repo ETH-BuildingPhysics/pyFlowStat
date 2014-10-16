@@ -1,8 +1,5 @@
 '''
 TriSurfaceVector.py
-
-
-!!! Still in alpha version !!!
 '''
 
 import re
@@ -34,13 +31,13 @@ class TriSurfaceVector(object):
              y-coordinates of grid points.
              
             *vx*: numpy array of shape (npoints).
-             Vector componant in z direction
+             "in-plan" vector componant. Labeled x TriSurfaceVector
              
             *vy*: numpy array of shape (npoints).
-             Vector componant in y direction
+             "in-plan" vector componant. Labeled y in TriSurfaceVector
              
              *vz*: numpy array of shape (npoints).
-             Vector componant in z direction
+             "off-plan" vector componant. Labeled z in TriSurfaceVector
 
             *triangles*: integer array of shape (ntri,3).
              For each triangle, the indices of the three points that make
@@ -51,11 +48,14 @@ class TriSurfaceVector(object):
             *mask*: optional boolean array of shape (ntri).
              Which triangles are masked out.
              
-            *interpoation*: python string.
-             type of interpolation used if needed. "cubic" or "linear"
-             
-            
-            *kind*
+            *interpoation*: python string. 
+             type of interpolation used. Value: "cubic" or "linear".
+             Default="cubic"
+
+            *kind*: python string.
+             Definition of the cubic interpolation type. Value: "geom" or
+             "min_E". Default="geom". "min_E" is supposed to be the more 
+             accurate, but "geom" is way faster.
         '''
 
         self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=None)
@@ -87,7 +87,6 @@ class TriSurfaceVector(object):
         self.datainter = dict()
         
  
-        
     @classmethod
     def readFromFoamFile(cls,
                          varsFile,
@@ -120,27 +119,31 @@ class TriSurfaceVector(object):
         tgtBasisSrc[:,1] = yViewBasis
         tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
         afftrans = coorTrans.AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+        lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
 
-        # get x and y vector (in ptTrt)
+        # get x and y vector (in ptsTgt)
         ptsSrc = parseFoamFile(pointsFile)
         ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
         for i in range(ptsSrc.shape[0]):
             ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
-            
+
+        #get vectors (in vecsTgt)
+        vecsSrc = parseFoamFile(varsFile)
+        vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
+        for i in range(vecsSrc.shape[0]):
+            vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
+        
         #get triangles
         triangles = parseFoamFile(facesFile)[:,1:4]
-        
-        #get vectors
-        vectors = parseFoamFile(varsFile)
         
 
         # feed x, y and triangles to the base constructor
         #(self, x, y, vx, vy, vz, triangles=None, mask=None, interpolation='cubic',kind='geom')
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
-                   vx=vectors[:,0],
-                   vy=vectors[:,0],
-                   vz=vectors[:,0],
+                   vx=vecsTgt[:,0],
+                   vy=vecsTgt[:,1],
+                   vz=vecsTgt[:,2],
                    triangles=triangles,
                    mask=mask,
                    interpolation=interpolation,
@@ -180,84 +183,53 @@ class TriSurfaceVector(object):
     
     # class methods #
     #---------------#
-#    def rawGrad(self):
-#        '''
-#        Calculate and save the gradient at all (self.x,self.y) locations.
-#        If x and y have a shape of (npts), z a shape of (npts,dim), than
-#        the gradient has a shape of (npts,2,dim).
-#        Example for a scalar field s:
-#            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
-#            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
-#        Example for a vector field (u,v,w):
-#            dudx = self['grad'][:,0,0]
-#            dudy = self['grad'][:,1,0]
-#            dvdx = self['grad'][:,0,1]
-#            dvdy = self['grad'][:,1,1]
-#            dwdx = self['grad'][:,0,2]
-#            dwdy = self['grad'][:,1,2]
-#        '''
-#        self.create_interpolator()
-#        self.data['grad'] = np.array([self.interpolator[i].gradient(self.triangulation.x,self.triangulation.y) for i in range(self.zsize())]).T
-
-#    def gradient(self,x,y):
-#        '''
-#        Return gradient at location (x,y). x,y can be an array.
-#        If x and y have a shape of (npts), z a shape of (npts,dim), than
-#        the gradient has a shape of (npts,2,dim).
-#        Example for a scalar field s:
-#            * dsdx = self['grad'][:,0,0] or   self['grad'][:,0]
-#            * dsdy = self['grad'][:,1,0] or   self['grad'][:,1]
-#        Example for a vector field (u,v,w):
-#            dudx = self['grad'][:,0,0]
-#            dudy = self['grad'][:,1,0]
-#            dvdx = self['grad'][:,0,1]
-#            dvdy = self['grad'][:,1,1]
-#            dwdx = self['grad'][:,0,2]
-#            dwdy = self['grad'][:,1,2]
-#        '''
-#        # x and y must be numpy array
-#        x = np.asarray(x, dtype=np.float)
-#        y = np.asarray(y, dtype=np.float)
-#        self.create_interpolator()
-#        return np.array([self.interpolator[i].gradient(x,y) for i in range(self.zsize())]).T
-                
+    def gradient(self):
+        '''
+        Calculate and save the gradient at all point of the grid.
+        '''
+        self.data['dvxdx'],self.data['dvxdy'] = self.vxinter.gradient(self.x(),self.y())
+        self.data['dvxdx'],self.data['dvydy'] = self.vyinter.gradient(self.x(),self.y())
+ 
+       
+    def gradientInter(self,x,y):
+        '''
+        Calculate the gradient at the point pt(x,y) and return it.
         
-        
-#    def interpolate(self,x,y):
-#        '''
-#        Return interpolated value at location (x,y). x and y can be arrays. The
-#        member variable interpolation can also be used directly.
-#        '''
-#        # no need to convert x and y in numpy array
-#        self.create_interpolator()
-#        return np.array([self.interpolator[i](x,y) for i in range(self.zsize())]).T
+        Arguments:
+            *x*: python float.
+             x coordinate of the point pt.
+            
+            *y*: python float.
+             y coordinate of the point pt.
+             
+        Returns:
+            *dvxdx, dvxdy, dvydx, dvydy*: python tuple of four float.
+             The gradient at point pt(x,y).
+        '''
+        dvxdx, dvxdy = self.vxinter.gradient(x,y)
+        dvydx, dvydy = self.vyinter.gradient(x,y)
+        return dvxdx, dvxdy, dvydx, dvydy 
 
-        
 
-#    def create_velocityInterpolator(self):
-#        '''
-#        Create the list of interpolator object.
-#        '''
-#        pass
-#            
-#
 #    def __iter__(self):
 #        '''
 #        Iterable on member "data".
 #        '''
 #        return self.data.itervalues()
-#
-#    def __getitem__(self, key):
-#        '''
-#        Getter for key "key" on member dictionnary "data"
-#        '''
-#        return self.data[key]
-#
-#    def __setitem__(self, key, item):
-#        '''
-#        Setter for key "key" on member dictionnary "data"
-#        '''
-#        self.data[key] = item
+
+
+    def __getitem__(self, key):
+        '''
+        Getter for key "key" on member dictionnary "data"
+        '''
+        return self.data[key]
+
+
+    def __setitem__(self, key, item):
+        '''
+        Setter for key "key" on member dictionnary "data"
+        '''
+        self.data[key] = item
 
         
     
