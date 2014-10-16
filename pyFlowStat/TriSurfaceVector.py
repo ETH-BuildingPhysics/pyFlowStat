@@ -12,7 +12,7 @@ import CoordinateTransformation as coorTrans
 
 class TriSurfaceVector(object):
     '''
-    class TriSurfaceVector
+    class TriSurfaceVector.
     '''
     
     # constructors #
@@ -138,7 +138,6 @@ class TriSurfaceVector(object):
         
 
         # feed x, y and triangles to the base constructor
-        #(self, x, y, vx, vy, vz, triangles=None, mask=None, interpolation='cubic',kind='geom')
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
                    vx=vecsTgt[:,0],
@@ -209,13 +208,6 @@ class TriSurfaceVector(object):
         dvxdx, dvxdy = self.vxinter.gradient(x,y)
         dvydx, dvydy = self.vyinter.gradient(x,y)
         return dvxdx, dvxdy, dvydx, dvydy 
-
-
-#    def __iter__(self):
-#        '''
-#        Iterable on member "data".
-#        '''
-#        return self.data.itervalues()
 
 
     def __getitem__(self, key):
