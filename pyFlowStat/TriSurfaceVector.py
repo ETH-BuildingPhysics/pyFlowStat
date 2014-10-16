@@ -13,12 +13,68 @@ import CoordinateTransformation as coorTrans
 class TriSurfaceVector(object):
     '''
     class TriSurfaceVector.
+    
+    Class which describes a 3D vector field V=(vx,vy,vz) on a 2D (flat)
+    triangulated surface S of N points. The triangulation is a grid of M 
+    triangles. The x coordinate is the horizontal direction of S, y the
+    vertical direction of S and z the off-plan direction. Therefore, vx and vy
+    are the in-plane coordinate and vz the off-plane.
+    
+    Member variables:
+        *triangulation* : triangulation object. 
+         Triangulation object, which holds the grid. Therefore, it also holds
+         the grid points coordinates (x and y), the triangles and some other
+         stuffs. See matplotlib.Tri.Trangulation.Triangulation for more
+         details.
+         
+        *vx*: numpy array of shape (N,)
+         
+        *vy*: numpy array of shape (N,)
+        
+        *vz*: numpy array of shape (N,)
+        
+        *vx_i*: CubicTriInterpolator or LinearTriInterpolation object
+        
+        *vy_i*: CubicTriInterpolator or LinearTriInterpolation object
+        
+        *vz_i*: CubicTriInterpolator or LinearTriInterpolation object
+        
+        *data*: python dict
+        
+        *data_i*: python dict
+        
+        *__interType*: python string
+        
+        *__interKind*: python string
+        
+    Member functions:
+        *__init__*: default constructor
+        
+        *readFromFoamFile*: constructor from a foamFile generate by OpenFOAM
+        
+        *readFromVTK*: contructor from a VTK file generate by OpenFOAM
+        
+        *x*
+         Returns the x coordinate of the grid points.
+        
+        *y*
+         Returns the y coordinate of the grid points.
+        
+        *trangles*
+        
+        *getInterpolator*
+        
+        *gradient*
+        
+        *gradient_i*
+        
+        
     '''
     
     # constructors #
     #--------------#
     
-    def __init__(self, x, y, vx, vy, vz, triangles=None, mask=None, interpolation='cubic',kind='geom'):
+    def __init__(self, x, y, vx, vy, vz, triangles=None, mask=None):
         '''
         base constructor from a list of x, y and z. list of triangles and mask 
         optional.
@@ -50,7 +106,7 @@ class TriSurfaceVector(object):
              
             *interpoation*: python string. 
              type of interpolation used. Value: "cubic" or "linear".
-             Default="cubic"
+             Default="cubic". 
 
             *kind*: python string.
              Definition of the cubic interpolation type. Value: "geom" or
@@ -65,26 +121,15 @@ class TriSurfaceVector(object):
         self.vz=np.asarray(vz)
         
     
-        self.__interType = interpolation
-        self.__interKind  = kind
-
+        self.__interType = None
+        self.__interKind  = None
         
-        
-        if self.__interType=='cubic':
-            self.vxinter = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.__interKind)
-            self.vyinter = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.__interKind)
-            self.vzinter = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.__interKind)
-        elif self.__interType=='linear':
-            self.vxinter = tri.LinearTriInterpolator(self.triangulation, self.vx)
-            self.vyinter = tri.LinearTriInterpolator(self.triangulation, self.vy)
-            self.vzinter = tri.LinearTriInterpolator(self.triangulation, self.vz)
-        else:
-            raise ValueError('Interpolation must be "cubic" or "linear".')
-            
-            
+        self.vx_i = None
+        self.vy_i = None
+        self.vz_i = None
         
         self.data = dict()
-        self.datainter = dict()
+        self.data_i = dict()
         
  
     @classmethod
@@ -96,9 +141,7 @@ class TriSurfaceVector(object):
                          xViewBasis,
                          yViewBasis,
                          srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                         mask=None,
-                         interpolation='cubic',
-                         kind='geom'):
+                         mask=None):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         '''
@@ -144,9 +187,7 @@ class TriSurfaceVector(object):
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
                    triangles=triangles,
-                   mask=mask,
-                   interpolation=interpolation,
-                   kind=kind)
+                   mask=mask)
  
        
     @classmethod
@@ -182,15 +223,30 @@ class TriSurfaceVector(object):
     
     # class methods #
     #---------------#
+    def getInterpolator(self,interpolation='cubic', kind='geom'):
+        self.__interType = interpolation
+        self.__interKind = kind
+        if self.__interType=='cubic':
+            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.__interKind)
+            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.__interKind)
+            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.__interKind)
+        elif self.__interType=='linear':
+            self.vx_i = tri.LinearTriInterpolator(self.triangulation, self.vx)
+            self.vy_i = tri.LinearTriInterpolator(self.triangulation, self.vy)
+            self.vz_i = tri.LinearTriInterpolator(self.triangulation, self.vz)
+        else:
+            raise ValueError('Interpolation must be "cubic" or "linear".')
+        
+    
     def gradient(self):
         '''
         Calculate and save the gradient at all point of the grid.
         '''
-        self.data['dvxdx'],self.data['dvxdy'] = self.vxinter.gradient(self.x(),self.y())
-        self.data['dvxdx'],self.data['dvydy'] = self.vyinter.gradient(self.x(),self.y())
+        self.data['dvxdx'],self.data['dvxdy'] = self.vx_i.gradient(self.x(),self.y())
+        self.data['dvxdx'],self.data['dvydy'] = self.vy_i.gradient(self.x(),self.y())
  
        
-    def gradientInter(self,x,y):
+    def gradient_i(self,x,y):
         '''
         Calculate the gradient at the point pt(x,y) and return it.
         
@@ -205,8 +261,8 @@ class TriSurfaceVector(object):
             *dvxdx, dvxdy, dvydx, dvydy*: python tuple of four float.
              The gradient at point pt(x,y).
         '''
-        dvxdx, dvxdy = self.vxinter.gradient(x,y)
-        dvydx, dvydy = self.vyinter.gradient(x,y)
+        dvxdx, dvxdy = self.vx_i.gradient(x,y)
+        dvydx, dvydy = self.vy_i.gradient(x,y)
         return dvxdx, dvxdy, dvydx, dvydy 
 
 
