@@ -114,7 +114,7 @@ class TriSurfaceVector(object):
              accurate, but "geom" is way faster.
         '''
 
-        self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=None)
+        self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=mask)
 
         self.vx=np.asarray(vx)
         self.vy=np.asarray(vy)

@@ -348,7 +348,7 @@ class Surface(object):
         if method=='cubic':
             itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         elif method=='linear':
-            itp=tri.LinearTriInterpolator(triangulation,values,kind=kind)
+            itp=tri.LinearTriInterpolator(triangulation,values)
         else:
             itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         zi_ma = itp(grid_x, grid_y)
@@ -356,13 +356,73 @@ class Surface(object):
 
         return zi
 
-    def readFromFoamFile(self,pointsFile,facesFile,velFile,scalarFileList=[],symTensorFileList=[],viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None,interpolationMethod='cubic'):
+    def readFromFoamFile(self,
+                         pointsFile,
+                         facesFile,
+                         velFile,
+                         scalarFileList=[],
+                         symTensorFileList=[],
+                         viewAnchor=(0,0,0),
+                         xViewBasis=(1,0,0),
+                         yViewBasis=(0,1,0),
+                         dx=None,
+                         dy=None,
+                         interpolationMethod='cubic',
+                         kind='min_E'):
+        '''
+        Read an OpenFOAM surface (triangulated grid) in the current Surface
+        object (cartesian grid). As the "grid" change (tri to cartesian), the
+        value must be interpolated.
+        
+        
+        Arguments:
+            *pointFile*: python string.
+             Point file  generate by OpenFOAM. This is the grid point
+             coordinates.
+            
+            *facesFile*: python string.
+             Face file generate by OpenFOAM. It is a list of triangles, which
+             compose the grid.
+            
+            *velFile*: python string.
+             Vector file generate by OpenFOAM. This is the data associated with
+             each grid point.
+            
+            *scalarFileList*: python list.
+            
+            *symTensorFileList*: python list.
+            
+            *dx*: python float.
+             Physical size of a pixel in the Surface class (x discretisation).
+             Must be given in mm.
+            
+            *dy*: python float.
+             Physical size of a pixel in the Surface class (y discretisation).
+             Must be given in mm.
+            
+            *interpolationMethod*: python string. 
+             Interpolation method used to interpolate from the triangulated
+             grid to the cartesian grid. "cubic" or "linear". Default="cubic"
+             
+            *kind*: python string.
+             Defines the algorithm used for the cubic interpolation. Choices:
+             "min_E" or "geom". "min_E" should be the more accurate, but it is 
+             also the most time time consuming.
+             
+        Returns:
+            none
+        '''
 
         print 'Reading Velocity'
 
         s=TriSurface()
         #s.storeMesh=False
-        s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
+        s.readFromFoamFile(varsFile=velFile,
+                           pointsFile=pointsFile,
+                           facesFile=facesFile,
+                           viewAnchor=viewAnchor,
+                           xViewBasis=xViewBasis,
+                           yViewBasis=yViewBasis)
 
         points=s.xys
         faces=s.faces
@@ -391,9 +451,9 @@ class Surface(object):
         triang = tri.Triangulation(points[:,0], points[:,1], faces)
 
         print 'Interpolating Velocity'
-        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
-        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
-        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod)
+        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
+        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
+        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
         self.vz=np.flipud(vz_i)
