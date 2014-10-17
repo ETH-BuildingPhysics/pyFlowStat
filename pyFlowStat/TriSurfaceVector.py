@@ -16,10 +16,17 @@ class TriSurfaceVector(object):
     
     Class which describes a 3D vector field V=(vx,vy,vz) on a 2D (flat)
     triangulated surface S of N points. The triangulation is a grid of M 
-    triangles. The x coordinate is the horizontal direction of S, y the
-    vertical direction of S and z the off-plan direction. Therefore, vx and vy
-    are the in-plane coordinate and vz the off-plane.
+    triangles. 
+    The coordinate system of S is the following:
+        * x = the horizontal coordinate, pointing East (in-plane)
+        * y = the vertical coordinate, pointing North (in-plane)
+        * z = the off-plane coordinate, pointing torward you   
+    Therefore, vx and vy are the in-plane vector coordinate and vz the
+    off-plane one.
     
+    To construct a TriSurfaceVector object, use better the @classmethod
+    "readFromFoamFile" or "readFromVTK".
+
     Member variables:
         *triangulation* : triangulation object. 
          Triangulation object, which holds the grid. Therefore, it also holds
@@ -47,22 +54,30 @@ class TriSurfaceVector(object):
         
         *__interKind*: python string
         
+        *__affTrans*:
+        
+        *__linTrans*:
+        
+        *__projectField*: python bool
+        
     Member functions:
-        *__init__*: default constructor
+        *__init__*: base constructor.
         
-        *readFromFoamFile*: constructor from a foamFile generate by OpenFOAM
+        *readFromFoamFile*: constructor from a foamFile generate by OpenFOAM.
         
-        *readFromVTK*: contructor from a VTK file generate by OpenFOAM
+        *readFromVTK*: contructor from a VTK file generate by OpenFOAM.
         
-        *x*
-         Returns the x coordinate of the grid points.
+        *x*: Returns the x coordinate of the grid points.
         
-        *y*
-         Returns the y coordinate of the grid points.
+        *y*: Returns the y coordinate of the grid points.
         
         *trangles*
         
         *getInterpolator*
+        
+        *addFields*
+
+        *addFieldFromFoamFile*        
         
         *gradient*
         
@@ -74,10 +89,21 @@ class TriSurfaceVector(object):
     # constructors #
     #--------------#
     
-    def __init__(self, x, y, vx, vy, vz, triangles=None, mask=None):
+    def __init__(self,
+                 x,
+                 y,
+                 vx,
+                 vy,
+                 vz,
+                 triangles=None,
+                 mask=None,
+                 projectField=True,
+                 interpolation=None,
+                 kind=None,
+                 affTrans=None,
+                 linTrans=None):
         '''
-        base constructor from a list of x, y and z. list of triangles and mask 
-        optional.
+        base constructor.
         
         Arguments:
             *x*: numpy array of shape (npoints).
@@ -104,6 +130,16 @@ class TriSurfaceVector(object):
             *mask*: optional boolean array of shape (ntri).
              Which triangles are masked out.
              
+            *projectField* python bool (default=True)
+             Defines if the data fields has to be projected in the basis of the
+             surface. Example where such option really matters:
+             Let us consider a 3D laminar flow with the follow velocity field: 
+             U=(Ux,0,0). Let us consider the surface S1 with the normal n1=(0,ny,0)
+             and the surface S2 with the normal n2=(nx,ny,0). On S1, Ux will be
+             in the surface plan, therefore S1.gradient() makes sense. On the 
+             other hand, Ux in NOT in the plane of S2.
+             
+             
             *interpoation*: python string. 
              type of interpolation used. Value: "cubic" or "linear".
              Default="cubic". 
@@ -112,6 +148,10 @@ class TriSurfaceVector(object):
              Definition of the cubic interpolation type. Value: "geom" or
              "min_E". Default="geom". "min_E" is supposed to be the more 
              accurate, but "geom" is way faster.
+             
+            *affTrans*: AffineTransformation object.
+            
+            *linTrans*: LinearTransformation object.
         '''
 
         self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=mask)
@@ -120,10 +160,6 @@ class TriSurfaceVector(object):
         self.vy=np.asarray(vy)
         self.vz=np.asarray(vz)
         
-    
-        self.__interType = None
-        self.__interKind  = None
-        
         self.vx_i = None
         self.vy_i = None
         self.vz_i = None
@@ -131,7 +167,16 @@ class TriSurfaceVector(object):
         self.data = dict()
         self.data_i = dict()
         
- 
+        
+        # "private" member variable. Don't play with them if you are not sure...        
+        self.__affTrans = affTrans
+        self.__linTrans = linTrans
+        
+        self.__interType = interpolation
+        self.__interKind  = kind
+        
+        self.__projectField = projectField
+        
     @classmethod
     def readFromFoamFile(cls,
                          varsFile,
@@ -141,7 +186,7 @@ class TriSurfaceVector(object):
                          xViewBasis,
                          yViewBasis,
                          srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                         mask=None):
+                         projectField=True):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         '''
@@ -173,24 +218,31 @@ class TriSurfaceVector(object):
         #get vectors (in vecsTgt)
         vecsSrc = parseFoamFile(varsFile)
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
-        for i in range(vecsSrc.shape[0]):
-            vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
+        if projectField==True:
+            for i in range(vecsSrc.shape[0]):
+                vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
+        else:
+            vecsTgt = vecsSrc
         
         #get triangles
         triangles = parseFoamFile(facesFile)[:,1:4]
         
 
-        # feed x, y and triangles to the base constructor
+        # update class member variables
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
                    vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
                    triangles=triangles,
-                   mask=mask)
+                   mask=None,
+                   projectField=projectField,
+                   interpolation=None,
+                   kind=None,
+                   affTrans=afftrans,
+                   linTrans=lintrans)
  
-       
-    @classmethod
+    @classmethod   
     def readFromVTK(cls):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
@@ -238,12 +290,54 @@ class TriSurfaceVector(object):
             raise ValueError('Interpolation must be "cubic" or "linear".')
         
     
+    def addField(self,field,fieldname):
+        '''
+        Add a field F of dimension d (e.g: d=3 for a vector filed) to the
+        current TriSurfaceVector object TSV. The grid of F (N points) must be
+        identical, in term of number of points and their location, as the grid
+        of TSV. F will be stored in TSV.data['fieldName'] or TSV['fieldName'].
+        
+        Arguments:
+            *field*: numpy array of shape (N,d).
+            
+            *fieldName*: python string.
+        '''
+        fieldSrc = field
+        fieldShape = fieldSrc.shape
+        fieldTgt = np.zeros((fieldShape[0],fieldShape[1]))
+
+        if (self.__projectField==True and fieldShape[1]>1):
+            for i in range(fieldShape[0]):
+                fieldTgt[i,:] = self.__linTrans.srcToTgt(fieldSrc[i,:])
+        else:
+            fieldTgt = fieldSrc
+        self.data[fieldname] = fieldTgt
+            
+        
+    def addFieldFromFoamFile(self,fieldFile,fieldname):
+        '''
+        Add a field F of dimension d (e.g: d=3 for a vector filed) to the
+        current TriSurfaceVector object TSV. The grid of F (N points) must be
+        identical, in term of number of points and their location, as the grid
+        of TSV. F will be stored in TSV.data['fieldName'] or TSV['fieldName'].
+        
+        Arguments:
+            *field*: numpy array of shape (N,d).
+            
+            *fieldName*: python string.
+        '''
+        #get field
+        fieldSrc = parseFoamFile(fieldFile)
+        self.addField(fieldSrc,fieldname)
+        
+    
     def gradient(self):
         '''
         Calculate and save the gradient at all point of the grid.
         '''
         self.data['dvxdx'],self.data['dvxdy'] = self.vx_i.gradient(self.x(),self.y())
-        self.data['dvxdx'],self.data['dvydy'] = self.vy_i.gradient(self.x(),self.y())
+        self.data['dvydx'],self.data['dvydy'] = self.vy_i.gradient(self.x(),self.y())
+        self.data['dvzdx'],self.data['dvzdy'] = self.vz_i.gradient(self.x(),self.y())
  
        
     def gradient_i(self,x,y):
@@ -251,10 +345,10 @@ class TriSurfaceVector(object):
         Calculate the gradient at the point pt(x,y) and return it.
         
         Arguments:
-            *x*: python float.
+            *x*: python float or numpy array.
              x coordinate of the point pt.
             
-            *y*: python float.
+            *y*: python float or numpy array.
              y coordinate of the point pt.
              
         Returns:
@@ -263,7 +357,8 @@ class TriSurfaceVector(object):
         '''
         dvxdx, dvxdy = self.vx_i.gradient(x,y)
         dvydx, dvydy = self.vy_i.gradient(x,y)
-        return dvxdx, dvxdy, dvydx, dvydy 
+        dvzdx, dvzdy = self.vz_i.gradient(x,y)
+        return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy 
 
 
     def __getitem__(self, key):
