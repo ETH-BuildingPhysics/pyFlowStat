@@ -325,9 +325,7 @@ class TriSurfaceVector(object):
         '''
         '''
         surfacePoints = np.vstack((self.x,self.y,self.__z)).T
-        print(surfacePoints)
         rawPoints = np.zeros((surfacePoints.shape[0],surfacePoints.shape[1]))
-        print(rawPoints)
         for i in range(surfacePoints.shape[0]):
             rawPoints[i,:] = self.affTrans.tgtToSrc(surfacePoints[i,:])
         return rawPoints
