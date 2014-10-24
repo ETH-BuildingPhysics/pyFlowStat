@@ -23,16 +23,16 @@ class TriSurfaceMesh(object):
                  mask=None,
                  affTrans=None,
                  linTrans=None):
-    '''
-    '''                     
-    self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=mask)
-
-  
-    # "private" member variable. Don't play with them if you are not sure...
-    self.__z = z
+        '''
+        '''                     
+        self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=mask)
     
-    self.__affTrans = affTrans
-    self.__linTrans = linTrans
+      
+        # "private" member variable. Don't play with them if you are not sure...
+        self.__z = z
+        
+        self.__affTrans = affTrans
+        self.__linTrans = linTrans
     
     @classmethod
     def readFromFoamFile(cls,

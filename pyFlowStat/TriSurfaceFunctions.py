@@ -13,6 +13,7 @@ Functions included:
 # load modules
 #=============================================================================#
 import h5py
+import re
 
 import numpy as np
 
@@ -80,7 +81,7 @@ def saveTriSurfaceList_hdf5(triSurfaceList,hdf5file):
 
         # save  data
         gsurfi.create_dataset('time',data=triSurfaceList[i].time)
-        gsurfi.create_dataset('data',data=triSurfaceList[i].rawData)
+        gsurfi.create_dataset('vars',data=triSurfaceList[i].rawVars)
         
     fwm.close()
 
@@ -112,7 +113,7 @@ def loadTriSurfaceList_hdf5(hdf5file,
     for i in range(len(fr.keys())):
         gName = 'TriSurface'+str(i)
         time = fr[gName]['time'].value
-        data = fr[gName]['data'].value 
+        data = fr[gName]['vars'].value 
         
         # get x and y vector (in ptsTgt)
         ptsSrc = points
