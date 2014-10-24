@@ -59,7 +59,7 @@ class TriSurfaceVector(object):
         
         *__linTrans*:
         
-        *__projectField*: python bool
+        *__projectedField*: python bool
         
     Member functions:
         *__init__*: base constructor.
@@ -93,12 +93,14 @@ class TriSurfaceVector(object):
     def __init__(self,
                  x,
                  y,
+                 z,
                  vx,
                  vy,
                  vz,
+                 time,
                  triangles=None,
                  mask=None,
-                 projectField=True,
+                 projectedField=True,
                  interpolation=None,
                  kind=None,
                  affTrans=None,
@@ -131,7 +133,7 @@ class TriSurfaceVector(object):
             *mask*: optional boolean array of shape (ntri).
              Which triangles are masked out.
              
-            *projectField* python bool (default=True)
+            *projectedField* python bool (default=True)
              Defines if the data fields has to be projected in the basis of the
              surface. Example where such option really matters:
              Let us consider a 3D laminar flow with the follow velocity field: 
@@ -168,26 +170,31 @@ class TriSurfaceVector(object):
         self.data = dict()
         self.data_i = dict()
         
+        self.time = float(time)
         
-        # "private" member variable. Don't play with them if you are not sure...        
+        
+        # "private" member variable. Don't play with them if you are not sure...
+        self.__z = z
+        
         self.__affTrans = affTrans
         self.__linTrans = linTrans
         
         self.__interType = interpolation
         self.__interKind  = kind
         
-        self.__projectField = projectField
+        self.__projectedField = projectedField
         
     @classmethod
     def readFromFoamFile(cls,
                          varsFile,
                          pointsFile,
                          facesFile,
+                         time,
                          viewAnchor,
                          xViewBasis,
                          yViewBasis,
                          srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                         projectField=True):
+                         projectedField=True):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         '''
@@ -205,7 +212,7 @@ class TriSurfaceVector(object):
         #get vectors (in vecsTgt)
         vecsSrc = parseFoamFile_sampledSurface(varsFile)
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
-        if projectField==True:
+        if projectedField==True:
             for i in range(vecsSrc.shape[0]):
                 vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
         else:
@@ -218,12 +225,14 @@ class TriSurfaceVector(object):
         # update class member variables
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
+                   z=ptsTgt[:,2],
                    vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
+                   time=time,
                    triangles=triangles,
                    mask=None,
-                   projectField=projectField,
+                   projectedField=projectedField,
                    interpolation=None,
                    kind=None,
                    affTrans=afftrans,
@@ -232,11 +241,12 @@ class TriSurfaceVector(object):
     @classmethod   
     def readFromVTK(cls,
                     vtkFile,
+                    time,
                     viewAnchor,
                     xViewBasis,
                     yViewBasis,
                     srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                    projectField=True):
+                    projectedField=True):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         '''
@@ -255,7 +265,7 @@ class TriSurfaceVector(object):
             
         # transform the data
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
-        if projectField==True:
+        if projectedField==True:
             for i in range(vecsSrc.shape[0]):
                 vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
         else:
@@ -264,41 +274,86 @@ class TriSurfaceVector(object):
         # update class member variables
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
+                   z=ptsTgt[:,2],
                    vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
+                   time=time,
                    triangles=triangles,
                    mask=None,
-                   projectField=projectField,
+                   projectedField=projectedField,
                    interpolation=None,
                    kind=None,
                    affTrans=afftrans,
                    linTrans=lintrans)
   
-    # getter and setter #
-    #-------------------#
+    # getters #
+    #---------#
 
+    @property
     def x(self):
         '''
         Get x coordinate of the grid points.
         '''
         return self.triangulation.x
         
-        
+    @property    
     def y(self):
         '''
         Get y coordinate of the grid points.
         '''
         return self.triangulation.y
         
-        
+    @property
     def triangles(self):
         '''
-        Get trangles from the grid.
+        Get triangles from the grid.
         '''
         return self.triangulation.triangles
         
+    @property
+    def affTrans(self):
+        return self.__affTrans
     
+    @property
+    def linTrans(self):
+        return self.__linTrans
+        
+        
+    @property
+    def rawPoints(self):
+        '''
+        '''
+        surfacePoints = np.vstack((self.x,self.y,self.__z)).T
+        print(surfacePoints)
+        rawPoints = np.zeros((surfacePoints.shape[0],surfacePoints.shape[1]))
+        print(rawPoints)
+        for i in range(surfacePoints.shape[0]):
+            rawPoints[i,:] = self.affTrans.tgtToSrc(surfacePoints[i,:])
+        return rawPoints
+            
+    @property        
+    def rawData(self):
+        '''
+        '''
+        surfaceData = np.vstack((self.vx,self.vy,self.vz)).T
+        rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
+        if self.__projectedField==True:
+            for i in range(surfaceData.shape[0]):
+                rawData[i,:] = self.linTrans.tgtToSrc(surfaceData[i,:])
+        else:
+            rawData = surfaceData
+        return rawData
+
+        
+        
+        
+    
+        
+    # setters #
+    #---------#
+
+
     # class methods #
     #---------------#
     def getInterpolator(self,interpolation='cubic', kind='geom'):
@@ -332,7 +387,7 @@ class TriSurfaceVector(object):
         fieldShape = fieldSrc.shape
         fieldTgt = np.zeros((fieldShape[0],fieldShape[1]))
 
-        if (self.__projectField==True and fieldShape[1]>1):
+        if (self.__projectedField==True and fieldShape[1]>1):
             for i in range(fieldShape[0]):
                 fieldTgt[i,:] = self.__linTrans.srcToTgt(fieldSrc[i,:])
         else:

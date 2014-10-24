@@ -50,7 +50,7 @@ def getTransformation(viewAnchor,
         
     # get the basis and the transformation object
     tgtBasisSrc = np.zeros((3,3))
-    tgtBasisSrc[:,0] = xViewBasis        
+    tgtBasisSrc[:,0] = xViewBasis
     tgtBasisSrc[:,1] = yViewBasis
     tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
     afftrans = coorTrans.AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
