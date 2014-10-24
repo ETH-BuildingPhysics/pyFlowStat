@@ -19,6 +19,7 @@ import numpy as np
 
 import CoordinateTransformation as coorTrans
 import TriSurfaceVector as TriSurfaceVector
+import TriSurfaceMesh as TriSurfaceMesh
 
 
 
@@ -107,10 +108,23 @@ def loadTriSurfaceList_hdf5(hdf5file,
     gName = 'mesh'
     points = fr[gName]['points'].value
     triangles = fr[gName]['triangles'].value
+    
+    ptsSrc = points
+    ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
+    for i in range(ptsSrc.shape[0]):
+        ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+    
+    tsm = TriSurfaceMesh.TriSurfaceMesh(x=ptsTgt[:,0],
+                                        y=ptsTgt[:,1],
+                                        z=ptsTgt[:,2],
+                                        triangles=triangles,
+                                        mask=None,
+                                        affTrans=afftrans,
+                                        linTrans=lintrans)
 
     # create the TriSurface list
     triSurfaceList = []
-    for i in range(len(fr.keys())):
+    for i in range(len(fr.keys())-1):
         gName = 'TriSurface'+str(i)
         time = fr[gName]['time'].value
         data = fr[gName]['vars'].value 
@@ -130,24 +144,18 @@ def loadTriSurfaceList_hdf5(hdf5file,
         else:
             vecsTgt = vecsSrc
         
-        tsv = TriSurfaceVector.TriSurfaceVector(x=ptsTgt[:,0],
-                                                y=ptsTgt[:,1],
-                                                z=ptsTgt[:,2],
-                                                vx=vecsTgt[:,0],
+        tsv = TriSurfaceVector.TriSurfaceVector(vx=vecsTgt[:,0],
                                                 vy=vecsTgt[:,1],
                                                 vz=vecsTgt[:,2],
                                                 time=time,
-                                                triangles=triangles,
-                                                mask=None,
+                                                triSurfaceMesh=tsm,
                                                 projectedField=projectedField,
                                                 interpolation=None,
-                                                kind=None,
-                                                affTrans=afftrans,
-                                                linTrans=lintrans)
+                                                kind=None,)
         triSurfaceList.append(tsv)
     
     fr.close()    
-    return triSurfaceList
+    return triSurfaceList, tsm
 
     
 def parseFoamFile_sampledSurface(foamFile):
@@ -220,8 +228,8 @@ def parseVTK_ugly_sampledSurface(vtkfile):
     istream = open(vtkfile, 'r')
     line = istream.readline()
 
-    # catch the begin of the list ogf points of the grid
-    # --------------------------------------------------
+    # catch the begin of the list of points
+    # -------------------------------------
     catchLine = False
     while catchLine==False:
         if (line.startswith('DATASET POLYDATA')):
