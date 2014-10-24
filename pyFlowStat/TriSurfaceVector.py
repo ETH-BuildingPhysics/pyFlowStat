@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.tri as tri
 
 import CoordinateTransformation as coorTrans
+import TriSurfaceMesh as TriSurfaceMesh
 import TriSurfaceFunctions
 
 
@@ -91,20 +92,14 @@ class TriSurfaceVector(object):
     #--------------#
     
     def __init__(self,
-                 x,
-                 y,
-                 z,
                  vx,
                  vy,
                  vz,
                  time,
-                 triangles=None,
-                 mask=None,
+                 triSurfaceMesh,
                  projectedField=True,
                  interpolation=None,
-                 kind=None,
-                 affTrans=None,
-                 linTrans=None):
+                 kind=None):
         '''
         base constructor.
         
@@ -123,15 +118,6 @@ class TriSurfaceVector(object):
              
              *vz*: numpy array of shape (npoints).
              "off-plan" vector componant. Labeled z in TriSurfaceVector
-
-            *triangles*: integer array of shape (ntri,3).
-             For each triangle, the indices of the three points that make
-             up the triangle, ordered in an anticlockwise manner. If no
-             triangles is passed, a Delauney triangulation is computed. 
-             Default=None.
-             
-            *mask*: optional boolean array of shape (ntri).
-             Which triangles are masked out.
              
             *projectedField* python bool (default=True)
              Defines if the data fields has to be projected in the basis of the
@@ -142,7 +128,6 @@ class TriSurfaceVector(object):
              in the surface plan, therefore S1.gradient() makes sense. On the 
              other hand, Ux in NOT in the plane of S2.
              
-             
             *interpoation*: python string. 
              type of interpolation used. Value: "cubic" or "linear".
              Default="cubic". 
@@ -151,13 +136,8 @@ class TriSurfaceVector(object):
              Definition of the cubic interpolation type. Value: "geom" or
              "min_E". Default="geom". "min_E" is supposed to be the more 
              accurate, but "geom" is way faster.
-             
-            *affTrans*: AffineTransformation object.
-            
-            *linTrans*: LinearTransformation object.
         '''
-
-        self.triangulation = tri.Triangulation(x, y, triangles=triangles, mask=mask)
+        self.triSurfaceMesh = triSurfaceMesh
 
         self.vx=np.asarray(vx)
         self.vy=np.asarray(vy)
@@ -171,97 +151,52 @@ class TriSurfaceVector(object):
         self.data_i = dict()
         
         self.time = float(time)
-        
-        
-        # "private" member variable. Don't play with them if you are not sure...
-        self.__z = z
-        
-        self.__affTrans = affTrans
-        self.__linTrans = linTrans
-        
+
+        # "private" member variable. Don't play with them if you are not sure...        
         self.__interType = interpolation
         self.__interKind  = kind
-        
         self.__projectedField = projectedField
         
     @classmethod
     def readFromFoamFile(cls,
                          varsFile,
-                         pointsFile,
-                         facesFile,
+                         triSurfaceMesh,
                          time,
-                         viewAnchor,
-                         xViewBasis,
-                         yViewBasis,
-                         srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                          projectedField=True):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         '''
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
-                                                                   xViewBasis,
-                                                                   yViewBasis,
-                                                                   srcBasisSrc)
-
-        # get x and y vector (in ptsTgt)
-        ptsSrc = parseFoamFile_sampledSurface(pointsFile)
-        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-        for i in range(ptsSrc.shape[0]):
-            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
 
         #get vectors (in vecsTgt)
-        vecsSrc = parseFoamFile_sampledSurface(varsFile)
+        vecsSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(varsFile)
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
                 vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
         else:
             vecsTgt = vecsSrc
-        
-        #get triangles
-        triangles = parseFoamFile_sampledSurface(facesFile)[:,1:4]
-        
 
         # update class member variables
-        return cls(x=ptsTgt[:,0],
-                   y=ptsTgt[:,1],
-                   z=ptsTgt[:,2],
-                   vx=vecsTgt[:,0],
+        return cls(vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
                    time=time,
-                   triangles=triangles,
-                   mask=None,
+                   triSurfaceMesh=triSurfaceMesh,
                    projectedField=projectedField,
                    interpolation=None,
-                   kind=None,
-                   affTrans=afftrans,
-                   linTrans=lintrans)
+                   kind=None)
  
     @classmethod   
     def readFromVTK(cls,
                     vtkFile,
+                    triSurfaceMesh,
                     time,
-                    viewAnchor,
-                    xViewBasis,
-                    yViewBasis,
-                    srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                     projectedField=True):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
-        '''
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
-                                                                   xViewBasis,
-                                                                   yViewBasis,
-                                                                   srcBasisSrc)
-       
+        '''     
         # read VTK file
-        ptsSrc, triangles, vecsSrc = parseVTK_ugly_sampledSurface(vtkFile)
-        
-        # Transform the points
-        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-        for i in range(ptsSrc.shape[0]):
-            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+        ptsSrc, triangles, vecsSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
             
         # transform the data
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
@@ -272,69 +207,48 @@ class TriSurfaceVector(object):
             vecsTgt = vecsSrc
 
         # update class member variables
-        return cls(x=ptsTgt[:,0],
-                   y=ptsTgt[:,1],
-                   z=ptsTgt[:,2],
-                   vx=vecsTgt[:,0],
+        return cls(vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
                    time=time,
-                   triangles=triangles,
-                   mask=None,
+                   triSurfaceMesh=triSurfaceMesh,
                    projectedField=projectedField,
                    interpolation=None,
-                   kind=None,
-                   affTrans=afftrans,
-                   linTrans=lintrans)
+                   kind=None)
   
     # getters #
     #---------#
-
     @property
     def x(self):
-        '''
-        Get x coordinate of the grid points.
-        '''
-        return self.triangulation.x
+        return self.triSurfaceMesh.x
         
     @property    
     def y(self):
-        '''
-        Get y coordinate of the grid points.
-        '''
-        return self.triangulation.y
+        return self.triSurfaceMesh.y
+        
+    @property
+    def triangulation(self):
+        return self.triSurfaceMesh.triangulation
         
     @property
     def triangles(self):
-        '''
-        Get triangles from the grid.
-        '''
-        return self.triangulation.triangles
+        return self.triSurfaceMesh.triangles
         
     @property
     def affTrans(self):
-        return self.__affTrans
+        return self.triSurfaceMesh.affTrans
     
     @property
     def linTrans(self):
-        return self.__linTrans
-        
-        
+        return self.triSurfaceMesh.linTrans
+
     @property
     def rawPoints(self):
-        '''
-        '''
-        surfacePoints = np.vstack((self.x,self.y,self.__z)).T
-        rawPoints = np.zeros((surfacePoints.shape[0],surfacePoints.shape[1]))
-        for i in range(surfacePoints.shape[0]):
-            rawPoints[i,:] = self.affTrans.tgtToSrc(surfacePoints[i,:])
-        return rawPoints
+        return self.triSurfaceMesh.rawPoints
             
     @property        
-    def rawData(self):
-        '''
-        '''
-        surfaceData = np.vstack((self.vx,self.vy,self.vz)).T
+    def rawVars(self):
+        surfaceData = self.surfaceVars
         rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
         if self.__projectedField==True:
             for i in range(surfaceData.shape[0]):
@@ -342,12 +256,13 @@ class TriSurfaceVector(object):
         else:
             rawData = surfaceData
         return rawData
+        
+    @property
+    def surfaceVars(self):
+        return np.vstack((self.vx,self.vy,self.vz)).T
+        
 
-        
-        
-        
-    
-        
+
     # setters #
     #---------#
 
@@ -387,7 +302,7 @@ class TriSurfaceVector(object):
 
         if (self.__projectedField==True and fieldShape[1]>1):
             for i in range(fieldShape[0]):
-                fieldTgt[i,:] = self.__linTrans.srcToTgt(fieldSrc[i,:])
+                fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
         else:
             fieldTgt = fieldSrc
         self.data[fieldname] = fieldTgt
@@ -452,155 +367,3 @@ class TriSurfaceVector(object):
         Setter for key "key" on member dictionnary "data"
         '''
         self.data[key] = item
-
-        
-    
-
-            
-
-
-def parseFoamFile_sampledSurface(foamFile):
-    '''
-    Parse a foamFile generated by the OpenFOAM sample tool or sampling library.
-    
-    Note:
-        * It's a primitiv parser, do not add header in your foamFile!
-        * Inline comment are allowed only from line start. c++ comment style.
-        * It's REALLY a primitive parser!!!
-        
-    Arguments:
-        * foamFile: [str()] Path of the foamFile
-
-    Returns:
-        * output: [numpy.array()] data store in foamFile
-    '''
-    output = []
-    catchFirstNb = False
-    istream = open(foamFile, 'r')
-    for line in istream: 
-        # This regex finds all numbers in a given string.
-        # It can find floats and integers writen in normal mode (10000) or
-        # with power of 10 (10e3).
-        match = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-        if (line.startswith('//')):
-            pass
-        if (catchFirstNb==False and len(match)==1):
-            catchFirstNb = True
-        elif (catchFirstNb==True and len(match)>0):
-            matchfloat = list()
-            for nb in match:                
-                matchfloat.append(float(nb))
-            output.append(matchfloat)
-        else:
-            pass
-    istream.close()
-    return np.array(output)
-    
-def parseVTK_ugly_sampledSurface(vtkfile):
-    '''
-    Parse a VTK file generate by the surface sampling tool of OpenFOAM. The
-    surface has N grid points and M triangles. The data stored at each grid
-    points has a dimension D.
-    
-    Warnings: This is a VERY primitive and ugly parser!! the python-to-vtk
-    binding should be used instead of the following shitty code! 
-    Nevertheless, this shit works :-)!!
-    
-    Arguments:
-        *vtkfile*: python string
-         Path to the vtk file
-         
-    Returns:
-        *points*: numpy array of shape (N,3)
-         List of points composing the grid.
-         
-        *polygon*: numpy array of shape (M,3)
-         List of triangles. Technically, this parser can return a List of any
-         type of ploygon, e.g: triangle, square, pentagon...
- 
-        *pointData* numpy array of shape (N,D)
-         List of data associate with each point of the grid.
-    '''
-    pointsOut = []
-    polyOut = []
-    pointDataOut = []
-    
-    istream = open(vtkfile, 'r')
-    line = istream.readline()
-
-    # catch the begin of the list ogf points of the grid
-    # --------------------------------------------------
-    catchLine = False
-    while catchLine==False:
-        if (line.startswith('DATASET POLYDATA')):
-            catchLine = True
-        line = istream.readline()
-        
-    # catch the number of points
-    nbpoints = int(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)[0])
-    pti = 0
-    line = istream.readline()
-    
-    #store the points in pointsOut
-    while (pti<nbpoints):
-        match = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-        pointsOut.append(match)
-        line = istream.readline()
-        pti = pti+1
-    pointsOut = np.asarray(pointsOut,dtype=float)
-    
-    # catch the begin of the list of polygons and the number of polygon
-    # -----------------------------------------------------------------
-    catchLine = False
-    nbpoly = 0
-    while catchLine==False:
-        if (line.startswith('POLYGONS')):
-            catchLine = True
-            nbpoly = int(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)[0])
-        line = istream.readline()
-    polyi = 0
-    
-    #store the polygons in polyOut
-    while polyi<nbpoly:
-        match = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-        polyOut.append(match[1:])
-        line = istream.readline()
-        polyi = polyi+1
-    polyOut = np.asarray(polyOut,dtype=float)
-    
-    # catch the begin of the list of point data
-    # -----------------------------------------
-    catchLine = False
-    nbptdata = 0
-    while catchLine==False:
-        if (line.startswith('POINT_DATA')):
-            catchLine = True
-            nbptdata = int(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)[0])
-        line = istream.readline()
-    ptdatai = 0
-    
-    # jump the line starting with "FIELD attributes"
-    line = istream.readline()
-    
-    # catch the dimension of point data and the number of point data
-    match = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-    dimptdata = int(match[0])
-    line = istream.readline()
-    
-    #store the point data in pointDataOut
-    if dimptdata==1:
-        pointDataOut = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-    else: 
-        while ptdatai<nbptdata:
-            match = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', line)
-            pointDataOut.append(match)
-            line = istream.readline()
-            ptdatai = ptdatai+1
-    pointDataOut = np.asarray(pointDataOut,dtype=float)
-    
-    istream.close()
-    
-    return pointsOut, polyOut, pointDataOut
-
-        
-    
