@@ -191,26 +191,8 @@ class TriSurfaceVector(object):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         '''
-#        # check and convert arguments
-#        srcBasisSrc = np.array(srcBasisSrc,dtype=float)
-#        if srcBasisSrc.shape!=(3,3):
-#            raise ValueError('srcBasis must be a 3x3 matrix')
-#            
-#        xViewBasis = np.array(xViewBasis,dtype=float)
-#        yViewBasis = np.array(yViewBasis,dtype=float)
-#        if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
-#            raise ValueError('xViewBasis.shape and yViewBasis. ',
-#                             'shape must be equal to (3,)')
-#            
-#        # get the basis and the transformation object
-#        tgtBasisSrc = np.zeros((3,3))
-#        tgtBasisSrc[:,0] = xViewBasis        
-#        tgtBasisSrc[:,1] = yViewBasis
-#        tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
-#        afftrans = coorTrans.AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
-#        lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
-        
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(xViewBasis,
+        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
+                                                                   xViewBasis,
                                                                    yViewBasis,
                                                                    srcBasisSrc)
 
@@ -258,7 +240,8 @@ class TriSurfaceVector(object):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         '''
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(xViewBasis,
+        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
+                                                                   xViewBasis,
                                                                    yViewBasis,
                                                                    srcBasisSrc)
        
@@ -401,7 +384,7 @@ class TriSurfaceVector(object):
         dvxdx, dvxdy = self.vx_i.gradient(x,y)
         dvydx, dvydy = self.vy_i.gradient(x,y)
         dvzdx, dvzdy = self.vz_i.gradient(x,y)
-        return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy 
+        return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy
 
 
     def __getitem__(self, key):
