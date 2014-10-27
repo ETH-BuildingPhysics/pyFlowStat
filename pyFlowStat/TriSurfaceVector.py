@@ -172,7 +172,7 @@ class TriSurfaceVector(object):
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
-                vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
+                vecsTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(vecsSrc[i,:])
         else:
             vecsTgt = vecsSrc
 
@@ -202,7 +202,7 @@ class TriSurfaceVector(object):
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
-                vecsTgt[i,:] = lintrans.srcToTgt(vecsSrc[i,:])
+                vecsTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(vecsSrc[i,:])
         else:
             vecsTgt = vecsSrc
 
@@ -321,7 +321,7 @@ class TriSurfaceVector(object):
             *fieldName*: python string.
         '''
         #get field
-        fieldSrc = parseFoamFile_sampledSurface(fieldFile)
+        fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
         
     
