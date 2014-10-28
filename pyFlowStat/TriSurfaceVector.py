@@ -2,13 +2,13 @@
 TriSurfaceVector.py
 '''
 
-import re
+#import re
 
 import numpy as np
 import matplotlib.tri as tri
 
-import CoordinateTransformation as coorTrans
-import TriSurfaceMesh as TriSurfaceMesh
+#import CoordinateTransformation as coorTrans
+#import TriSurfaceMesh as TriSurfaceMesh
 import TriSurfaceFunctions
 
 
@@ -242,13 +242,19 @@ class TriSurfaceVector(object):
     def linTrans(self):
         return self.triSurfaceMesh.linTrans
 
-    @property
+
+    # setters #
+    #---------#
+
+
+    # class methods #
+    #---------------#
     def rawPoints(self):
-        return self.triSurfaceMesh.rawPoints
+        return self.triSurfaceMesh.rawPoints()
             
-    @property        
+     
     def rawVars(self):
-        surfaceData = self.surfaceVars
+        surfaceData = self.surfaceVars()
         rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
         if self.__projectedField==True:
             for i in range(surfaceData.shape[0]):
@@ -257,19 +263,89 @@ class TriSurfaceVector(object):
             rawData = surfaceData
         return rawData
         
-    @property
+
     def surfaceVars(self):
         return np.vstack((self.vx,self.vy,self.vz)).T
+
+
+    def Umag(self):
+        return np.sqrt(np.square(self.vx)+np.square(self.vy)+np.square(self.vz))
+      
+     
+    def VortZ(self):
+        if self.vx_i!=None:  
+            VortZ = None
+            if (self.data.has_key('dvydx')==True and self.data.has_key('dvydx')==True):
+                VortZ = self.data['dvydx']-self.data['dvydx']
+            else:
+                dvydx,dvydy = self.vy_i.gradient(self.x,self.y)
+                dvxdx,dvxdy = self.vx_i.gradient(self.x,self.y)
+                VortZ = dvydx-dvydx
+            
+            return VortZ
+            
+        else:
+            raise ValueError('this method needs interpolators. Please run',
+                             'method "addInterpolator" first.')
+    
+    def Q(self):
+        if self.vx_i!=None:
+            Q = None
+            if (self.data.has_key('dvydx')==True and self.data.has_key('dvydx')==True):
+                Q = 0.5*(-2.0*self['dvxdy']*self['dvydx']-self['dvxdx']**2-self['dvydy']**2)
+            else:
+                dvydx,dvydy = self.vy_i.gradient(self.x,self.y)
+                dvxdx,dvxdy = self.vx_i.gradient(self.x,self.y)
+                Q = 0.5*(-2.0*dvxdy*dvydx-dvxdx**2-dvydy**2)
+            
+            return Q
+        else:
+            raise ValueError('this method needs interpolators. Please run',
+                             'method "addInterpolator" first.')
+
+
+    def gradient(self,x,y):
+        '''
+        Calculate the gradient at the point pt(x,y) and return it.
         
+        Arguments:
+            *x*: python float or numpy array.
+             x coordinate of the point pt.
+            
+            *y*: python float or numpy array.
+             y coordinate of the point pt.
+             
+        Returns:
+            *dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy *: python tuple of four float.
+             The gradient at point pt(x,y).
+        '''
+        if self.vx_i!=None: 
+            dvxdx, dvxdy = self.vx_i.gradient(x,y)
+            dvydx, dvydy = self.vy_i.gradient(x,y)
+            dvzdx, dvzdy = self.vz_i.gradient(x,y)
+            return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy
+        else:
+            raise ValueError('this method needs interpolators. Please run',
+                             'method "addInterpolator" first.')
+    
+    
+    def __getitem__(self, key):
+        '''
+        Getter for key "key" on member dictionnary "data"
+        '''
+        return self.data[key]
 
 
-    # setters #
-    #---------#
-
-
-    # class methods #
-    #---------------#
-    def getInterpolator(self,interpolation='cubic', kind='geom'):
+    def __setitem__(self, key, item):
+        '''
+        Setter for key "key" on member dictionnary "data"
+        '''
+        self.data[key] = item
+        
+    # class methods - adders #
+    #------------------------#
+        
+    def addInterpolator(self,interpolation='cubic', kind='geom'):
         self.__interType = interpolation
         self.__interKind = kind
         if self.__interType=='cubic':
@@ -282,7 +358,7 @@ class TriSurfaceVector(object):
             self.vz_i = tri.LinearTriInterpolator(self.triangulation, self.vz)
         else:
             raise ValueError('Interpolation must be "cubic" or "linear".')
-    
+            
     
     def addField(self,field,fieldname):
         '''
@@ -323,47 +399,56 @@ class TriSurfaceVector(object):
         #get field
         fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
+    
+    
+    def addGradient(self):
+        '''
+        Calculate and save the gradient at all point of the grid. As expected,
+        the dvidz does not exist.
+        '''   
+        dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy = self.gradient(self.x,self.y)
+        self.data['dvxdx'] = dvxdx
+        self.data['dvxdy'] = dvxdy
+        
+        self.data['dvydx'] = dvydx
+        self.data['dvydy'] = dvydy
+        
+        self.data['dvzdx'] = dvzdx
+        self.data['dvzdy'] = dvzdy
+        
+
+    def addUmag(self):
+        '''
+        Add velocity magnitude in data  (TriSurfaceVector['Umag']). This method
+        makes sense only if vx, vy and vz are velocity componants. 
+        '''
+        self.data['Umag'] = self.Umag()
+        
+        
+    def addU(self):
+        '''
+        Add velocity in data  (TriSurfaceVector['U']). This method
+        makes sense only if vx, vy and vz are velocity componants.
+        '''
+        self.data['U'] = self.surfaceVars()
+        
+        
+    def addVortZ(self):
+        '''
+        Add z componant of the vorticity in data  (TriSurfaceVector['VortZ']). 
+        This method makes sense only if vx, vy and vz are velocity componants.
+        '''
+        self.data['VortZ'] = self.VortZ()
+        
+    def addQ(self):
+        '''
+        Add the Q criterion in data  (TriSurfaceVector['Q']). 
+        This method makes sense only if vx, vy and vz are velocity componants.
+        '''
+        self.data['Q'] = self.Q()
         
     
-    def gradient(self):
-        '''
-        Calculate and save the gradient at all point of the grid.
-        '''
-        self.data['dvxdx'],self.data['dvxdy'] = self.vx_i.gradient(self.x(),self.y())
-        self.data['dvydx'],self.data['dvydy'] = self.vy_i.gradient(self.x(),self.y())
-        self.data['dvzdx'],self.data['dvzdy'] = self.vz_i.gradient(self.x(),self.y())
- 
-       
-    def gradient_i(self,x,y):
-        '''
-        Calculate the gradient at the point pt(x,y) and return it.
-        
-        Arguments:
-            *x*: python float or numpy array.
-             x coordinate of the point pt.
             
-            *y*: python float or numpy array.
-             y coordinate of the point pt.
-             
-        Returns:
-            *dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy *: python tuple of four float.
-             The gradient at point pt(x,y).
-        '''
-        dvxdx, dvxdy = self.vx_i.gradient(x,y)
-        dvydx, dvydy = self.vy_i.gradient(x,y)
-        dvzdx, dvzdy = self.vz_i.gradient(x,y)
-        return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy
-
-
-    def __getitem__(self, key):
-        '''
-        Getter for key "key" on member dictionnary "data"
-        '''
-        return self.data[key]
-
-
-    def __setitem__(self, key, item):
-        '''
-        Setter for key "key" on member dictionnary "data"
-        '''
-        self.data[key] = item
+    
+    
+ 

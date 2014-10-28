@@ -75,7 +75,7 @@ class TriSurfaceMesh(object):
                     viewAnchor,
                     xViewBasis,
                     yViewBasis,
-                    srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],):
+                    srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         '''
@@ -133,7 +133,9 @@ class TriSurfaceMesh(object):
         return self.__linTrans
         
         
-    @property
+    # class methods #
+    #---------------#
+        
     def rawPoints(self):
         '''
         '''
