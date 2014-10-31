@@ -17,24 +17,22 @@ class TriSurfaceVector(object):
     class TriSurfaceVector.
     
     Class which describes a 3D vector field V=(vx,vy,vz) on a 2D (flat)
-    triangulated surface S of N points. The triangulation is a grid of M 
-    triangles. 
+    triangulated surface S of N points. The triangulation is a TriSurfaceMesh
+    object of M triangles.
+    
     The coordinate system of S is the following:
         * x = the horizontal coordinate, pointing East (in-plane)
         * y = the vertical coordinate, pointing North (in-plane)
         * z = the off-plane coordinate, pointing torward you   
-    Therefore, vx and vy are the in-plane vector coordinate and vz the
-    off-plane one.
+    If "projectedField" is "True" in the constructor, vx and vy are the
+    in-plane vector coordinate and vz the off-plane one. If "False", no
+    transformation is made on the input vx, vy and vz.
     
     To construct a TriSurfaceVector object, use better the @classmethod
     "readFromFoamFile" or "readFromVTK".
 
     Member variables:
-        *triangulation* : triangulation object. 
-         Triangulation object, which holds the grid. Therefore, it also holds
-         the grid points coordinates (x and y), the triangles and some other
-         stuffs. See matplotlib.Tri.Trangulation.Triangulation for more
-         details.
+        *triSurfaceMesh* :  TriSurfaceMesh object.
          
         *vx*: numpy array of shape (N,)
          
@@ -51,41 +49,7 @@ class TriSurfaceVector(object):
         *data*: python dict
         
         *data_i*: python dict
-        
-        *__interType*: python string
-        
-        *__interKind*: python string
-        
-        *__affTrans*:
-        
-        *__linTrans*:
-        
-        *__projectedField*: python bool
-        
-    Member functions:
-        *__init__*: base constructor.
-        
-        *readFromFoamFile*: constructor from a foamFile generate by OpenFOAM.
-        
-        *readFromVTK*: contructor from a VTK file generate by OpenFOAM.
-        
-        *x*: Returns the x coordinate of the grid points.
-        
-        *y*: Returns the y coordinate of the grid points.
-        
-        *trangles*
-        
-        *getInterpolator*
-        
-        *addFields*
-
-        *addFieldFromFoamFile*        
-        
-        *gradient*
-        
-        *gradient_i*
-        
-        
+  
     '''
     
     # constructors #
@@ -104,11 +68,6 @@ class TriSurfaceVector(object):
         base constructor.
         
         Arguments:
-            *x*: numpy array of shape (npoints).
-             x-coordinates of grid points.
-    
-            *y*: numpy array of shape (npoints).
-             y-coordinates of grid points.
              
             *vx*: numpy array of shape (npoints).
              "in-plan" vector componant. Labeled x TriSurfaceVector
@@ -116,17 +75,19 @@ class TriSurfaceVector(object):
             *vy*: numpy array of shape (npoints).
              "in-plan" vector componant. Labeled y in TriSurfaceVector
              
-             *vz*: numpy array of shape (npoints).
+            *vz*: numpy array of shape (npoints).
              "off-plan" vector componant. Labeled z in TriSurfaceVector
+             
+            *time*: python float
+             timestep of the surface. If this information does not matter,
+             use 0.
+             
+            *triSurfaceMesh* :  TriSurfaceMesh object.
+             TriSurfaceMesh object, which holds the mesh information.
              
             *projectedField* python bool (default=True)
              Defines if the data fields has to be projected in the basis of the
-             surface. Example where such option really matters:
-             Let us consider a 3D laminar flow with the follow velocity field: 
-             U=(Ux,0,0). Let us consider the surface S1 with the normal n1=(0,ny,0)
-             and the surface S2 with the normal n2=(nx,ny,0). On S1, Ux will be
-             in the surface plan, therefore S1.gradient() makes sense. On the 
-             other hand, Ux in NOT in the plane of S2.
+             surface. 
              
             *interpoation*: python string. 
              type of interpolation used. Value: "cubic" or "linear".
@@ -165,6 +126,21 @@ class TriSurfaceVector(object):
                          projectedField=True):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
+        
+        Arguments:
+            *varsFile*: python string.
+             Path to the file holding the vector field.
+             
+            *time*: python float
+             timestep of the surface. If this information does not matter,
+             use 0.
+             
+            *triSurfaceMesh* :  TriSurfaceMesh object.
+             TriSurfaceMesh object, which holds the mesh information.
+             
+            *projectedField* python bool (default=True)
+             Defines if the data fields has to be projected in the basis of the
+             surface. 
         '''
 
         #get vectors (in vecsTgt)
@@ -194,6 +170,21 @@ class TriSurfaceVector(object):
                     projectedField=True):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
+        
+        Arguments:
+            *varsFile*: python string.
+             Path to the vtk-file.
+             
+            *time*: python float
+             timestep of the surface. If this information does not matter,
+             use 0.
+             
+            *triSurfaceMesh* :  TriSurfaceMesh object.
+             TriSurfaceMesh object, which holds the mesh information.
+             
+            *projectedField* python bool (default=True)
+             Defines if the data fields has to be projected in the basis of the
+             surface. 
         '''     
         # read VTK file
         ptsSrc, triangles, vecsSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
@@ -250,10 +241,22 @@ class TriSurfaceVector(object):
     # class methods #
     #---------------#
     def rawPoints(self):
+        '''
+        Return the grid points in the source coordinate system.
+        
+        Returns:
+            *rawPoints*: numpy array of shape (N,3)
+        '''
         return self.triSurfaceMesh.rawPoints()
             
      
     def rawVars(self):
+        '''
+        Return the vector field defined the source coordinate system.
+        
+        Returns:
+            *rawData*: numpy array of shape (N,3)
+        '''
         surfaceData = self.surfaceVars()
         rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
         if self.__projectedField==True:
@@ -265,6 +268,12 @@ class TriSurfaceVector(object):
         
 
     def surfaceVars(self):
+        '''
+        Return the vector field as saved in the TriSurfaceVector object.
+        
+        Returns:
+            *surfaceVars*: numpy array of shape (N,3)
+        '''
         return np.vstack((self.vx,self.vy,self.vz)).T
 
 
@@ -289,6 +298,16 @@ class TriSurfaceVector(object):
                              'method "addInterpolator" first.')
     
     def Q(self):
+        '''
+        Evaluate the Q criteria on the vector field v. Q make sense only if v
+        is a velocity field. Be careful: The full definition of Q needs the
+        velocity derivatives in the z direction too (off-plane derivatives).
+        As those derivative are not accessible in TriSurfaceVector, Q() returns
+        a sort of troncated Q...
+        
+        Returns:
+            *Q*: numpy array of shape (N,).
+        '''
         if self.vx_i!=None:
             Q = None
             if (self.data.has_key('dvydx')==True and self.data.has_key('dvydx')==True):
@@ -304,7 +323,7 @@ class TriSurfaceVector(object):
                              'method "addInterpolator" first.')
 
 
-    def gradient(self,x,y):
+    def gradientxy(self,x,y):
         '''
         Calculate the gradient at the point pt(x,y) and return it.
         
@@ -316,7 +335,7 @@ class TriSurfaceVector(object):
              y coordinate of the point pt.
              
         Returns:
-            *dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy *: python tuple of four float.
+            *dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy *: python tuple of six float or numpy array.
              The gradient at point pt(x,y).
         '''
         if self.vx_i!=None: 
@@ -346,6 +365,9 @@ class TriSurfaceVector(object):
     #------------------------#
         
     def addInterpolator(self,interpolation='cubic', kind='geom'):
+        '''
+        Add interpolator Object to the vector field.
+        '''
         self.__interType = interpolation
         self.__interKind = kind
         if self.__interType=='cubic':
@@ -406,7 +428,7 @@ class TriSurfaceVector(object):
         Calculate and save the gradient at all point of the grid. As expected,
         the dvidz does not exist.
         '''   
-        dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy = self.gradient(self.x,self.y)
+        dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy = self.gradientxy(self.x,self.y)
         self.data['dvxdx'] = dvxdx
         self.data['dvxdy'] = dvxdy
         

@@ -138,6 +138,10 @@ class TriSurfaceMesh(object):
         
     def rawPoints(self):
         '''
+        Return the grid points in the source coordinate system.
+        
+        Returns:
+            *rawPoints*: numpy array of shape (N,3)
         '''
         surfacePoints = np.vstack((self.x,self.y,self.__z)).T
         rawPoints = np.zeros((surfacePoints.shape[0],surfacePoints.shape[1]))
