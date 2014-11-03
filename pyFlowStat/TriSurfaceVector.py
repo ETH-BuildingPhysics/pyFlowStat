@@ -408,18 +408,25 @@ class TriSurfaceVector(object):
         
     def addFieldFromFoamFile(self,fieldFile,fieldname):
         '''
-        Add a field F of dimension d (e.g: d=3 for a vector filed) to the
-        current TriSurfaceVector object TSV. The grid of F (N points) must be
-        identical, in term of number of points and their location, as the grid
-        of TSV. F will be stored in TSV.data['fieldName'] or TSV['fieldName'].
-        
-        Arguments:
-            *field*: numpy array of shape (N,d).
-            
-            *fieldName*: python string.
+        Add a field F (shape d) stored in a foamFile to the current
+        TriSurfaceVector object. See docstring from self.addField() for more
+        information.
+
         '''
         #get field
         fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
+        self.addField(fieldSrc,fieldname)
+        
+        
+    def addFieldFromVTK(self,fieldFile,fieldname):
+        '''
+        Add a field F (shape d) stored in a VTK file to the current
+        TriSurfaceVector object. See docstring from self.addField() for more
+        information.
+
+        '''
+        #get field
+        points, polygon, fieldSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
     
     
