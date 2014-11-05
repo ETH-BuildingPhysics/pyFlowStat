@@ -396,9 +396,9 @@ class TriSurfaceVector(object):
         '''
         fieldSrc = field
         fieldShape = fieldSrc.shape
-        fieldTgt = np.zeros((fieldShape[0],fieldShape[1]))
+        fieldTgt = np.zeros(fieldShape)
 
-        if (self.__projectedField==True and fieldShape[1]>1):
+        if (self.__projectedField==True and len(fieldShape)>1):
             for i in range(fieldShape[0]):
                 fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
         else:

@@ -189,7 +189,10 @@ def parseFoamFile_sampledSurface(foamFile):
             matchfloat = list()
             for nb in match:                
                 matchfloat.append(float(nb))
-            output.append(matchfloat)
+            if len(matchfloat)==1:
+                output.append(matchfloat[0])
+            else:
+                output.append(matchfloat)
         else:
             pass
     istream.close()
