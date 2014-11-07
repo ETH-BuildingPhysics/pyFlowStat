@@ -19,3 +19,14 @@ def interpx_lin(yval,xi):
 def interpx_lin_1d(x1,x2,y1,y2,xi):
     yi=(float(y2)-float(y1))/(float(x2)-float(x1))*(float(xi)-float(x1))+float(y1)
     return yi
+    
+def interp1exp(x,y,xi):
+    '''
+    linear interpolation with linear extrapolation
+    '''
+    val=np.interp(xi,x,y,left=np.inf*-1.0,right=np.inf)
+    if np.isneginf(val):
+        return np.polyval(np.polyfit(x[:2],y[:2],1),xi)
+    elif np.isposinf(val):
+        return np.polyval(np.polyfit(x[-2:],y[-2:],1),xi)
+    return val
