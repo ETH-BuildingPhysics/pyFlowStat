@@ -8,7 +8,7 @@ import glob, os
 
 
 setup(name='pyFlowStat',
-      version="2.0",
+      version="3.0",
       packages=['pyFlowStat'],
       description='Python tools for statistical analyses of flow data',
       url='http://www.carmeliet.arch.ethz.ch/',

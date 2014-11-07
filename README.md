@@ -5,7 +5,7 @@ purpose:
     Python tools for statistical analyses of flow data.
 
 version:
-    2.0
+    3.0
     
 Authors:
     Marc Immer   (aaa.aaa@aaa.com)
@@ -22,7 +22,7 @@ python requirement:
     
     
 Installation:
-    1. Download pyFlowStat 2.0 on your computer
+    1. Download pyFlowStat on your computer
     2. go in the pyFlowStat folder
     3. in super user mode, type "python setup.py install"
     
