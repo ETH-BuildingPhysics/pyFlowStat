@@ -181,27 +181,43 @@ class Surface(object):
         self.data['Umag']=Umag
         self.data['Umag2D']=Umag2D
 
-        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        self.computeGradients()
+        
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        
         vort_z=dvdx-dudy
-        self.data['dudy']=dudy
-        self.data['dudx']=dudx
-        self.data['dvdy']=dvdy
-        self.data['dvdx']=dvdx
         self.data['VortZ']=vort_z
         self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         self.data['Div2D']=dudx+dvdy
 
+        
+        self.computeQ()
         #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
-        self.data['Q']=np.zeros(self.data['Ux'].shape)
         #self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
-        self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
 #        tensorS= np.empty(self.data['Ux'].shape)
 #        tensorW= np.empty(self.data['Ux'].shape)
 #        tensorS= 0.5*[[dudx+dudx,dudy+dvdx],[dvdx+dudy,dvdy+dvdy]]
 #        tensor2= 0.5*[[0.0,dudy-dvdx],[dvdx-dudy,0.0]]
         self.data['lambda2'] = self.getLambda2(dudx,dudy,dvdx,dvdy)
-
+    def computeGradients(self):
+        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        self.data['dudy']=dudy
+        self.data['dudx']=dudx
+        self.data['dvdy']=dvdy
+        self.data['dvdx']=dvdx
+        
+    def computeQ(self):
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        #self.data['Q']=np.zeros(self.data['Ux'].shape)
+        self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
+        
     def getLambda2(self,dudx,dudy,dvdx,dvdy):
         S11 = dudx
         S12 = 0.5*(dudy+dvdx)
