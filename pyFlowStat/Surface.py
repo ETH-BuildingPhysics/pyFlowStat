@@ -18,7 +18,7 @@ from ctypes import *
 TypeName = ["Image", "2D-PIV-Vector (header, 4x(Vx,Vy))",
             "2D-Vector (Vx,Vy)", "2D-PIV+p.ratio (header, 4x(Vx,Vy), peakratio)",
           "3D-Vector (Vx,Vy,Vz)", "3D-Vector+p.ratio (header, 4x(Vx,Vy), peakratio)"]
-
+          
 WORD=c_ushort
 
 #typedef struct AttributeList
@@ -27,8 +27,36 @@ WORD=c_ushort
 #   char*          value;
 #   AttributeList* next;
 #} AttributeList;
+#class AttributeList(Structure):
+#    pass
+    
 class AttributeList(Structure):
-    pass
+    def __getattr__(self, key):
+        if key=='pairs':
+            self.get_pairs()
+            return self.pairs
+        if key=='dict':
+            return self.as_dict()
+        else:
+            raise AttributeError(u"Does not have %s atribute" % key)
+            
+    def get_pairs(self):
+        att = self
+        self.pairs = []
+        while att!=0:
+            try:
+                self.pairs.append((att.name, att.value))
+                att = att.next[0]
+            except ValueError:
+                break
+    
+    def as_dict(self):
+        self.get_pairs()
+        return dict(self.pairs)
+        
+    def delete(self):
+        del_attributelist(self)
+        
 AttributeList._fields_=[("name",c_char_p),("value",c_char_p),("next",POINTER(AttributeList))]
 
 #   union
@@ -153,27 +181,45 @@ class Surface(object):
         self.data['Umag']=Umag
         self.data['Umag2D']=Umag2D
 
-        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        self.computeGradients()
+        
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        
         vort_z=dvdx-dudy
-        self.data['dudy']=dudy
-        self.data['dudx']=dudx
-        self.data['dvdy']=dvdy
-        self.data['dvdx']=dvdx
         self.data['VortZ']=vort_z
         self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         self.data['Div2D']=dudx+dvdy
 
+        
+        self.computeQ()
         #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
-        self.data['Q']=np.zeros(self.data['Ux'].shape)
         #self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
-        self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
+        
+        self.data['OW-Q']=(dudx-dvdy)**2+(dudy+dvdx)**2-(dvdx-dudy)**2
 #        tensorS= np.empty(self.data['Ux'].shape)
 #        tensorW= np.empty(self.data['Ux'].shape)
 #        tensorS= 0.5*[[dudx+dudx,dudy+dvdx],[dvdx+dudy,dvdy+dvdy]]
 #        tensor2= 0.5*[[0.0,dudy-dvdx],[dvdx-dudy,0.0]]
         self.data['lambda2'] = self.getLambda2(dudx,dudy,dvdx,dvdy)
-
+    def computeGradients(self):
+        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+        self.data['dudy']=dudy
+        self.data['dudx']=dudx
+        self.data['dvdy']=dvdy
+        self.data['dvdx']=dvdx
+        
+    def computeQ(self):
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        #self.data['Q']=np.zeros(self.data['Ux'].shape)
+        self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
+        
     def getLambda2(self,dudx,dudy,dvdx,dvdy):
         S11 = dudx
         S12 = 0.5*(dudy+dvdx)
@@ -254,7 +300,10 @@ class Surface(object):
         self.vz=[]
 
         res = ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(attributeLst))
-
+        
+        #print len(self.attributeLst)
+        #attv=att.as_dict()['_SCALE_X']
+        #print attv
         #print res
         if res>0:
             print "Error reading image"
@@ -285,23 +334,23 @@ class Surface(object):
                 for theX in range(0,height):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                        self.vy[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vx[theY,theX] = np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX] = np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*2+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
         if tmpBuffer.image_sub_type == 4:
             for theY in range(0,width):
                 for theX in range(0,height):
-                    self.vx[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                    self.vy[theY,theX] = -1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vx[theY,theX] = np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                    self.vy[theY,theX] = np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     self.vz[theY,theX] = (tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*2]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
         if tmpBuffer.image_sub_type == 5:
             for theY in range(0,width):
                 for theX in range(0,height):
                     mode = getMode(tmpBuffer,theX,theY,height,frameOffset)
                     if mode >= 0:
-                        self.vx[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
-                        self.vy[theY,theX]=-1*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vx[theY,theX]=np.sign(tmpBuffer.scaleX.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+1)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
+                        self.vy[theY,theX]=np.sign(tmpBuffer.scaleY.factor)*(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+2)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                         self.vz[theY,theX]=(tmpBuffer.floatArray[theX + theY*height + frameOffset + componentOffset*(mode*3+3)]*tmpBuffer.scaleI.factor+tmpBuffer.scaleI.offset)
                     else:
                         pass
@@ -340,29 +389,131 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
 
+    def readFromIM7(self,filename,key,frame=0,v=False,scale=1.0):
+        '''
+        reads PIV image data in tha Davis format, using the 64bit windows DLL
+        '''
+
+        dllpath = os.path.dirname(os.path.realpath(__file__))
+        ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+
+        tmpBuffer = BufferType()
+        self.attributeLst = AttributeList()
+        res = ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(self.attributeLst))
+        s=None
+        
+        if tmpBuffer.image_sub_type < 0:
+            if v:
+                print "Size (ny, nx)"
+                print tmpBuffer.ny
+                print tmpBuffer.nx
+                print tmpBuffer.nf
+                print 'type:',tmpBuffer.image_sub_type
+
+            theFrame=frame
+            width = tmpBuffer.ny;
+            height = tmpBuffer.nx;
+            if tmpBuffer.isFloat:
+                s=np.empty((height,width), dtype=float)
+                s[:] = np.NAN
+            else:
+                s=np.empty((height,width), dtype=int)
+                s[:] = np.NAN
+            if(tmpBuffer.isFloat):
+                for y in range(0,tmpBuffer.ny):
+                    for x in range(0,tmpBuffer.nx): 
+                        s[x,y] = (tmpBuffer.floatArray[theFrame*tmpBuffer.nx*tmpBuffer.ny+x*tmpBuffer.ny+y]*tmpBuffer.scaleI.factor*scale+tmpBuffer.scaleI.offset)
+            else:
+                for y in range(0,tmpBuffer.ny):
+                    for x in range(0,tmpBuffer.nx):
+                        s[x,y] = (tmpBuffer.wordArray[theFrame*tmpBuffer.nx*tmpBuffer.ny+x*tmpBuffer.ny+y]*tmpBuffer.scaleI.factor*scale+tmpBuffer.scaleI.offset)
+        
+        ReadIMX64.DestroyBuffer(tmpBuffer)
+        self.data[key]=s
+
     def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
         '''
         helper function
         methode=linear,cubic (default)
         '''
         if method=='cubic':
-            itp=tri.CubicTriInterpolator(triangulation,values)
+            itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         elif method=='linear':
             itp=tri.LinearTriInterpolator(triangulation,values)
         else:
-            itp=tri.CubicTriInterpolator(triangulation,values)
+            itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
         zi_ma = itp(grid_x, grid_y)
         zi=zi_ma.filled(np.nan)
 
         return zi
 
-    def readFromFoamFile(self,pointsFile,facesFile,velFile,scalarFileList=[],symTensorFileList=[],viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None,interpolationMethod='cubic'):
+    def readFromFoamFile(self,
+                         pointsFile,
+                         facesFile,
+                         velFile,
+                         scalarFileList=[],
+                         symTensorFileList=[],
+                         viewAnchor=(0,0,0),
+                         xViewBasis=(1,0,0),
+                         yViewBasis=(0,1,0),
+                         dx=None,
+                         dy=None,
+                         interpolationMethod='cubic',
+                         kind='min_E'):
+        '''
+        Read an OpenFOAM surface (triangulated grid) in the current Surface
+        object (cartesian grid). As the "grid" change (tri to cartesian), the
+        value must be interpolated.
+        
+        
+        Arguments:
+            *pointFile*: python string.
+             Point file  generate by OpenFOAM. This is the grid point
+             coordinates.
+            
+            *facesFile*: python string.
+             Face file generate by OpenFOAM. It is a list of triangles, which
+             compose the grid.
+            
+            *velFile*: python string.
+             Vector file generate by OpenFOAM. This is the data associated with
+             each grid point.
+            
+            *scalarFileList*: python list.
+            
+            *symTensorFileList*: python list.
+            
+            *dx*: python float.
+             Physical size of a pixel in the Surface class (x discretisation).
+             Must be given in mm.
+            
+            *dy*: python float.
+             Physical size of a pixel in the Surface class (y discretisation).
+             Must be given in mm.
+            
+            *interpolationMethod*: python string. 
+             Interpolation method used to interpolate from the triangulated
+             grid to the cartesian grid. "cubic" or "linear". Default="cubic"
+             
+            *kind*: python string.
+             Defines the algorithm used for the cubic interpolation. Choices:
+             "min_E" or "geom". "min_E" should be the more accurate, but it is 
+             also the most time time consuming.
+             
+        Returns:
+            none
+        '''
 
         print 'Reading Velocity'
 
         s=TriSurface()
         #s.storeMesh=False
-        s.readFromFoamFile(varsFile=velFile,pointsFile=pointsFile,facesFile=facesFile,viewAnchor=viewAnchor,xViewBasis=xViewBasis,yViewBasis=yViewBasis)
+        s.readFromFoamFile(varsFile=velFile,
+                           pointsFile=pointsFile,
+                           facesFile=facesFile,
+                           viewAnchor=viewAnchor,
+                           xViewBasis=xViewBasis,
+                           yViewBasis=yViewBasis)
 
         points=s.xys
         faces=s.faces
@@ -391,9 +542,9 @@ class Surface(object):
         triang = tri.Triangulation(points[:,0], points[:,1], faces)
 
         print 'Interpolating Velocity'
-        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
-        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
-        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod)
+        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
+        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
+        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
         self.vz=np.flipud(vz_i)
@@ -686,6 +837,40 @@ def getVC7filelist(directory,nr=0,step=1):
         filelist=filelist[0:min(len(filelist),nr)]
 
     return filelist
+    
+def getIM7filelist(directory,nr=0,step=1):
+    '''
+    Get a list of filenames of PIV vetor data files
+    '''
+    filelist=[]
+    if os.path.exists(directory):
+        for files in os.listdir(directory):
+            if files.endswith(".im7"):
+                filelist.append(files)
+        filelist.sort()
+        filelist=filelist[0::step]
+        if nr==0:
+            nr=len(filelist)
+        filelist=filelist[0:min(len(filelist),nr)]
+
+    return filelist
+    
+def getIM7SurfaceList(directory,nr=0,step=1):
+    '''
+    Get a list of Surfaces read from PIV data
+    '''
+    filelist=getIM7filelist(directory,nr,step)
+
+    surfaces=[]
+    surfaces=[Surface()]*len(filelist)
+    #os.chdir(directory)
+    if nr==0:
+        nr=len(filelist)
+    for i in range(0,min(len(filelist),nr)):
+        print("reading " + filelist[i])
+        surfaces[i]=Surface()
+        surfaces[i].readFromIM7(os.path.join(directory,filelist[i]))
+    return surfaces
 
 class rect(object):
     def __init__(self,x0,x1,y0,y1,name=''):
@@ -706,3 +891,101 @@ class rect(object):
         ymin=np.min([self.y0,self.y1])
 
         return (xmin,ymin)
+
+class IM7(object):
+    def __init__(self,filename):
+        '''
+        reads PIV image data in tha Davis format, using the 64bit windows DLL
+        '''
+
+        dllpath = os.path.dirname(os.path.realpath(__file__))
+        self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+
+        self.myBuffer = BufferType()
+        self.attributeLst = AttributeList()
+        self.res = self.ReadIMX64.ReadIM7(filename, byref(self.myBuffer), byref(self.attributeLst))
+        
+    def nx(self):
+        return self.myBuffer.nx
+        
+    def ny(self):
+        return self.myBuffer.ny
+        
+    def nf(self):
+        return self.myBuffer.nf
+        
+    def imageSubType(self):
+        BufferFormat_t=dict()
+        BufferFormat_t["-2"]='BUFFER_FORMAT_MEMPACKWORD'
+        BufferFormat_t["-3"]='BUFFER_FORMAT_FLOAT'
+        BufferFormat_t["-4"]='BUFFER_FORMAT_WORD'
+        return BufferFormat_t[str(self.myBuffer.image_sub_type)]
+        
+    def getData(self,frame):
+        s=None
+        if self.myBuffer.image_sub_type < 0:
+            if v:
+                print "Size (ny, nx)"
+                print self.myBuffer.ny
+                print self.myBuffer.nx
+                print self.myBuffer.nf
+                print 'type:',self.myBuffer.image_sub_type
+
+            theFrame=frame
+            width = self.myBuffer.ny;
+            height = self.myBuffer.nx;
+            if self.myBuffer.isFloat:
+                s=np.empty((height,width), dtype=float)
+                s[:] = np.NAN
+            else:
+                s=np.empty((height,width), dtype=int)
+                s[:] = np.NAN
+            if(self.myBuffer.isFloat):
+                for y in range(0,self.myBuffer.ny):
+                    for x in range(0,self.myBuffer.nx): 
+                        s[x,y] = (self.myBuffer.floatArray[theFrame*self.myBuffer.nx*self.myBuffer.ny+x*self.myBuffer.ny+y])
+            else:
+                for y in range(0,self.myBuffer.ny):
+                    for x in range(0,self.myBuffer.nx):
+                        s[x,y] = (self.myBuffer.wordArray[theFrame*self.myBuffer.nx*self.myBuffer.ny+x*self.myBuffer.ny+y])
+        return s
+        
+    def __del__(self):        
+        self.ReadIMX64.DestroyBuffer(self.myBuffer)
+    
+
+class SurfaceTimeSeries(object):
+    def __init__(self):
+        self.vx=[]
+        self.vy=[]
+        self.vz=[]
+        self.t=[]
+        
+        self.dx = float()
+        self.dy = float()
+
+        self.minX = float()
+        self.maxX = float()
+        self.minY = float()
+        self.maxY = float()
+        self.extent = []
+
+        self.data=dict()
+        return
+        
+    def loadFromSurfaceList(self,slist,frq):
+        self.vx=np.array([s.data['Ux'] for s in slist])
+        self.vy=np.array([s.data['Uy'] for s in slist])
+        self.vz=np.array([s.data['Uz'] for s in slist])
+        self.dx=slist[0].dx
+        self.dy=slist[0].dy        
+        self.minX=slist[0].minX
+        self.maxX=slist[0].maxX
+        self.minY=slist[0].minY
+        self.maxY=slist[0].maxY
+        self.extent=slist[0].extent
+        
+        self.data['frq']=frq
+        self.data['dt']=1.0/frq       
+        self.t=np.linspace(0,(self.vx.shape[0]-1)/self.data['frq'],self.vx.shape[0])
+        self.data['t'] = self.t

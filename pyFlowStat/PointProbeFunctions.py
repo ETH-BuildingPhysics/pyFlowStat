@@ -57,7 +57,7 @@ def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
         * hdf5file: [str] path to target file.
         * keyrange: [str] keys included in the pointProbe which will be
           saved in the hdf5 file.
-              * 'raw' = only U, t and pos (default)
+              * 'raw' = only probeVar, probeTimes and probeLoc (default)
               * 'full' = U, t and pos, plus all the other keys included
               in ppList[i].data
 
@@ -101,7 +101,7 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
         * hdf5file: [str] path to source file.
         * keyrange: [str] keys included in the pointProbe which will be
           saved in the hdf5 file.
-              * 'raw' = only U, t and pos (default)
+              * 'raw' = only probeVar, probeTimes and probeLoc (default)
               * 'full' = 'raw', plus all the other keys included in ppList[i].data
         * createDict: [bool] create data dict. Usefull if the hdf5 contains
           only the raw data or if you load only the raw data from a full
@@ -135,3 +135,60 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
             ppList[i].createDataDict()
     fr.close()
     return ppList
+
+  
+def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True,createDict=True,genStat=True):
+    '''
+    Create a PointProbe from time resolved field data for a selected location i,j.
+    adds the velocity vector time series, the times, probeLoc and calls 
+    createDataDict and generateStatistics by default.
+
+    Arguments:
+        * surfaceTimeSeries: [SurfaceTimeSeries] pyFlowStat.Surface.SurfaceTimeSeries object
+        * frq: [float]  Sample frequency
+        * i: [int] Row of the point (in pixel).
+        * j: [int] Column of the point (in pixel).
+        * doDetrend: [bool] apply detrending in generateStatistics(). Default=True
+        * createDict: [bool] call createDataDict. Default=True
+        * genStat: [bool] call generateStatistics. Default=True
+
+    Returns:
+        * pt: [PointProbe] PointProbe object.
+    '''
+    
+    vel=np.column_stack((surfaceTimeSeries.vx[:,i,j],surfaceTimeSeries.vy[:,i,j],surfaceTimeSeries.vz[:,i,j]))
+    #if not np.isnan(vel).any():
+    try:
+        pt=pp.PointProbe()
+        pt.probeVar=vel
+        pt.probeTimes=surfaceTimeSeries.t
+        pt.probeLoc=[i,j]
+        pt.createDataDict(action=createDict)
+        if genStat==True:
+            pt.generateStatistics(doDetrend=doDetrend)
+
+        return pt
+    except:
+        return None
+ 
+def createFromArray(dt,u,v,w,doDetrend=True):
+    '''
+    Create a PointProbe from three scalar arrays (velocity components)
+    adds the velocity vector time series, the times, and calls createDataDict and generateStatistics
+
+    Arguments:
+        * u,v,w:   [numpy.array shape=(N)] Coordinate of probe (must be included in ofFile)
+        * dt: [float]  Time step
+        * doDetrend: [bool] apply detrending in generateStatistics()
+
+    Returns:
+        * pt: [PointProbe] PointProbe object.
+    '''
+    pt=pp.PointProbe()
+    pt.probeVar=np.transpose(np.vstack((u,v,w)))
+    nrpoints=len(u)
+    endtime=(len(u)-1)*dt
+    pt.probeTimes=np.linspace(0,endtime,nrpoints)
+    pt.createDataDict()
+    pt.generateStatistics(doDetrend=doDetrend)
+    return pt

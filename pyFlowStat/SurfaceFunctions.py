@@ -289,7 +289,7 @@ def loadPPfromSurf_hdf5(hdf5fileObj,pixloc,keyrange='raw',createDict=False,dt=1.
 
     # get number of surfaces
     nbsurf = len(hdf5fileObj.keys())
-
+    print nbsurf
     # generate probeVar and probeTimes
     probeVar = np.zeros((nbsurf,3))
     probeTimes = np.zeros(nbsurf)
@@ -332,3 +332,115 @@ def loadPPfromSurf_hdf5(hdf5fileObj,pixloc,keyrange='raw',createDict=False,dt=1.
         pt.createDataDict()
 
     return pt
+
+    
+def corrField(f1,f2=None,i_ref=0,j_ref=0,norm=True):
+    '''
+    f1,f2: SurfaceList velocity component
+    '''
+    f1sum=np.sum(f1,axis=0)
+    if f2==None:
+        f2=f1
+        f2sum=f1sum
+    else:
+        f2sum=np.sum(f2,axis=0)
+        
+    res=np.empty(f1[0].shape, dtype=float)
+    res[:] = np.nan
+    k,dx,dy=f1.shape
+    if np.isnan(f1sum[i_ref,j_ref]):
+        res[i_ref,j_ref] = np.nan
+    else:
+        for i in range(dx):
+            for j in range(dy):
+                if np.isnan(f2sum[i,j]):
+                    res[i,j]=np.nan
+                else:
+                    res[i,j]=tt.twoPointCorr(x=f1[:,i_ref,j_ref],y=f2[:,i,j],norm=True)
+    if norm==True:
+        return res/res[i_ref,j_ref]
+    else:
+        return res
+        
+def corrFieldHorz(f1,f2=None,j_ref=0,norm=True):
+    '''
+    f1,f2: SurfaceList velocity component
+    '''
+    f1sum=np.sum(f1,axis=0)
+    if f2==None:
+        f2=f1
+        f2sum=f1sum
+    else:
+        f2sum=np.sum(f2,axis=0)
+        
+    res=np.empty(f1[0].shape, dtype=float)
+    res[:] = np.nan
+    k,dx,dy=f1.shape
+    for i in range(dx):
+        if np.isnan(f1sum[i,j_ref]):
+            res[i,:]=np.nan
+        else:
+            for j in range(dy):
+                if np.isnan(f1sum[i,j]) or np.isnan(f2sum[i,j]):
+                    res[i,j]=np.nan
+                else:
+                    res[i,j]=tt.twoPointCorr(x=f1[:,i,j_ref],y=f2[:,i,j],norm=True)
+            if norm==True:
+                res[i,:]=res[i,:]/res[i,j_ref]
+      
+    return res
+    
+def corrFieldVert(f1,f2=None,i_ref=0,norm=True):
+    '''
+    f1,f2: SurfaceList velocity component
+    '''
+    f1sum=np.sum(f1,axis=0)
+    if f2==None:
+        f2=f1
+        f2sum=f1sum
+    else:
+        f2sum=np.sum(f2,axis=0)
+       
+    res=np.empty(f1[0].shape, dtype=float)
+    res[:] = np.nan
+    k,dx,dy=f1.shape
+    for j in range(dy):
+        if np.isnan(f1sum[i_ref,j]):
+            res[:,j]=np.nan
+        else:
+            for i in range(dx):
+                if np.isnan(f1sum[i,j]) or np.isnan(f2sum[i,j]):
+                    res[i,j]=np.nan
+                else:
+                    res[i,j]=tt.twoPointCorr(x=f1[:,i_ref,j],y=f2[:,i,j],norm=True)
+            if norm==True:
+                res[:,j]=res[:,j]/res[i_ref,j]
+            
+    return res
+    
+def corrVert(f1,f2=None,i_ref=0,j_ref=0,norm=True):
+    '''
+    f1,f2: SurfaceList velocity component
+    '''
+    f1sum=np.sum(f1,axis=0)
+    if f2==None:
+        f2=f1
+        f2sum=f1sum
+    else:
+        f2sum=np.sum(f2,axis=0)
+    
+    res=np.empty(f1[0].shape[0], dtype=float)
+    res[:] = np.nan
+    k,dx,dy=f1.shape
+    for i in range(dx):
+        if np.isnan(f1sum[i_ref,j_ref]) or np.isnan(f2sum[i_ref,j_ref]):
+            res[i]=np.nan
+        else:
+            res[i]=tt.twoPointCorr(x=f1[:,i_ref,j_ref],y=f2[:,i,j_ref],norm=True)
+    if norm==True:
+        res=res/res[i_ref]
+    res_l=res[:i_ref+1][::-1]
+    res_r=res[i_ref:]
+    lags_l=np.arange(len(res_l))
+    lags_r=np.arange(len(res_r))
+    return lags_l,res_l,lags_r,res_r
