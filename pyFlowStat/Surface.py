@@ -197,6 +197,8 @@ class Surface(object):
         self.computeQ()
         #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
         #self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
+        
+        self.data['OW-Q']=(dudx-dvdy)**2+(dudy+dvdx)**2-(dvdx-dudy)**2
 #        tensorS= np.empty(self.data['Ux'].shape)
 #        tensorW= np.empty(self.data['Ux'].shape)
 #        tensorS= 0.5*[[dudx+dudx,dudy+dvdx],[dvdx+dudy,dvdy+dvdy]]
