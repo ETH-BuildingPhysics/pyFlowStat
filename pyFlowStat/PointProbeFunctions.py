@@ -157,16 +157,19 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
     '''
     
     vel=np.column_stack((surfaceTimeSeries.vx[:,i,j],surfaceTimeSeries.vy[:,i,j],surfaceTimeSeries.vz[:,i,j]))
-    
-    pt=pp.PointProbe()
-    pt.probeVar=vel
-    pt.probeTimes=surfaceTimeSeries.t
-    pt.probeLoc=[i,j]
-    pt.createDataDict(action=createDict)
-    if genStat==True:
-        pt.generateStatistics(doDetrend=doDetrend)
+    #if not np.isnan(vel).any():
+    try:
+        pt=pp.PointProbe()
+        pt.probeVar=vel
+        pt.probeTimes=surfaceTimeSeries.t
+        pt.probeLoc=[i,j]
+        pt.createDataDict(action=createDict)
+        if genStat==True:
+            pt.generateStatistics(doDetrend=doDetrend)
 
-    return pt
+        return pt
+    except:
+        return None
  
 def createFromArray(dt,u,v,w,doDetrend=True):
     '''
