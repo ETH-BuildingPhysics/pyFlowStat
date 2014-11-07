@@ -18,7 +18,7 @@ from ctypes import *
 TypeName = ["Image", "2D-PIV-Vector (header, 4x(Vx,Vy))",
             "2D-Vector (Vx,Vy)", "2D-PIV+p.ratio (header, 4x(Vx,Vy), peakratio)",
           "3D-Vector (Vx,Vy,Vz)", "3D-Vector+p.ratio (header, 4x(Vx,Vy), peakratio)"]
-
+          
 WORD=c_ushort
 
 #typedef struct AttributeList
@@ -27,8 +27,36 @@ WORD=c_ushort
 #   char*          value;
 #   AttributeList* next;
 #} AttributeList;
+#class AttributeList(Structure):
+#    pass
+    
 class AttributeList(Structure):
-    pass
+    def __getattr__(self, key):
+        if key=='pairs':
+            self.get_pairs()
+            return self.pairs
+        if key=='dict':
+            return self.as_dict()
+        else:
+            raise AttributeError(u"Does not have %s atribute" % key)
+            
+    def get_pairs(self):
+        att = self
+        self.pairs = []
+        while att!=0:
+            try:
+                self.pairs.append((att.name, att.value))
+                att = att.next[0]
+            except ValueError:
+                break
+    
+    def as_dict(self):
+        self.get_pairs()
+        return dict(self.pairs)
+        
+    def delete(self):
+        del_attributelist(self)
+        
 AttributeList._fields_=[("name",c_char_p),("value",c_char_p),("next",POINTER(AttributeList))]
 
 #   union
@@ -254,7 +282,10 @@ class Surface(object):
         self.vz=[]
 
         res = ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(attributeLst))
-
+        
+        #print len(self.attributeLst)
+        #attv=att.as_dict()['_SCALE_X']
+        #print attv
         #print res
         if res>0:
             print "Error reading image"
@@ -340,7 +371,49 @@ class Surface(object):
 #			vx = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+1) ];
 #			vy = theBuffer.floatArray[ theX + theY*width + frameOffset + componentOffset*(mode*2+2) ];
 
-    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic',kind='min_E'):
+    def readFromIM7(self,filename,key,frame=0,v=False,scale=1.0):
+        '''
+        reads PIV image data in tha Davis format, using the 64bit windows DLL
+        '''
+
+        dllpath = os.path.dirname(os.path.realpath(__file__))
+        ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+
+        tmpBuffer = BufferType()
+        self.attributeLst = AttributeList()
+        res = ReadIMX64.ReadIM7(filename, byref(tmpBuffer), byref(self.attributeLst))
+        s=None
+        
+        if tmpBuffer.image_sub_type < 0:
+            if v:
+                print "Size (ny, nx)"
+                print tmpBuffer.ny
+                print tmpBuffer.nx
+                print tmpBuffer.nf
+                print 'type:',tmpBuffer.image_sub_type
+
+            theFrame=frame
+            width = tmpBuffer.ny;
+            height = tmpBuffer.nx;
+            if tmpBuffer.isFloat:
+                s=np.empty((height,width), dtype=float)
+                s[:] = np.NAN
+            else:
+                s=np.empty((height,width), dtype=int)
+                s[:] = np.NAN
+            if(tmpBuffer.isFloat):
+                for y in range(0,tmpBuffer.ny):
+                    for x in range(0,tmpBuffer.nx): 
+                        s[x,y] = (tmpBuffer.floatArray[theFrame*tmpBuffer.nx*tmpBuffer.ny+x*tmpBuffer.ny+y]*tmpBuffer.scaleI.factor*scale+tmpBuffer.scaleI.offset)
+            else:
+                for y in range(0,tmpBuffer.ny):
+                    for x in range(0,tmpBuffer.nx):
+                        s[x,y] = (tmpBuffer.wordArray[theFrame*tmpBuffer.nx*tmpBuffer.ny+x*tmpBuffer.ny+y]*tmpBuffer.scaleI.factor*scale+tmpBuffer.scaleI.offset)
+        
+        ReadIMX64.DestroyBuffer(tmpBuffer)
+        self.data[key]=s
+
+    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
         '''
         helper function
         methode=linear,cubic (default)
@@ -746,6 +819,40 @@ def getVC7filelist(directory,nr=0,step=1):
         filelist=filelist[0:min(len(filelist),nr)]
 
     return filelist
+    
+def getIM7filelist(directory,nr=0,step=1):
+    '''
+    Get a list of filenames of PIV vetor data files
+    '''
+    filelist=[]
+    if os.path.exists(directory):
+        for files in os.listdir(directory):
+            if files.endswith(".im7"):
+                filelist.append(files)
+        filelist.sort()
+        filelist=filelist[0::step]
+        if nr==0:
+            nr=len(filelist)
+        filelist=filelist[0:min(len(filelist),nr)]
+
+    return filelist
+    
+def getIM7SurfaceList(directory,nr=0,step=1):
+    '''
+    Get a list of Surfaces read from PIV data
+    '''
+    filelist=getIM7filelist(directory,nr,step)
+
+    surfaces=[]
+    surfaces=[Surface()]*len(filelist)
+    #os.chdir(directory)
+    if nr==0:
+        nr=len(filelist)
+    for i in range(0,min(len(filelist),nr)):
+        print("reading " + filelist[i])
+        surfaces[i]=Surface()
+        surfaces[i].readFromIM7(os.path.join(directory,filelist[i]))
+    return surfaces
 
 class rect(object):
     def __init__(self,x0,x1,y0,y1,name=''):
@@ -766,6 +873,68 @@ class rect(object):
         ymin=np.min([self.y0,self.y1])
 
         return (xmin,ymin)
+
+class IM7(object):
+    def __init__(self,filename):
+        '''
+        reads PIV image data in tha Davis format, using the 64bit windows DLL
+        '''
+
+        dllpath = os.path.dirname(os.path.realpath(__file__))
+        self.ReadIMX64 = cdll.LoadLibrary(dllpath+"\ReadIMX64.dll")
+
+        self.myBuffer = BufferType()
+        self.attributeLst = AttributeList()
+        self.res = self.ReadIMX64.ReadIM7(filename, byref(self.myBuffer), byref(self.attributeLst))
+        
+    def nx(self):
+        return self.myBuffer.nx
+        
+    def ny(self):
+        return self.myBuffer.ny
+        
+    def nf(self):
+        return self.myBuffer.nf
+        
+    def imageSubType(self):
+        BufferFormat_t=dict()
+        BufferFormat_t["-2"]='BUFFER_FORMAT_MEMPACKWORD'
+        BufferFormat_t["-3"]='BUFFER_FORMAT_FLOAT'
+        BufferFormat_t["-4"]='BUFFER_FORMAT_WORD'
+        return BufferFormat_t[str(self.myBuffer.image_sub_type)]
+        
+    def getData(self,frame):
+        s=None
+        if self.myBuffer.image_sub_type < 0:
+            if v:
+                print "Size (ny, nx)"
+                print self.myBuffer.ny
+                print self.myBuffer.nx
+                print self.myBuffer.nf
+                print 'type:',self.myBuffer.image_sub_type
+
+            theFrame=frame
+            width = self.myBuffer.ny;
+            height = self.myBuffer.nx;
+            if self.myBuffer.isFloat:
+                s=np.empty((height,width), dtype=float)
+                s[:] = np.NAN
+            else:
+                s=np.empty((height,width), dtype=int)
+                s[:] = np.NAN
+            if(self.myBuffer.isFloat):
+                for y in range(0,self.myBuffer.ny):
+                    for x in range(0,self.myBuffer.nx): 
+                        s[x,y] = (self.myBuffer.floatArray[theFrame*self.myBuffer.nx*self.myBuffer.ny+x*self.myBuffer.ny+y])
+            else:
+                for y in range(0,self.myBuffer.ny):
+                    for x in range(0,self.myBuffer.nx):
+                        s[x,y] = (self.myBuffer.wordArray[theFrame*self.myBuffer.nx*self.myBuffer.ny+x*self.myBuffer.ny+y])
+        return s
+        
+    def __del__(self):        
+        self.ReadIMX64.DestroyBuffer(self.myBuffer)
+    
 
 class SurfaceTimeSeries(object):
     def __init__(self):
