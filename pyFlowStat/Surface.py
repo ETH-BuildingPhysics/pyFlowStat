@@ -20,17 +20,19 @@ TypeName = ["Image", "2D-PIV-Vector (header, 4x(Vx,Vy))",
           "3D-Vector (Vx,Vy,Vz)", "3D-Vector+p.ratio (header, 4x(Vx,Vy), peakratio)"]
           
 WORD=c_ushort
-
-#typedef struct AttributeList
-#{
-#   char*          name;
-#   char*          value;
-#   AttributeList* next;
-#} AttributeList;
-#class AttributeList(Structure):
-#    pass
-    
+ 
 class AttributeList(Structure):
+    '''
+    ctypes wrapper Davis VC7 struct AttributeList 
+    
+    #typedef struct AttributeList
+    {
+       char*          name;
+       char*          value;
+       AttributeList* next;
+    } AttributeList;
+    
+    '''
     def __getattr__(self, key):
         if key=='pairs':
             self.get_pairs()
@@ -59,45 +61,59 @@ class AttributeList(Structure):
         
 AttributeList._fields_=[("name",c_char_p),("value",c_char_p),("next",POINTER(AttributeList))]
 
-#   union
-#	{
-#      float*   floatArray;
-#      Word*    wordArray;
-#   };
+
 class _bufarray(Union):
+    '''
+    ctypes wrapper Davis VC7 union
+    union
+    {
+          float*   floatArray;
+          Word*    wordArray;
+    };
+    '''
     _fields_=[("floatArray",POINTER(c_float)),("wordArray",POINTER(WORD))]
 
 
-
-#typedef struct
-#{
-#   int         isFloat;
-#   int         nx,ny,nz,nf;
-#   int         totalLines;
-#	int			vectorGrid;			// 0 for images
-#	int			image_sub_type;	// BufferFormat_t
-#   union
-#	{
-#      float*   floatArray;
-#      Word*    wordArray;
-#   };
-#	BufferScaleType	scaleX;		// x-scale
-#	BufferScaleType	scaleY;		// y-scale
-#	BufferScaleType	scaleI;		// intensity scale
-#	bool*			bMaskArray;			// mask array, NULL if no mask exists
-#} BufferType;
 class BufferScaleType(Structure):
+    '''
+    ctypes wrapper for Davis VC7 struct BufferScaleType
+    
+    typedef struct
+    {
+    	float	factor;
+    	float offset;
+    	char	description[16];
+    	char	unit[16];
+    } BufferScaleType;
+    
+    '''
     _fields_=[("factor",c_float),("offset",c_float),("description",c_char*16),
               ("unit",c_char*16)]
 
-#typedef struct
-#{
-#	float	factor;
-#	float offset;
-#	char	description[16];
-#	char	unit[16];
-#} BufferScaleType;
+
 class BufferType(Structure):
+    '''
+    ctypes wrapper for Davis VC7 class BufferType
+    
+    typedef struct
+    {
+      int         isFloat;
+      int         nx,ny,nz,nf;
+      int         totalLines;
+    	int			vectorGrid;			// 0 for images
+    	int			image_sub_type;	// BufferFormat_t
+      union
+    	{
+          float*   floatArray;
+          Word*    wordArray;
+      };
+    	BufferScaleType	scaleX;		// x-scale
+    	BufferScaleType	scaleY;		// y-scale
+    	BufferScaleType	scaleI;		// intensity scale
+    	bool*			bMaskArray;			// mask array, NULL if no mask exists
+    } BufferType;
+    
+    '''
     _anonymous_ = ("bufarray",)
     _fields_=[("isFloat",c_int),("ny",c_int),("nx",c_int),("nz",c_int),("nf",c_int),
              ("totalLines",c_int),("vectorGrid",c_int),("image_sub_type",c_int),
@@ -105,6 +121,9 @@ class BufferType(Structure):
              ("scaleI",BufferScaleType),("bMaskArray",POINTER(c_bool))]
 
 def getMode(buf,theX_,theY_,width_,frameOffset):
+    '''
+    helper method to get mode from Davis VC7 buffer
+    '''
     mode = int(buf.floatArray[theX_ + theY_*width_ + frameOffset])
     if mode<0:
         return -1
@@ -114,9 +133,20 @@ def getMode(buf,theX_,theY_,width_,frameOffset):
     mode=mode-1
     return mode
 
-#Read file of type IMG/IMX/VEC, returns error code ImReadError_t
-#extern "C" int EXPORT ReadIMX ( const char* theFileName, BufferType* myBuffer, AttributeList** myList );
 class Surface(object):
+    '''
+    Holds 2D data on a equidistant,cartesian grid
+    
+    Attributes:
+      * vx,vy,vz (numpy ndarray): velocity data, saved on cell center.
+      * dx,dy (float): cell size, in mm.
+      * minX,maxX,minY,maxY (float): min/max position of cell centers in mm.
+      * extent (list of floats): [minX-dx/2,maxX+dx/2,minY-dy/2,maxY+dy/2] in mm.
+      * data (dict): dictionary to hold processed data, created by createDataDict().
+        
+    Note: Units for distances have to be in mm (dx,dy,minX,maxX,minY,maxY and extent)
+    in order for gradients to be calculated correctly.
+    '''
     def __init__(self):
         self.vx=[]
         self.vy=[]
@@ -182,43 +212,84 @@ class Surface(object):
         self.data['Umag2D']=Umag2D
 
         self.computeGradients()
+        self.computeVorticity()
+        self.computeQ()
+        self.computeOWQ()
+        self.computeLambda2()
         
-        dudy=self.data['dudy']
         dudx=self.data['dudx']
         dvdy=self.data['dvdy']
-        dvdx=self.data['dvdx']
-        
-        vort_z=dvdx-dudy
-        self.data['VortZ']=vort_z
-        self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         self.data['Div2D']=dudx+dvdy
-
         
-        self.computeQ()
+        self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
+        
+        #self.computeGradients(method='r')
+        #self.computeGradients(method='ls')
+        
         #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
         #self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
         
-        self.data['OW-Q']=(dudx-dvdy)**2+(dudy+dvdx)**2-(dvdx-dudy)**2
+        
 #        tensorS= np.empty(self.data['Ux'].shape)
 #        tensorW= np.empty(self.data['Ux'].shape)
 #        tensorS= 0.5*[[dudx+dudx,dudy+dvdx],[dvdx+dudy,dvdy+dvdy]]
 #        tensor2= 0.5*[[0.0,dudy-dvdx],[dvdx-dudy,0.0]]
-        self.data['lambda2'] = self.getLambda2(dudx,dudy,dvdx,dvdy)
-    def computeGradients(self):
-        dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-        dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
-        self.data['dudy']=dudy
-        self.data['dudx']=dudx
-        self.data['dvdy']=dvdy
-        self.data['dvdx']=dvdx
         
+    def computeGradients(self,method='numpy'):
+        if method=='numpy':
+            dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
+            dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+            self.data['dudy']=dudy
+            self.data['dudx']=dudx
+            self.data['dvdy']=dvdy
+            self.data['dvdx']=dvdx
+        elif method=='r':
+            dudx_r = np.zeros(self.data['Ux'].shape)
+            for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudx_r[i,j]=(self.data['Ux'][i,j-2]-8.0*self.data['Ux'][i,j-1]+8.0*self.data['Ux'][i,j+1]-self.data['Ux'][i,j+2])/(12.0*self.dx/1000.0)
+            self.data['dudx_r']=dudx_r
+        elif method=='ls':
+            dudx_ls = np.zeros(self.data['Ux'].shape)
+            for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudx_ls[i,j]=(2.0*self.data['Ux'][i,j+2]+self.data['Ux'][i,j+1]-self.data['Ux'][i,j-1]-2.0*self.data['Ux'][i,j-2])/(10.0*self.dx/1000.0)
+            self.data['dudx_ls']=dudx_ls
+            
+    
     def computeQ(self):
+        
         dudy=self.data['dudy']
         dudx=self.data['dudx']
         dvdy=self.data['dvdy']
         dvdx=self.data['dvdx']
         #self.data['Q']=np.zeros(self.data['Ux'].shape)
         self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
+        
+    def computeOWQ(self):
+        '''
+        Okubo-Weiss
+        '''
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        #self.data['Q']=np.zeros(self.data['Ux'].shape)
+        self.data['OW-Q']=(dudx-dvdy)**2+(dudy+dvdx)**2-(dvdx-dudy)**2
+        
+    def computeLambda2(self):
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        self.data['lambda2'] = self.getLambda2(dudx,dudy,dvdx,dvdy)
+        
+    def computeVorticity(self):
+        
+        dudy=self.data['dudy']
+        dvdx=self.data['dvdx']
+        vort_z=dvdx-dudy
+        self.data['VortZ']=vort_z
         
     def getLambda2(self,dudx,dudy,dvdx,dvdy):
         S11 = dudx
@@ -873,6 +944,9 @@ def getIM7SurfaceList(directory,nr=0,step=1):
     return surfaces
 
 class rect(object):
+    '''
+    Defines a rectangle using the cooridnate of two points
+    '''
     def __init__(self,x0,x1,y0,y1,name=''):
         self.x0=x0
         self.x1=x1
@@ -887,6 +961,9 @@ class rect(object):
         return np.abs(self.y1-self.y0)
 
     def p1(self):
+        '''
+        returns lower left point
+        '''
         xmin=np.min([self.x0,self.x1])
         ymin=np.min([self.y0,self.y1])
 
@@ -955,6 +1032,9 @@ class IM7(object):
     
 
 class SurfaceTimeSeries(object):
+    '''
+    Transfroms a list of Surfaces into a 3D array
+    '''
     def __init__(self):
         self.vx=[]
         self.vy=[]
