@@ -20,6 +20,8 @@ setup(name='pyFlowStat',
 
 errors=0
 print "\n"
+
+# test if the minimum requiered package are installed
 try:
     import numpy
     print "Found numpy",numpy.version.version
@@ -50,6 +52,25 @@ except ImportError, e:
         errors+=1
         print "\n"
         print "matplotlib python-package not installed. Please install matplotlib"
+        print "\n"
+
+# test if the extra package are installed
+try:
+    import h5py
+    print "Found h5py",h5py.__version__
+except ImportError, e:
+        errors+=1
+        print "\n"
+        print "h5py python-package not installed. Install h5py if you want to use the extra HDF5 save and load feature."
+        print "\n"
+        
+try:
+    import modred
+    print "Found modred",modred.__version__
+except ImportError, e:
+        errors+=1
+        print "\n"
+        print "modred python-package not installed. Install modred if you want to use the extra POD and DMD decomposition."
         print "\n"
 
 print "\nInstallation finished.",errors,"Error(s)"
