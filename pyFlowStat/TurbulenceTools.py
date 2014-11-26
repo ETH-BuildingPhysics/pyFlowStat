@@ -288,7 +288,7 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     return res, lags
 
 
-def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
+def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False,oneSided=True):
     '''
     Cross-correlation using scipy.fftconvolve. Similar returns as TurbulenceTools.xcorr()
     but faster with fftconvolve.
@@ -365,9 +365,9 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
         res = res[lags] / rms / Nf
     else:
         res = res[lags]
-
-    res=res[(len(res)-1)/2:-1]
-    lags = np.arange(0, maxlags)
+    if oneSided:
+        res=res[(len(res)-1)/2:-1]
+        lags = np.arange(0, maxlags)
     return res, lags
     
 def twoPointCorr(x,y,subtractMean=True,norm=False):
