@@ -1,6 +1,81 @@
 import numpy as np
 import modred
 
+class PODPiv(object):
+    def __init__(self,surfaceList):
+        '''
+        Arguments:
+            *scalarFieldList*: numpy array of shape (N,surfX,surfY).
+             Surfaces from a PIV measurment (for example one component of a SurfaceList).
+        '''
+        FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+        inputShape=FourD.shape
+        self.inputShape=inputShape
+        self.vecs=FourD.reshape((inputShape[0],inputShape[1]*inputShape[2]*inputShape[3])).T
+
+        self.result=dict()
+        pass
+
+    def decompose(self,nMode,method='snap',subtractMean=False):
+        '''
+        Compute the Porper Orthogonal Decomposition (POD) from a list of N snapshots. 
+        The snapshots are PIV surfaces of size (surfX,surfY) of field F. F can be any
+        scalar field (Ux, ux, T, vorticity, R11,...)
+        
+        Arguments:
+
+            
+            *nMode*: python integer.
+             Number of modes of the POD.
+            
+            *PODmethod*: python string. Default='snap'
+             Type of POD algorithm used. For the snapshot method, use PODmethod='snap' and
+             for the direct method, use PODmewthod='direct'. The default value is 'snap'.
+             
+             How to choose between 'snap' and 'direct': if surfX*surfY > N**2, use the snap
+             method, it should increase the coputational speed for only a little loss in 
+             precision.
+             
+        Returns:
+            None
+        
+        '''
+
+        nSnap = self.vecs.shape[1]
+        
+        # reshape the input
+        #vecs = self.surfaces.reshape(self.surfShape[0],self.surfShape[1]*self.surfShape[2]).T
+
+        if np.any(self.vecs):
+            self.vecs = np.nan_to_num(self.vecs)
+        
+        if subtractMean:
+            self.vecs=self.vecs-np.mean(self.vecs,axis=1,keepdims=True)
+            
+        if method=='snap':
+            modesPOD, eigVals = modred.compute_POD_matrices_snaps_method(self.vecs, range(nMode))
+        elif method=='direct':
+            modesPOD, eigVals = modred.compute_POD_matrices_direct_method(self.vecs, range(nMode))
+        else:
+            print('error: argument '+str(method)+' is not valid. Use \'snap\' or \'direct\'')
+        
+        # convert modesPOD in an numpy array
+        modesPOD = np.asarray(modesPOD)
+        
+        # reshape modes: from 1D array to 2D array (an image)
+        #modes = np.asarray(modesPOD).T.reshape(nMode,self.surfShape[1],self.surfShape[2])
+        modes = np.asarray(modesPOD).T.reshape(nMode,self.inputShape[1],self.inputShape[2],self.inputShape[3])
+        
+        # compute the time dependent coefficients ai
+        ai = np.zeros((nSnap,nMode))
+        i = 0
+        for i in range(0,nMode):
+            ai[:,i] = np.inner(self.vecs.T,modesPOD[:,i]).T
+
+        self.result['modes']=modes
+        self.result['eigVals']=eigVals
+        self.result['ai']=ai
+        
 class POD(object):
     def __init__(self,scalarFieldList):
         '''
