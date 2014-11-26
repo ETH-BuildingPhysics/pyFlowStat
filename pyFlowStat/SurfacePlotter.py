@@ -3,16 +3,16 @@ import matplotlib as mpl
 import numpy as np
 import pyFlowStat.Surface as Surface
 
-def PlotField(ax,surface,field,vmin,vmax,offset=[0,0],interpolation='nearest',modifier=None):
+def PlotField(ax,surface,field,vmin,vmax,offset=[0,0],interpolation='nearest',modifier=None,**kwargs):
     extent=[0,0,0,0]
     extent[0]=surface.extent[0]-offset[0]
     extent[1]=surface.extent[1]-offset[0]
     extent[2]=surface.extent[2]-offset[1]
     extent[3]=surface.extent[3]-offset[1]
     if not modifier:
-        im=ax.imshow(surface.data[field],vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent)
+        im=ax.imshow(surface.data[field],vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent,**kwargs)
     else:
-        im=ax.imshow(modifier(surface.data[field]),vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent)
+        im=ax.imshow(modifier(surface.data[field]),vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent,**kwargs)
     return im
     
 def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11):
