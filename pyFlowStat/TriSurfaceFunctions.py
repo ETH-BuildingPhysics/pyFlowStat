@@ -17,6 +17,9 @@ import re
 
 import numpy as np
 
+import matplotlib.tri as tri
+import matplotlib.path as mplPath
+
 import CoordinateTransformation as coorTrans
 import TriSurfaceVector as TriSurfaceVector
 import TriSurfaceMesh as TriSurfaceMesh
@@ -61,8 +64,159 @@ def getTransformation(viewAnchor,
     lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
     
     return afftrans, lintrans
+
+
+def getSubTriSurfaceMesh(tsmSource, poly, op='in', mode='mid'):
+    '''
+    Return a sub TriSurfaceMesh defined inside or outside a polygon. This is
+    a helper function. Use better getSubTriSurfaceVector.    
+    
+    Arguments:
+        *tsmSource*: TriSurfaceMesh Object
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+
+    Returns:
+        *tsm*: TriSurfaceMesh object.
+
+        *node_renum*: 
+         Node renumbering. Useful for the compression of the data
+    '''
+    # create a boundBox from the polygon
+    maskedTri = np.zeros(tsmSource.triangles.shape[0])
+    bb = mplPath.Path(poly)
+    
+    # define the operation
+    inPoly = None
+    outPoly = None
+    if op=='in':
+        inPoly = 0
+        outPoly = 1
+    elif op=='out':
+        inPoly = 1
+        outPoly = 0
+    else:
+        raise ValueError('Argument "op" must be "in" or "out".')
+
+    # define the mask and apply it.
+    if mode=='each':
+        xtri = tsmSource.x[tsmSource.triangles]
+        ytri = tsmSource.y[tsmSource.triangles]
+        for i in range(maskedTri.shape[0]):
+            if np.sum(bb.contains_points(np.vstack((xtri[i],ytri[i])).T))>0:
+                maskedTri[i] = inPoly
+            else:
+                maskedTri[i] = outPoly
+    elif mode=='mid':
+        xmid = tsmSource.x[tsmSource.triangles].mean(axis=1)
+        ymid = tsmSource.y[tsmSource.triangles].mean(axis=1)
+        for i in range(maskedTri.shape[0]):
+            if bb.contains_point([xmid[i],ymid[i]])==1:
+                maskedTri[i] = inPoly
+            else:
+                maskedTri[i] = outPoly
+    else:
+        raise ValueError('Argument "mode" must be "each" or "mid".')
+    
+    tsmSource.triangulation.set_mask(maskedTri)
+    
+    #compress the triangles and create a new TriSurface mesh
+    trianalyzer = tri.TriAnalyzer(tsmSource.triangulation)
+    (comp_triangles,comp_x,comp_y,node_renum) = trianalyzer._get_compressed_triangulation(return_node_renum=True)
+
+    comp_z = compressArray(tsmSource._TriSurfaceMesh__z,node_renum)
+
+    subTsm = TriSurfaceMesh.TriSurfaceMesh(x=comp_x,
+                                        y=comp_y,
+                                        z=comp_z,
+                                        triangles=comp_triangles,
+                                        mask=None,
+                                        affTrans=tsmSource.affTrans,
+                                        linTrans=tsmSource.linTrans)
+
+    return subTsm,node_renum
+
+
+def compressArray(z,node_renum):
+    '''
+    Compress an array according the node renumbering list produced by the
+    function getSubTriSurfaceMesh.
+    
+    Arguments:
     
     
+    Returns:
+    
+    '''
+    node_mask = (node_renum == -1)
+    z[node_renum[~node_mask]] = z
+    z = z[~node_mask]
+    return z
+    
+def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renum=False):
+    '''
+    Do stuff...    
+    
+    Arguments:
+        *tsmSource*: TriSurfaceMesh Object
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+         
+        *return_node_renum*: python bool. Default=False
+         If True, returns the node renumbering. Useful to compress array with
+         TriSurfaceFunctions.compressArray()
+         
+    Returns:
+        *subTsm*: TriSurfaceMesh object
+        
+        *subTsv*: TriSurfaceVector object
+        
+        *node_renum*: numpy array. Returned only if return_node_renum=Trus
+         
+    '''
+    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tsvSource.triSurfaceMesh,
+                                             poly=poly,
+                                             op=op,
+                                             mode=mode)
+    
+    comp_vx = compressArray(tsvSource.vx,node_renum)
+    comp_vy = compressArray(tsvSource.vy,node_renum)
+    comp_vz = compressArray(tsvSource.vz,node_renum)
+
+    
+    subProjectedField = tsvSource._TriSurfaceVector__projectedField
+    subInterpolation = tsvSource._TriSurfaceVector__interType
+    subKind = tsvSource._TriSurfaceVector__interKind
+
+    subTsv = TriSurfaceVector.TriSurfaceVector(vx=comp_vx,
+                                               vy=comp_vy,
+                                               vz=comp_vz,
+                                               time=tsvSource.time,
+                                               triSurfaceMesh=subTsm,
+                                               projectedField=subProjectedField,
+                                               interpolation=subInterpolation,
+                                               kind=subKind)
+                                               
+                                              
+    
+    if return_node_renum==False:
+        return subTsm, subTsv
+    elif return_node_renum==True:
+        return subTsm, subTsv, node_renum
+
+   
 def saveTriSurfaceList_hdf5(triSurfaceList,hdf5file):
     '''
     '''
