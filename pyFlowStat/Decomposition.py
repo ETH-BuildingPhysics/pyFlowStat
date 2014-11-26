@@ -88,7 +88,7 @@ class POD(object):
         self.result=dict()
         pass
     
-    def decompose(self,nMode,PODmethod='snap'):
+    def decompose(self,nMode,method='snap',subtractMean=False):
         '''
         Compute the Porper Orthogonal Decomposition (POD) from a list of N snapshots. 
         The snapshots are PIV surfaces of size (surfX,surfY) of field F. F can be any
@@ -116,14 +116,20 @@ class POD(object):
         nSnap = self.surfShape[0]
         
         # reshape the input
-        surfacesPOD = np.nan_to_num(self.surfaces.reshape(self.surfShape[0],self.surfShape[1]*self.surfShape[2]).T)
+        vecs = self.surfaces.reshape(self.surfShape[0],self.surfShape[1]*self.surfShape[2]).T
+
+        if np.any(vecs):
+            vecs = np.nan_to_num(vecs)
         
-        if PODmethod=='snap':
-            modesPOD, eigVals = modred.compute_POD_matrices_snaps_method(surfacesPOD, range(nMode))
-        elif PODmethod=='direct':
-            modesPOD, eigVals = modred.compute_POD_matrices_direct_method(surfacesPOD, range(nMode))
+        if subtractMean:
+            vecs=vecs-np.mean(vecs,axis=1,keepdims=True)
+            
+        if method=='snap':
+            modesPOD, eigVals = modred.compute_POD_matrices_snaps_method(vecs, range(nMode))
+        elif method=='direct':
+            modesPOD, eigVals = modred.compute_POD_matrices_direct_method(vecs, range(nMode))
         else:
-            print('error: argument '+str(PODmethod)+' is not valid. Use \'snap\' or \'direct\'')
+            print('error: argument '+str(method)+' is not valid. Use \'snap\' or \'direct\'')
         
         # convert modesPOD in an numpy array
         modesPOD = np.asarray(modesPOD)
@@ -135,11 +141,12 @@ class POD(object):
         ai = np.zeros((nSnap,nMode))
         i = 0
         for i in range(0,nMode):
-            ai[:,i] = np.inner(surfacesPOD.T,modesPOD[:,i]).T
+            ai[:,i] = np.inner(vecs.T,modesPOD[:,i]).T
 
         self.result['modes']=modes
         self.result['eigVals']=eigVals
         self.result['ai']=ai
+        
         
     def plotEnegry(self,ax,start,end,**kwargs):
         ax.plot(self.result['eigVals'][start:end]/np.sum(self.result['eigVals'][start:]),**kwargs)
