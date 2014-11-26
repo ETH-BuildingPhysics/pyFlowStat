@@ -226,9 +226,6 @@ class Surface(object):
         #self.computeGradients(method='r')
         #self.computeGradients(method='ls')
         
-        #self.data['SwirlingStrength^2']=np.zeros(self.data['Ux'].shape)
-        #self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
-        
         
 #        tensorS= np.empty(self.data['Ux'].shape)
 #        tensorW= np.empty(self.data['Ux'].shape)
@@ -265,6 +262,15 @@ class Surface(object):
         dvdx=self.data['dvdx']
         #self.data['Q']=np.zeros(self.data['Ux'].shape)
         self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
+    
+    def computeSwirlingStrength(self):
+        
+        dudy=self.data['dudy']
+        dudx=self.data['dudx']
+        dvdy=self.data['dvdy']
+        dvdx=self.data['dvdx']
+        #self.data['Q']=np.zeros(self.data['Ux'].shape)
+        self.data['SwirlingStrength^2']=(1.0/(4.0*dudx))**2+(1.0/(4.0*dvdy))**2-0.5*dudx*dvdy+dvdx*dudy
         
     def computeOWQ(self):
         '''
