@@ -141,6 +141,9 @@ def getSubTriSurfaceMesh(tsmSource, poly, op='in', mode='mid'):
                                            affTrans=tsmSource.affTrans,
                                            linTrans=tsmSource.linTrans)
 
+    # remove the mash from the source
+    tsmSource.set_mask(None)   
+    
     return subTsm,node_renum
 
 
