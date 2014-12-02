@@ -227,7 +227,7 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
         return subTsm, subTsv, node_renum
 
    
-def saveTriSurfaceList_hdf5(triSurfaceList,hdf5file,indexingMode='time'):
+def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,indexingMode='time'):
     '''
     Save a list of TriSurface<type> in a hdf5 file.
     
@@ -252,15 +252,15 @@ def saveTriSurfaceList_hdf5(triSurfaceList,hdf5file,indexingMode='time'):
     gMesh = fwm.create_group(gName)
 
     gMesh.create_dataset('points',data=triSurfaceList[0].rawPoints())
-    gMesh.create_dataset('triangles',data=triSurfaceList[0].triangles)
+    gMesh.create_dataset('faces',data=triSurfaceList[0].triangles)
     
     for i in range(len(triSurfaceList)):
         # group name
         gName = str()
         if indexingMode=='time':
-            gName = 'TriSurface_'+str(triSurfaceList[i].time)
+            gName = str(triSurfaceList[i].time)
         elif indexingMode=='index':
-            gName = 'TriSurface_'+str(i)
+            gName = str(i)
         else:
             raise ValueError('Argument "indexingMode" must be "time" or "index".')
         
@@ -268,7 +268,7 @@ def saveTriSurfaceList_hdf5(triSurfaceList,hdf5file,indexingMode='time'):
 
         # save  data
         gsurfi.create_dataset('time',data=triSurfaceList[i].time)
-        gsurfi.create_dataset('vars',data=triSurfaceList[i].rawVars())
+        gsurfi.create_dataset(varName,data=triSurfaceList[i].rawVars())
         
     fwm.close()
 
@@ -290,7 +290,7 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
     # get mest data
     gName = 'mesh'
     points = hdf5Parser[gName]['points'].value
-    triangles = hdf5Parser[gName]['triangles'].value
+    triangles = hdf5Parser[gName]['faces'].value
     
     ptsSrc = points
     ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
@@ -306,7 +306,11 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
                                         linTrans=lintrans)
     return tsm    
 
-def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,TriSurfaceMesh, projectedField=True):
+def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
+                                        varName,
+                                        TriSurfaceMesh,
+                                        extraVar=[],
+                                        projectedField=True):
     '''
     Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
@@ -322,7 +326,7 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,TriSurfaceMesh, projectedFiel
     for key in keys:
         gName = str(key)
         time = hdf5Parser[gName]['time'].value
-        data = hdf5Parser[gName]['vars'].value 
+        data = hdf5Parser[gName][varName].value 
 
         #get vectors (in vecsTgt)
         vecsSrc = data
@@ -341,14 +345,19 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,TriSurfaceMesh, projectedFiel
                                                 projectedField=projectedField,
                                                 interpolation=None,
                                                 kind=None,)
+        if len(extraVar)==0:
+            for var in extraVar:
+                tsv.data[var] = hdf5Parser[gName][var].value 
         triSurfaceList.append(tsv)
     return triSurfaceList
 
 
 def loadTriSurfaceVectorList_hdf5(hdf5file,
+                                  varName,
                                   viewAnchor,
                                   xViewBasis,
                                   yViewBasis,
+                                  extraVar=[],
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                                   projectedField=True):
     '''
@@ -375,7 +384,9 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
     
    
     tsvList = loadTriSurfaceVectorList_hdf5Parser(hdf5Parser=fr,
+                                                  varName=varName,
                                                   TriSurfaceMesh=tsm,
+                                                  extraVar=extraVar,
                                                   projectedField=projectedField)  
    
     fr.close()    
