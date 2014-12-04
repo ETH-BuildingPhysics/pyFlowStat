@@ -180,7 +180,7 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
     use the node_renum output to feed the function compressArray.
     
     Arguments:
-        *tsmSource*: TriSurfaceMesh Object
+        *tsvSource*: TriSurfaceVector Object
         
         *poly*: numpy array of shape (N,2)
          list of N points of the polygon. Example for a square made by the
@@ -226,6 +226,69 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
     elif return_node_renum==True:
         return subTsm, subTsv, node_renum
 
+
+def getSubTriSurfaceVectorList(tsvListSource,
+                               poly,
+                               op='in',
+                               mode='mid',
+                               return_node_renum=False):
+    '''
+    Same as getSubTriSurfaceVector, but with a list of TriSurfaceVector list.
+    
+    Arguments:
+        *tsvSource*: python list of lense N.
+         List of source TriSurfaceVector Object.
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+         
+        *return_node_renum*: python bool. Default=False
+         If True, returns the node renumbering. Useful to compress array with
+         TriSurfaceFunctions.compressArray()
+         
+    Returns:
+        *subTsm*: TriSurfaceMesh object
+        
+        *subTsvList*: python list of lense N.
+         List of sub TriSurfaceVector object
+        
+        *node_renum*: numpy array. Returned only if return_node_renum=True      
+    '''    
+    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tsvListSource[0].triSurfaceMesh,
+                                             poly=poly,
+                                             op=op,
+                                             mode=mode)
+
+    subTsvList = []    
+    
+    for tsvSource in tsvListSource:
+        comp_vx = compressArray(tsvSource.vx,node_renum)
+        comp_vy = compressArray(tsvSource.vy,node_renum)
+        comp_vz = compressArray(tsvSource.vz,node_renum)
+    
+        subProjectedField = tsvSource._TriSurfaceVector__projectedField
+    
+        subTsv = TriSurfaceVector.TriSurfaceVector(vx=comp_vx,
+                                                   vy=comp_vy,
+                                                   vz=comp_vz,
+                                                   time=tsvSource.time,
+                                                   triSurfaceMesh=subTsm,
+                                                   projectedField=subProjectedField,
+                                                   interpolation=None,
+                                                   kind=None)
+        subTsvList.append(subTsv)
+        
+    if return_node_renum==False:
+        return subTsm, subTsvList
+    elif return_node_renum==True:
+        return subTsm, subTsvList, node_renum
+
+        
    
 def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,indexingMode='time'):
     '''
