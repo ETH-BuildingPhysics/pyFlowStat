@@ -466,7 +466,7 @@ def calcIntegralScale(rho_i,dx=1.0,method=None):
 
 
 #-----------------------------------------------------------------------------#
-def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False):
+def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Bandpass Filter.
 
@@ -497,13 +497,13 @@ def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, [low, high], btype='band',
                        ftype='butter', output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1]axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
-def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False):
+def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Bandstop Filter.
 
@@ -535,13 +535,13 @@ def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, [low, high],
                        btype='bandstop', ftype='butter', output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
-def lowpass(data, freq, df, corners=4, zerophase=False):
+def lowpass(data, freq, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Lowpass Filter.
 
@@ -568,10 +568,10 @@ def lowpass(data, freq, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, f, btype='lowpass', ftype='butter',
                        output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
 def highpass(data, freq, df, corners=4, zerophase=False):
@@ -599,8 +599,8 @@ def highpass(data, freq, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, f, btype='highpass', ftype='butter',
                        output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 #-----------------------------------------------------------------------------#
