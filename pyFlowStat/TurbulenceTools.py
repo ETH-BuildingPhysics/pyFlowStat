@@ -498,7 +498,7 @@ def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False,axis=-1):
                        ftype='butter', output='ba')
     if zerophase:
         firstpass = spsig.lfilter(b, a, data,axis=axis)
-        return spsig.lfilter(b, a, firstpass[::-1]axis=axis)[::-1]
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
         return spsig.lfilter(b, a, data,axis=axis)
 
