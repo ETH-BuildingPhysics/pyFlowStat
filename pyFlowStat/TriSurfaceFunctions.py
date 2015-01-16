@@ -413,8 +413,11 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
     
     for key in keys:
         gName = str(key)
-        time = hdf5Parser[gName]['time'].value
-        data = hdf5Parser[gName][varName].value 
+        try:
+            time = hdf5Parser[gName]['time'].value
+            data = hdf5Parser[gName][varName].value 
+        except:
+            print('Field '+varName+' in time '+gName+' does not exist. Skip.')
 
 
         #get vectors (in vecsTgt)
