@@ -8,7 +8,19 @@ Collection of functions for the following classes:
     * TriSurfaceScalar (to be implemented)
 
 Functions included:
-    *
+    * getTransformation
+    * getSubTriSurfaceMesh
+    * compressArray
+    * getSubTriSurfaceVector
+    * getSubTriSurfaceVectorList
+    * saveTriSurfaceList_hdf5
+    * loadTriSurfaceMesh_hdf5Parser
+    * loadTriSurfaceVectorList_hdf5Parser
+    * loadTriSurfaceVector_hdf5Parser
+    * parseFoamFile_sampledSurface
+    * parseVTK_ugly_sampledSurface
+    
+For documentation, see the docstring included in each function.
 '''
 #=============================================================================#
 # load modules
@@ -35,11 +47,24 @@ def getTransformation(viewAnchor,
                       yViewBasis,
                       srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
     '''
-    Return the affine and linear transfomation obecjt to move from the
-    coordinate system of the 3D CFD simulation to the 2D surface.
+    Return the affine and linear transfomation object for coordinate
+    transformation from a source coordinate system S to a target coordinate 
+    system T.
     
     Arguments:
-    
+        *viewAnchor*: python list or numpy array of shape (3,).
+         Location of the origin of T, defined in S.
+         
+        *xViewBasis*: python list or numpy array of shape (3,).
+         x axis of T, defined in S.
+        
+        *yViewBasis*: python list or numpy array of shape (3,).
+         y axis of T, defined in S.
+        
+        *srcBasisSrc*: python list or numpy array of shape (3,3).
+         x,y,z axis of S, defined in S. For advenced user only.
+         Default=[[1,0,0],[0,1,0],[0,0,1]]
+          
     Returns:
         *affTrans*: AffineTransformation object.
             
@@ -391,6 +416,7 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
         time = hdf5Parser[gName]['time'].value
         data = hdf5Parser[gName][varName].value 
 
+
         #get vectors (in vecsTgt)
         vecsSrc = data
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
@@ -424,7 +450,7 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                                   projectedField=True):
     '''
-    Load all (N) the TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
+    Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
     object associated to the surfaces is also returned.
     
     Arguments:

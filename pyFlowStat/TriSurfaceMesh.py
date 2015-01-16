@@ -126,10 +126,16 @@ class TriSurfaceMesh(object):
         
     @property
     def affTrans(self):
+        '''
+        Get affine transformation object.
+        '''
         return self.__affTrans
     
     @property
     def linTrans(self):
+        '''
+        Get linear transformation object.
+        '''
         return self.__linTrans
         
         
