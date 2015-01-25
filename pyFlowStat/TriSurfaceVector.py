@@ -409,7 +409,7 @@ class TriSurfaceVector(object):
                                   [a[1],a[3],a[4]],
                                   [a[2],a[4],a[5]]])
                     B = self.linTrans.srcToTgt(A)
-                    fieldTgt[i,:] = np.array([B[0,0],B[0,1],B[0,2],B[1,1],B[1,2],[2,2]])
+                    fieldTgt[i,:] = np.array([B[0,0],B[0,1],B[0,2],B[1,1],B[1,2],B[2,2]])
                     
                 
         else:
