@@ -232,6 +232,18 @@ class TriSurfaceVector(object):
     @property
     def linTrans(self):
         return self.triSurfaceMesh.linTrans
+        
+    @property
+    def interType(self):
+        return self.__interType
+        
+    @property
+    def interKind(self):
+        return self.__interKind
+
+    @property
+    def projectedField(self):
+        return self.__projectedField
 
 
     # setters #
