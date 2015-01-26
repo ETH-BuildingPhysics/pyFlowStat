@@ -346,6 +346,18 @@ class TriSurfaceVector(object):
         else:
             raise ValueError('this method needs interpolators. Please run',
                              'method "addInterpolator" first.')
+
+
+    def mat(self,varName):
+        '''
+        '''
+        return TriSurfaceFunctions.mat(self.data[varName])
+        
+        
+    def unmat(self,varName):
+        '''
+        '''
+        return TriSurfaceFunctions.unmat(self.data[varName])
     
     
     def __getitem__(self, key):
@@ -398,9 +410,21 @@ class TriSurfaceVector(object):
         fieldShape = fieldSrc.shape
         fieldTgt = np.zeros(fieldShape)
 
-        if (self.__projectedField==True and len(fieldShape)>1):
-            for i in range(fieldShape[0]):
-                fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
+        if (self.__projectedField==True and len(fieldShape)>1):            
+            if fieldShape[1]==3:
+                for i in range(fieldShape[0]):
+                    fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
+            if fieldShape[1]==6:
+                realMat = self.mat()
+                for i in range(fieldShape[0]):
+                    a = fieldSrc[i,:]
+                    A = np.array([[a[0],a[1],a[2]],
+                                  [a[1],a[3],a[4]],
+                                  [a[2],a[4],a[5]]])
+                    B = self.linTrans.srcToTgt(A)
+                    fieldTgt[i,:] = np.array([B[0,0],B[0,1],B[0,2],B[1,1],B[1,2],B[2,2]])
+                    
+                
         else:
             fieldTgt = fieldSrc
         self.data[fieldname] = fieldTgt
