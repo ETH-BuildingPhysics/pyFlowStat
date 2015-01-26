@@ -427,7 +427,6 @@ class TriSurfaceVector(object):
                 for i in range(fieldShape[0]):
                     fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
             if fieldShape[1]==6:
-                realMat = self.mat()
                 for i in range(fieldShape[0]):
                     a = fieldSrc[i,:]
                     A = np.array([[a[0],a[1],a[2]],
