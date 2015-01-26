@@ -7,7 +7,7 @@ Collection of tools/classes to do coordinate transformation.
 import numpy as np
 
 
-class AffineTransfomation(object):
+class AffineTransformation(object):
     '''
     An affine transfomation is define as ya = A*xa, with A the affine matrix
     (shape=(4,4)), xa (shape=(4)) the augmented vector defined in the source

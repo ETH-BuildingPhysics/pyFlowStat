@@ -153,7 +153,7 @@ def getTransformation(viewAnchor,
     tgtBasisSrc[:,0] = xViewBasis
     tgtBasisSrc[:,1] = yViewBasis
     tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
-    afftrans = coorTrans.AffineTransfomation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+    afftrans = coorTrans.AffineTransformation(srcBasisSrc,tgtBasisSrc,viewAnchor)
     lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
     
     return afftrans, lintrans
