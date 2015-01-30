@@ -45,6 +45,26 @@ class TriSurfaceMesh(object):
 
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
+        
+        Arguments:
+            *pointsFile*: python string.
+             Location of the point file. It holds the points (summits) of
+             the triangulate grid.
+            
+            *facesFile*: python string.
+             Location of the faces file. It holds the triangles of the grid.
+             If facesFile=None, the triangles are created with the Delauney
+             method.
+             
+            *viewAnchor*: python of numpy array. Shape = 3.
+             Location of the (0,0) point of your grid. Defined in the source
+             basis (meaning: the coordinate system of the OpenFOAM simulation)
+             
+            *xViewBasis*: python of numpy array. Shape = 3.
+            
+            *yViewBasis*: python of numpy array. Shape = 3.
+            
+            *srcBasisSrc*: python of numpy array. Shape = 3,3.
         '''
         afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
                                                                    xViewBasis,
@@ -58,7 +78,10 @@ class TriSurfaceMesh(object):
             ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
 
         #get triangles
-        triangles = TriSurfaceFunctions.parseFoamFile_sampledSurface(facesFile)[:,1:4]
+        if facesFile==None:
+            triangles = None
+        else:
+            triangles = TriSurfaceFunctions.parseFoamFile_sampledSurface(facesFile)[:,1:4]
 
         # update class member variables
         return cls(x=ptsTgt[:,0],
