@@ -33,8 +33,6 @@ class TriSurfaceVector(TriSurface):
     "readFromFoamFile" or "readFromVTK".
 
     Member variables:
-        *triSurfaceMesh* :  TriSurfaceMesh object.
-         
         *vx*: numpy array of shape (N,)
          
         *vy*: numpy array of shape (N,)
