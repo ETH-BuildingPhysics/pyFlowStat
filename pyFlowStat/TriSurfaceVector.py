@@ -10,7 +10,7 @@ import matplotlib.tri as tri
 #import CoordinateTransformation as coorTrans
 #import TriSurfaceMesh as TriSurfaceMesh
 import TriSurfaceFunctions
-import TriSurface
+from TriSurface import TriSurface
 
 
 class TriSurfaceVector(TriSurface):
@@ -99,15 +99,11 @@ class TriSurfaceVector(TriSurface):
              "min_E". Default="geom". "min_E" is supposed to be the more 
              accurate, but "geom" is way faster.
         '''
-        TriSurface.__init__(self,
-                            time=time,
-                            triSurfaceMesh=triSurfaceMesh,
-                            projectedField=projectedField,
-                            interpolation=interpolation,
-                            kind=kind)      
-        
-        
-#        self.triSurfaceMesh = triSurfaceMesh
+        super(TriSurfaceVector,self).__init__(time=time,
+                                        triSurfaceMesh=triSurfaceMesh,
+                                        projectedField=projectedField,
+                                        interpolation=interpolation,
+                                        kind=kind)
 
         self.vx=np.asarray(vx)
         self.vy=np.asarray(vy)
@@ -119,12 +115,7 @@ class TriSurfaceVector(TriSurface):
         
         self.data = dict()
         self.data_i = dict()
-        
-        # variables holds by the base class
-#        self.time = float(time)      
-#        self.__interType = interpolation
-#        self.__interKind  = kind
-#        self.__projectedField = projectedField
+
         
     @classmethod
     def readFromFoamFile(cls,
@@ -216,42 +207,7 @@ class TriSurfaceVector(TriSurface):
                    kind=None)
   
     # getters #
-    #---------#
-#    @property
-#    def x(self):
-#        return self.triSurfaceMesh.x
-        
-#    @property    
-#    def y(self):
-#        return self.triSurfaceMesh.y
-        
-#    @property
-#    def triangulation(self):
-#        return self.triSurfaceMesh.triangulation
-        
-#    @property
-#    def triangles(self):
-#        return self.triSurfaceMesh.triangles
-        
-#    @property
-#    def affTrans(self):
-#        return self.triSurfaceMesh.affTrans
-    
-#    @property
-#    def linTrans(self):
-#        return self.triSurfaceMesh.linTrans
-        
-#    @property
-#    def interType(self):
-#        return self.__interType
-        
-#    @property
-#    def interKind(self):
-#        return self.__interKind
-
-#    @property
-#    def projectedField(self):
-#        return self.__projectedField
+    #---------#      
 
 
     # setters #
@@ -260,12 +216,6 @@ class TriSurfaceVector(TriSurface):
 
     # class methods #
     #---------------#
-#    def rawPoints(self):
-#        '''
-#        '''
-#        return self.triSurfaceMesh.rawPoints()
-            
-     
     def rawVars(self):
         '''
         Return the vector field defined the source coordinate system.
@@ -363,32 +313,7 @@ class TriSurfaceVector(TriSurface):
             raise ValueError('this method needs interpolators. Please run',
                              'method "addInterpolator" first.')
 
-
-#    def mat(self,varName):
-#        '''
-#        '''
-#        return TriSurfaceFunctions.mat(self.data[varName])
-        
-        
-#    def unmat(self,varName):
-#        '''
-#        '''
-#        return TriSurfaceFunctions.unmat(self.data[varName])
-    
-    
-#    def __getitem__(self, key):
-#        '''
-#        Getter for key "key" on member dictionnary "data"
-#        '''
-#        return self.data[key]
-
-
-#    def __setitem__(self, key, item):
-#        '''
-#        Setter for key "key" on member dictionnary "data"
-#        '''
-#        self.data[key] = item
-        
+  
     # class methods - adders #
     #------------------------#
         
@@ -409,66 +334,7 @@ class TriSurfaceVector(TriSurface):
         else:
             raise ValueError('Interpolation must be "cubic" or "linear".')
             
-    
-#    def addField(self,field,fieldname):
-#        '''
-#        Add a field F of dimension d (e.g: d=3 for a vector filed) to the
-#        current TriSurfaceVector object TSV. The grid of F (N points) must be
-#        identical, in term of number of points and their location, as the grid
-#        of TSV. F will be stored in TSV.data['fieldName'] or TSV['fieldName'].
-#        
-#        Arguments:
-#            *field*: numpy array of shape (N,d).
-#            
-#            *fieldName*: python string.
-#        '''
-#        fieldSrc = field
-#        fieldShape = fieldSrc.shape
-#        fieldTgt = np.zeros(fieldShape)
-#
-#        if (self.__projectedField==True and len(fieldShape)>1):            
-#            if fieldShape[1]==3:
-#                for i in range(fieldShape[0]):
-#                    fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
-#            if fieldShape[1]==6:
-#                for i in range(fieldShape[0]):
-#                    a = fieldSrc[i,:]
-#                    A = np.array([[a[0],a[1],a[2]],
-#                                  [a[1],a[3],a[4]],
-#                                  [a[2],a[4],a[5]]])
-#                    B = self.linTrans.srcToTgt(A)
-#                    fieldTgt[i,:] = np.array([B[0,0],B[0,1],B[0,2],B[1,1],B[1,2],B[2,2]])
-#                    
-#                
-#        else:
-#            fieldTgt = fieldSrc
-#        self.data[fieldname] = fieldTgt
-            
-        
-#    def addFieldFromFoamFile(self,fieldFile,fieldname):
-#        '''
-#        Add a field F (shape d) stored in a foamFile to the current
-#        TriSurfaceVector object. See docstring from self.addField() for more
-#        information.
-#
-#        '''
-#        #get field
-#        fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
-#        self.addField(fieldSrc,fieldname)
-        
-        
-#    def addFieldFromVTK(self,fieldFile,fieldname):
-#        '''
-#        Add a field F (shape d) stored in a VTK file to the current
-#        TriSurfaceVector object. See docstring from self.addField() for more
-#        information.
-#
-#        '''
-#        #get field
-#        points, polygon, fieldSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(fieldFile)
-#        self.addField(fieldSrc,fieldname)
-    
-    
+
     def addGradient(self):
         '''
         Calculate and save the gradient at all point of the grid. As expected,
@@ -483,7 +349,7 @@ class TriSurfaceVector(TriSurface):
         
         self.data['dvzdx'] = dvzdx
         self.data['dvzdy'] = dvzdy
-        
+
 
     def addUmag(self):
         '''
@@ -514,9 +380,3 @@ class TriSurfaceVector(TriSurface):
         This method makes sense only if vx, vy and vz are velocity componants.
         '''
         self.data['Q'] = self.Q()
-        
-    
-            
-    
-    
- 
