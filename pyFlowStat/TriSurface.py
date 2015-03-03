@@ -34,9 +34,9 @@ class TriSurface(object):
         self.time = float(time)
 
         # "private" member variable. Don't play with them if you are not sure...        
-        self.__interType = interpolation
-        self.__interKind  = kind
-        self.__projectedField = projectedField
+        self.interType = interpolation
+        self.interKind  = kind
+        self.projectedField = projectedField
         
     @classmethod
     def readFromFoamFile(cls,
@@ -85,22 +85,11 @@ class TriSurface(object):
     @property
     def linTrans(self):
         return self.triSurfaceMesh.linTrans
-        
-    @property
-    def interType(self):
-        return self.__interType
-        
-    @property
-    def interKind(self):
-        return self.__interKind
-
-    @property
-    def projectedField(self):
-        return self.__projectedField
 
 
     # setters #
     #---------#
+
 
 
     # class methods #
@@ -186,7 +175,7 @@ class TriSurface(object):
         fieldShape = fieldSrc.shape
         fieldTgt = np.zeros(fieldShape)
 
-        if (self.__projectedField==True and len(fieldShape)>1):            
+        if (self.projectedField==True and len(fieldShape)>1):            
             if fieldShape[1]==3:
                 for i in range(fieldShape[0]):
                     fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])

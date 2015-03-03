@@ -223,7 +223,7 @@ class TriSurfaceVector(TriSurface):
         '''
         surfaceData = self.surfaceVars()
         rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
-        if self.__projectedField==True:
+        if self.projectedField==True:
             for i in range(surfaceData.shape[0]):
                 rawData[i,:] = self.linTrans.tgtToSrc(surfaceData[i,:])
         else:
@@ -319,13 +319,13 @@ class TriSurfaceVector(TriSurface):
         '''
         Add interpolator Object to the vector field.
         '''
-        self.__interType = interpolation
-        self.__interKind = kind
-        if self.__interType=='cubic':
-            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.__interKind)
-            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.__interKind)
-            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.__interKind)
-        elif self.__interType=='linear':
+        self.interType = interpolation
+        self.interKind = kind
+        if self.interType=='cubic':
+            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.interKind)
+            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.interKind)
+            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.interKind)
+        elif self.interType=='linear':
             self.vx_i = tri.LinearTriInterpolator(self.triangulation, self.vx)
             self.vy_i = tri.LinearTriInterpolator(self.triangulation, self.vy)
             self.vz_i = tri.LinearTriInterpolator(self.triangulation, self.vz)

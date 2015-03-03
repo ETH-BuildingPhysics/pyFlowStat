@@ -180,63 +180,51 @@ class TriSurfaceScalar(TriSurface):
         return self.s
 
 
-#    def gradientxy(self,x,y):
-#        '''
-#        Calculate the gradient at the point pt(x,y) and return it.
-#        
-#        Arguments:
-#            *x*: python float or numpy array.
-#             x coordinate of the point pt.
-#            
-#            *y*: python float or numpy array.
-#             y coordinate of the point pt.
-#             
-#        Returns:
-#            *dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy *: python tuple of six float or numpy array.
-#             The gradient at point pt(x,y).
-#        '''
-#        if self.vx_i!=None: 
-#            dvxdx, dvxdy = self.vx_i.gradient(x,y)
-#            dvydx, dvydy = self.vy_i.gradient(x,y)
-#            dvzdx, dvzdy = self.vz_i.gradient(x,y)
-#            return dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy
-#        else:
-#            raise ValueError('this method needs interpolators. Please run',
-#                             'method "addInterpolator" first.')
-#
-#  
-#    # class methods - adders #
-#    #------------------------#
-#        
-#    def addInterpolator(self,interpolation='cubic', kind='geom'):
-#        '''
-#        Add interpolator Object to the vector field.
-#        '''
-#        self.__interType = interpolation
-#        self.__interKind = kind
-#        if self.__interType=='cubic':
-#            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.__interKind)
-#            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.__interKind)
-#            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.__interKind)
-#        elif self.__interType=='linear':
-#            self.vx_i = tri.LinearTriInterpolator(self.triangulation, self.vx)
-#            self.vy_i = tri.LinearTriInterpolator(self.triangulation, self.vy)
-#            self.vz_i = tri.LinearTriInterpolator(self.triangulation, self.vz)
-#        else:
-#            raise ValueError('Interpolation must be "cubic" or "linear".')
-#            
-#
-#    def addGradient(self):
-#        '''
-#        Calculate and save the gradient at all point of the grid. As expected,
-#        the dvidz does not exist.
-#        '''   
-#        dvxdx, dvxdy, dvydx, dvydy, dvzdx, dvzdy = self.gradientxy(self.x,self.y)
-#        self.data['dvxdx'] = dvxdx
-#        self.data['dvxdy'] = dvxdy
-#        
-#        self.data['dvydx'] = dvydx
-#        self.data['dvydy'] = dvydy
-#        
-#        self.data['dvzdx'] = dvzdx
-#        self.data['dvzdy'] = dvzdy
+    def gradientxy(self,x,y):
+        '''
+        Calculate the gradient at the point pt(x,y) and return it. The method
+        works also for a list of N points. In such case, x and y are arrays.
+        
+        Arguments:
+            *x*: python float or numpy array (shape=N).
+             x coordinate of the point pt.
+            
+            *y*: python float or numpy array (shape=N).
+             y coordinate of the point pt.
+             
+        Returns:
+            *dsdx, dsdy*: python tuple of two float or numpy array.
+             The gradient at point pt(x,y).
+        '''
+        if self.s_i!=None: 
+            dsdx, dsdy = self.s_i.gradient(x,y)
+            return dsdx, dsdy
+        else:
+            raise ValueError('this method needs interpolators. Please run',
+                             'method "addInterpolator" first.')
+
+  
+    # class methods - adders #
+    #------------------------#
+        
+    def addInterpolator(self,interpolation='cubic', kind='geom'):
+        '''
+        Add interpolator Object.
+        '''
+        self.interType = interpolation
+        self.interKind = kind
+        if self.interType=='cubic':
+            self.s_i = tri.CubicTriInterpolator(self.triangulation, self.s, kind=self.interKind)
+        elif self.interType=='linear':
+            self.s_i = tri.LinearTriInterpolator(self.triangulation, self.s)
+        else:
+            raise ValueError('Interpolation must be "cubic" or "linear".')
+            
+
+    def addGradient(self):
+        '''
+        Calculate and save the gradient at all point of the grid.
+        '''   
+        dsdx, dsdy = self.gradientxy(self.x,self.y)
+        self.data['dsdx'] = dsdx
+        self.data['dsdy'] = dsdy
