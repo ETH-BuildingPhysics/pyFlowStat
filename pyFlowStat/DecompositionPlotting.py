@@ -102,7 +102,7 @@ def plotGrowth(myDMD,ax,k=1,dt=1.0,idx=None):
 
     plt.tight_layout()
     
-def plotModes(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5):
+def plotModes(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5,extent=None):
     testMode=np.real(myDMD.getMode(0))
     sizef=testMode.shape[0]/float(testMode.shape[1])
     width=20.0
@@ -111,7 +111,7 @@ def plotModes(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5):
     for i in range(min((nCols*nRows)-1,len(idxList))):
         j=idxList[i+iStart]
         ax=plt.subplot(nRows,nCols,i+1)
-        ax.imshow(np.real(myDMD.getMode(j)),vmin=vmin,vmax=vmax,interpolation='nearest')
+        ax.imshow(np.real(myDMD.getMode(j)),vmin=vmin,vmax=vmax,interpolation='nearest',extent=extent)
         #ax.imshow(np.real(FullFieldDMD.getMode(j)*np.real(FullFieldDMD.result['ritz_vals'][j])),vmin=vmin_mode,vmax=vmax_mode,interpolation='nearest')
         myDMD.getFrqStr(j,2)
         ax.set_title(str(j)+' '+(myDMD.getFrqStr(j,2) + r' |$\lambda$|=' + str(np.round(myDMD.getEigAbs(idx=j),6))+r' |$\phi$| '+ str(np.round(np.sqrt(myDMD.getNorm(j)),2))))
@@ -120,7 +120,7 @@ def plotModes(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5):
         #ax.set_title(myDMD.getFrqStr(j,2))
     plt.tight_layout()
     
-def plotModesPiv(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5,component=0):
+def plotModesPiv(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5,component=0,extent=None):
     testMode=np.real(myDMD.getMode(0,component=0))
     sizef=testMode.shape[0]/float(testMode.shape[1])
     width=20.0
@@ -128,7 +128,7 @@ def plotModesPiv(myDMD,idxList,nRows=8,nCols=6,iStart=0,vmin=-0.5,vmax=0.5,compo
     for i in range(min((nCols*nRows)-1,len(idxList))):
         j=idxList[i+iStart]
         ax=plt.subplot(nRows,nCols,i+1)
-        ax.imshow(np.real(myDMD.getMode(j,component=component)),vmin=vmin,vmax=vmax,interpolation='nearest')
+        ax.imshow(np.real(myDMD.getMode(j,component=component)),vmin=vmin,vmax=vmax,interpolation='nearest',extent=extent)
         #ax.imshow(np.real(FullFieldDMD.getMode(j)*np.real(FullFieldDMD.result['ritz_vals'][j])),vmin=vmin_mode,vmax=vmax_mode,interpolation='nearest')
         myDMD.getFrqStr(j,2)
         ax.set_title(str(j)+' '+(myDMD.getFrqStr(j,2) + r' |$\lambda$|=' + str(np.round(myDMD.getEigAbs(idx=j),6))+r' |$\phi$| '+ str(np.round(myDMD.getNorm(j),2))))
