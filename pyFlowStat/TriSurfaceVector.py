@@ -9,7 +9,7 @@ import matplotlib.tri as tri
 
 #import CoordinateTransformation as coorTrans
 #import TriSurfaceMesh as TriSurfaceMesh
-import TriSurfaceFunctions
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
 class TriSurfaceVector(object):
@@ -144,7 +144,7 @@ class TriSurfaceVector(object):
         '''
 
         #get vectors (in vecsTgt)
-        vecsSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(varsFile)
+        vecsSrc = ParserFunctions.parseFoamFile_sampledSurface(varsFile)
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
@@ -187,7 +187,7 @@ class TriSurfaceVector(object):
              surface. 
         '''     
         # read VTK file
-        ptsSrc, triangles, vecsSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
+        ptsSrc, triangles, vecsSrc = ParserFunctions.parseVTK_ugly_sampledSurface(vtkFile)
             
         # transform the data
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
@@ -449,7 +449,7 @@ class TriSurfaceVector(object):
 
         '''
         #get field
-        fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
+        fieldSrc = ParserFunctions.parseFoamFile_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
         
         
@@ -461,7 +461,7 @@ class TriSurfaceVector(object):
 
         '''
         #get field
-        points, polygon, fieldSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(fieldFile)
+        points, polygon, fieldSrc = ParserFunctions.parseVTK_ugly_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
     
     
@@ -512,7 +512,68 @@ class TriSurfaceVector(object):
         self.data['Q'] = self.Q()
         
     
-            
+def mat(field):
+        '''
+        return a symmTensor field (shape=[N,6]) or Tensor field (shape=[N,9])
+        as a "real" tensor field (shape=[N,3,3]). if "field" is a vector or a
+        scalar, nothing is done and return as given.
+        
+        In the TriSurface ecosystem, a symmTenor field is stored as a line to
+        save memory. For consistency, a Tensor field is also stored as a line.
+        Nevertheless this memory efficient storing is incompatible with linear
+        algebra calculus. Therefore the function mat() converts a tensor like
+        field into "real" Tensor field.
+        
+        Arguments:
+            *field*: numpy array. Shape=[N,d], with d an int.
+             Field to convert.
+             
+        Returns:
+            *realField* numpy array. shape=[N,3,3]
+             Return the field as a "real" tensor. If "field" is not tensor
+             like, the field is returned unmodified.
+        '''
+        tensorType = len(field[0])
+        
+        if tensorType==6:
+            tgt = np.zeros([field.shape[0],3,3])   # target field
+            # fill line by line
+            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+            tgt[:,1,:] = np.array([field[:,1],field[:,3],field[:,4]]).T  # add index 21,22,23 to tgt
+            tgt[:,2,:] = np.array([field[:,2],field[:,4],field[:,5]]).T # add index 31,32,33 to tgt
+            return tgt
+        elif tensorType==9:
+            tgt = np.zeros([field.shape[0],3,3])   # target field
+            # fill line by line
+            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+            tgt[:,1,:] = field[:,3:6]  # add index 21,22,23 to tgt
+            tgt[:,2,:] = field[:,6:9] # add index 31,32,33 to tgt
+            return tgt
+        else:
+            return field
+   
+         
+def unmat(field):
+    '''
+    Opposite of mat()....
+    '''
+    # get field type
+    fieldType = None
+    if (len(field.shape)==3 and field.shape[1]==3 and field.shape[2]==3):  #field is a 3x3 tensor
+        if [field[0,0,1],field[0,0,2],field[0,1,2]]==[field[0,1,0],field[0,2,0],field[0,2,1]]: #field is symmTensor
+            fieldType = 'symmTensor'
+        else:
+           fieldType = 'tensor'
+    else:
+       fieldType = 'notTensor'
+           
+    # convert field and return it
+    if fieldType=='symmTensor':
+        return np.hstack(( field[:,0,:] , field[:,1,1:3] , field[:,2,2].reshape(field.shape[0],1) ))
+    elif fieldType=='tensor':
+        return np.hstack(( field[:,0,:] , field[:,1,:] , field[:,2,:]))
+    elif fieldType=='notTensor':
+        return field            
     
     
  

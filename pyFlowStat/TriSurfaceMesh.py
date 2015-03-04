@@ -2,13 +2,11 @@
 TriSurfaceMesh.py
 '''
 
-import re
-
 import numpy as np
 import matplotlib.tri as tri
 
-import CoordinateTransformation as coorTrans
-import TriSurfaceFunctions
+import pyFlowStat.CoordinateTransformation as coorTrans
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
 class TriSurfaceMesh(object):
@@ -66,13 +64,13 @@ class TriSurfaceMesh(object):
             
             *srcBasisSrc*: python of numpy array. Shape = 3,3.
         '''
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
-                                                                   xViewBasis,
-                                                                   yViewBasis,
-                                                                   srcBasisSrc)
+        afftrans, lintrans = getTransformation(viewAnchor,
+                                               xViewBasis,
+                                               yViewBasis,
+                                               srcBasisSrc)
                                        
         # get x and y vector (in ptsTgt)
-        ptsSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(pointsFile)
+        ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
         ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
         for i in range(ptsSrc.shape[0]):
             ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
@@ -81,7 +79,7 @@ class TriSurfaceMesh(object):
         if facesFile==None:
             triangles = None
         else:
-            triangles = TriSurfaceFunctions.parseFoamFile_sampledSurface(facesFile)[:,1:4]
+            triangles = ParserFunctions.parseFoamFile_sampledSurface(facesFile)[:,1:4]
 
         # update class member variables
         return cls(x=ptsTgt[:,0],
@@ -102,13 +100,13 @@ class TriSurfaceMesh(object):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         '''
-        afftrans, lintrans = TriSurfaceFunctions.getTransformation(viewAnchor,
-                                                                   xViewBasis,
-                                                                   yViewBasis,
-                                                                   srcBasisSrc)
+        afftrans, lintrans = getTransformation(viewAnchor,
+                                               xViewBasis,
+                                               yViewBasis,
+                                               srcBasisSrc)
        
         # read VTK file
-        ptsSrc, triangles, vecsSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
+        ptsSrc, triangles, vecsSrc = ParserFunctions.parseVTK_ugly_sampledSurface(vtkFile)
         
         # Transform the points
         ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
@@ -177,3 +175,53 @@ class TriSurfaceMesh(object):
         for i in range(surfacePoints.shape[0]):
             rawPoints[i,:] = self.affTrans.tgtToSrc(surfacePoints[i,:])
         return rawPoints                   
+
+
+def getTransformation(viewAnchor,
+                      xViewBasis,
+                      yViewBasis,
+                      srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
+    '''
+    Return the affine and linear transfomation object for coordinate
+    transformation from a source coordinate system S to a target coordinate 
+    system T.
+    
+    Arguments:
+        *viewAnchor*: python list or numpy array of shape (3,).
+         Location of the origin of T, defined in S.
+         
+        *xViewBasis*: python list or numpy array of shape (3,).
+         x axis of T, defined in S.
+        
+        *yViewBasis*: python list or numpy array of shape (3,).
+         y axis of T, defined in S.
+        
+        *srcBasisSrc*: python list or numpy array of shape (3,3).
+         x,y,z axis of S, defined in S. For advenced user only.
+         Default=[[1,0,0],[0,1,0],[0,0,1]]
+          
+    Returns:
+        *affTrans*: AffineTransformation object.
+            
+        *linTrans*: LinearTransformation object.
+    '''
+    # check and convert arguments
+    srcBasisSrc = np.array(srcBasisSrc,dtype=float)
+    if srcBasisSrc.shape!=(3,3):
+        raise ValueError('srcBasis must be a 3x3 matrix')
+        
+    xViewBasis = np.array(xViewBasis,dtype=float)
+    yViewBasis = np.array(yViewBasis,dtype=float)
+    if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
+        raise ValueError('xViewBasis.shape and yViewBasis. ',
+                         'shape must be equal to (3,)')
+        
+    # get the basis and the transformation object
+    tgtBasisSrc = np.zeros((3,3))
+    tgtBasisSrc[:,0] = xViewBasis
+    tgtBasisSrc[:,1] = yViewBasis
+    tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
+    afftrans = coorTrans.AffineTransformation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+    lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
+    
+    return afftrans, lintrans
