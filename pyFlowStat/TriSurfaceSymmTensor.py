@@ -7,13 +7,11 @@ TriSurfaceSymmTensor.py
 import numpy as np
 import matplotlib.tri as tri
 
-#import CoordinateTransformation as coorTrans
-#import TriSurfaceMesh as TriSurfaceMesh
-import TriSurfaceFunctions
-from TriSurface import TriSurface
+import pyFlowStat.TriSurface as TriSurface
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
-class TriSurfaceSymmTensor(TriSurface):
+class TriSurfaceSymmTensor(TriSurface.TriSurface):
     '''
     class TriSurfaceSymmTensor.
     
@@ -109,42 +107,54 @@ class TriSurfaceSymmTensor(TriSurface):
         self.data_i = dict()
 
         
-#    @classmethod
-#    def readFromFoamFile(cls,
-#                         varsFile,
-#                         triSurfaceMesh,
-#                         time,
-#                         projectedField=False):
-#        '''
-#        Construct from a surface saved  by OpenFOAM in foamFile format.
-#        
-#        Arguments:
-#            *varsFile*: python string.
-#             Path to the file holding the scalar field.
-#             
-#            *time*: python float
-#             timestep of the surface. If this information does not matter,
-#             use 0.
-#             
-#            *triSurfaceMesh* :  TriSurfaceMesh object.
-#             TriSurfaceMesh object, which holds the mesh information.
-#             
-#            *projectedField* python bool (default=False)
-#             Unused for the scalar field, but might be used for the fields
-#             added with the methods "addField", "addFieldFromFoamFile" and
-#             "addFieldFromVtk"
-#        '''
-#
-#        #get scalars
-#        slrsTgt = TriSurfaceFunctions.parseFoamFile_sampledSurface(varsFile)
-#
-#        # update class member variables
-#        return cls(s=slrsTgt,
-#                   time=time,
-#                   triSurfaceMesh=triSurfaceMesh,
-#                   projectedField=projectedField,
-#                   interpolation=None,
-#                   kind=None)
+    @classmethod
+    def readFromFoamFile(cls,
+                         varsFile,
+                         triSurfaceMesh,
+                         time,
+                         projectedField=False):
+        '''
+        Construct from a surface saved  by OpenFOAM in foamFile format.
+        
+        Arguments:
+            *varsFile*: python string.
+             Path to the file holding the scalar field.
+             
+            *time*: python float
+             timestep of the surface. If this information does not matter,
+             use 0.
+             
+            *triSurfaceMesh* :  TriSurfaceMesh object.
+             TriSurfaceMesh object, which holds the mesh information.
+             
+            *projectedField* python bool (default=False)
+             Unused for the scalar field, but might be used for the fields
+             added with the methods "addField", "addFieldFromFoamFile" and
+             "addFieldFromVtk"
+        '''
+
+        #get scalars
+        stensSrc = ParserFunctions.parseFoamFile_sampledSurface(varsFile)
+        stensTgt = np.zeros((stensSrc.shape[0],stensSrc.shape[1]))
+        if projectedField==True:
+            for i in range(stensSrc.shape[0]):
+                stenAsMat = cls.mat(stensSrc[i,:])
+                stensTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(stenAsMat)
+        else:
+            stensTgt = stensSrc
+
+        # update class member variables
+        return cls(txx=stensTgt[:,0],
+                   txy=stensTgt[:,1],
+                   txz=stensTgt[:,2],
+                   tyy=stensTgt[:,3],
+                   tyz=stensTgt[:,4],
+                   tzz=stensTgt[:,5],
+                   time=time,
+                   triSurfaceMesh=triSurfaceMesh,
+                   projectedField=projectedField,
+                   interpolation=None,
+                   kind=None)
 # 
 #    @classmethod   
 #    def readFromVTK(cls,

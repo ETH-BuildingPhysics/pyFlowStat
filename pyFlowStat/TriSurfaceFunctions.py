@@ -3,10 +3,11 @@ TriSurfaceFunctions.py
 
 Collection of functions for the following classes:
     * TriSurfaceMesh
+    * TriSurfaceScalar
     * TriSurfaceVector
+    * TriSurfaceSymmTensor
     * TriSurfaceTensor (to be implemented)
-    * TriSurfaceScalar (to be implemented)
-
+    
 Functions included:
     * getSubTriSurfaceMesh
     * compressArray
@@ -31,9 +32,10 @@ import numpy as np
 import matplotlib.tri as tri
 import matplotlib.path as mplPath
 
-import CoordinateTransformation as coorTrans
-import TriSurfaceVector as TriSurfaceVector
-import TriSurfaceMesh as TriSurfaceMesh
+#import pyFlowStat.CoordinateTransformation as coorTrans
+import pyFlowStat.TriSurface as TriSurface
+import pyFlowStat.TriSurfaceMesh as TriSurfaceMesh
+import pyFlowStat.TriSurfaceVector as TriSurfaceVector
 
 
 
@@ -329,10 +331,10 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
     Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
     # create the transformation objects
-    afftrans, lintrans = getTransformation(viewAnchor=viewAnchor,
-                                           xViewBasis=xViewBasis,
-                                           yViewBasis=yViewBasis,
-                                           srcBasisSrc=srcBasisSrc)
+    afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
+                                                      xViewBasis=xViewBasis,
+                                                      yViewBasis=yViewBasis,
+                                                      srcBasisSrc=srcBasisSrc)
   
     # get mest data
     gName = 'mesh'

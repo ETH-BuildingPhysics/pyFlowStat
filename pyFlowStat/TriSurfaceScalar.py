@@ -7,13 +7,11 @@ TriSurfaceVector.py
 import numpy as np
 import matplotlib.tri as tri
 
-#import CoordinateTransformation as coorTrans
-#import TriSurfaceMesh as TriSurfaceMesh
-import TriSurfaceFunctions
-from TriSurface import TriSurface
+import pyFlowStat.TriSurface as TriSurface
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
-class TriSurfaceScalar(TriSurface):
+class TriSurfaceScalar(TriSurface.TriSurface):
     '''
     class TriSurfaceScalar.
     
@@ -104,7 +102,7 @@ class TriSurfaceScalar(TriSurface):
         '''
 
         #get scalars
-        slrsTgt = TriSurfaceFunctions.parseFoamFile_sampledSurface(varsFile)
+        slrsTgt = ParserFunctions.parseFoamFile_sampledSurface(varsFile)
 
         # update class member variables
         return cls(s=slrsTgt,
@@ -139,7 +137,7 @@ class TriSurfaceScalar(TriSurface):
              surface. 
         '''     
         # read VTK file
-        ptsSrc, triangles, slrsTgt = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
+        ptsSrc, triangles, slrsTgt = ParserFunctions.parseVTK_ugly_sampledSurface(vtkFile)
 
 
         # update class member variables

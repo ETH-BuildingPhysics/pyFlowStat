@@ -6,7 +6,8 @@ TriSurface.py
 import numpy as np
 #import matplotlib.tri as tri
 
-import TriSurfaceFunctions
+import pyFlowStat.CoordinateTransformation as coorTrans
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
 class TriSurface(object):
@@ -127,13 +128,13 @@ class TriSurface(object):
     def mat(self,varName):
         '''
         '''
-        return TriSurfaceFunctions.mat(self.data[varName])
+        return mat(self.data[varName])
         
         
     def unmat(self,varName):
         '''
         '''
-        return TriSurfaceFunctions.unmat(self.data[varName])
+        return unmat(self.data[varName])
     
     
     def __getitem__(self, key):
@@ -201,7 +202,7 @@ class TriSurface(object):
 #        information.
         '''
         #get field
-        fieldSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(fieldFile)
+        fieldSrc = ParserFunctions.parseFoamFile_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
         
         
@@ -212,7 +213,7 @@ class TriSurface(object):
 #        information.
         '''
         #get field
-        points, polygon, fieldSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(fieldFile)
+        points, polygon, fieldSrc = ParserFunctions.parseVTK_ugly_sampledSurface(fieldFile)
         self.addField(fieldSrc,fieldname)
     
     
@@ -224,8 +225,118 @@ class TriSurface(object):
         raise NotImplementedError('TriSurface subclasses should implement addGradient.')
         
         
+def getTransformation(viewAnchor,
+                      xViewBasis,
+                      yViewBasis,
+                      srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
+    '''
+    Return the affine and linear transfomation object for coordinate
+    transformation from a source coordinate system S to a target coordinate 
+    system T.
     
+    Arguments:
+        *viewAnchor*: python list or numpy array of shape (3,).
+         Location of the origin of T, defined in S.
+         
+        *xViewBasis*: python list or numpy array of shape (3,).
+         x axis of T, defined in S.
+        
+        *yViewBasis*: python list or numpy array of shape (3,).
+         y axis of T, defined in S.
+        
+        *srcBasisSrc*: python list or numpy array of shape (3,3).
+         x,y,z axis of S, defined in S. For advenced user only.
+         Default=[[1,0,0],[0,1,0],[0,0,1]]
+          
+    Returns:
+        *affTrans*: AffineTransformation object.
             
+        *linTrans*: LinearTransformation object.
+    '''
+    # check and convert arguments
+    srcBasisSrc = np.array(srcBasisSrc,dtype=float)
+    if srcBasisSrc.shape!=(3,3):
+        raise ValueError('srcBasis must be a 3x3 matrix')
+        
+    xViewBasis = np.array(xViewBasis,dtype=float)
+    yViewBasis = np.array(yViewBasis,dtype=float)
+    if xViewBasis.shape!=(3,) or yViewBasis.shape!=(3,):
+        raise ValueError('xViewBasis.shape and yViewBasis. ',
+                         'shape must be equal to (3,)')
+        
+    # get the basis and the transformation object
+    tgtBasisSrc = np.zeros((3,3))
+    tgtBasisSrc[:,0] = xViewBasis
+    tgtBasisSrc[:,1] = yViewBasis
+    tgtBasisSrc[:,2] = np.cross(xViewBasis,yViewBasis)
+    afftrans = coorTrans.AffineTransformation(srcBasisSrc,tgtBasisSrc,viewAnchor)
+    lintrans = coorTrans.LinearTransformation(srcBasisSrc,tgtBasisSrc)
+    
+    return afftrans, lintrans
+
+    
+def mat(field):
+        '''
+        return a symmTensor field (shape=[N,6]) or Tensor field (shape=[N,9])
+        as a "real" tensor field (shape=[N,3,3]). if "field" is a vector or a
+        scalar, nothing is done and return as given.
+        
+        In the TriSurface ecosystem, a symmTenor field is stored as a line to
+        save memory. For consistency, a Tensor field is also stored as a line.
+        Nevertheless this memory efficient storing is incompatible with linear
+        algebra calculus. Therefore the function mat() converts a tensor like
+        field into "real" Tensor field.
+        
+        Arguments:
+            *field*: numpy array. Shape=[N,d], with d an int.
+             Field to convert.
+             
+        Returns:
+            *realField* numpy array. shape=[N,3,3]
+             Return the field as a "real" tensor. If "field" is not tensor
+             like, the field is returned unmodified.
+        '''
+        tensorType = len(field[0])
+        
+        if tensorType==6:
+            tgt = np.zeros([field.shape[0],3,3])   # target field
+            # fill line by line
+            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+            tgt[:,1,:] = np.array([field[:,1],field[:,3],field[:,4]]).T  # add index 21,22,23 to tgt
+            tgt[:,2,:] = np.array([field[:,2],field[:,4],field[:,5]]).T # add index 31,32,33 to tgt
+            return tgt
+        elif tensorType==9:
+            tgt = np.zeros([field.shape[0],3,3])   # target field
+            # fill line by line
+            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+            tgt[:,1,:] = field[:,3:6]  # add index 21,22,23 to tgt
+            tgt[:,2,:] = field[:,6:9] # add index 31,32,33 to tgt
+            return tgt
+        else:
+            return field
+   
+         
+def unmat(field):
+    '''
+    Opposite of mat()....
+    '''
+    # get field type
+    fieldType = None
+    if (len(field.shape)==3 and field.shape[1]==3 and field.shape[2]==3):  #field is a 3x3 tensor
+        if [field[0,0,1],field[0,0,2],field[0,1,2]]==[field[0,1,0],field[0,2,0],field[0,2,1]]: #field is symmTensor
+            fieldType = 'symmTensor'
+        else:
+           fieldType = 'tensor'
+    else:
+       fieldType = 'notTensor'
+           
+    # convert field and return it
+    if fieldType=='symmTensor':
+        return np.hstack(( field[:,0,:] , field[:,1,1:3] , field[:,2,2].reshape(field.shape[0],1) ))
+    elif fieldType=='tensor':
+        return np.hstack(( field[:,0,:] , field[:,1,:] , field[:,2,:]))
+    elif fieldType=='notTensor':
+        return field            
     
     
  

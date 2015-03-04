@@ -7,14 +7,11 @@ TriSurfaceVector.py
 import numpy as np
 import matplotlib.tri as tri
 
-#import CoordinateTransformation as coorTrans
-#import TriSurfaceMesh as TriSurfaceMesh
-
-import TriSurfaceFunctions
-from TriSurface import TriSurface
+import pyFlowStat.TriSurface as TriSurface
+import pyFlowStat.ParserFunctions as ParserFunctions
 
 
-class TriSurfaceVector(TriSurface):
+class TriSurfaceVector(TriSurface.TriSurface):
     '''
     class TriSurfaceVector.
     
