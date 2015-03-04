@@ -97,6 +97,39 @@ class POD(object):
                 
     def clearInputData(self):
         self.surfaces=None
+        
+    def saveResult(self,filename):
+        '''
+        experimental: works with DMDPiv class
+        '''
+        
+        self.result['inputShape']=self.inputShape
+        #self.result['dt']=self.dt
+        
+        keys = self.result.keys()
+        fwm = h5py.File(filename, 'w')
+        gDict = fwm.create_group('dict')
+        for k in keys:
+            gDict.create_dataset(k,data=self.result[k])
+        
+        fwm.close()
+        
+    def loadResult(self,filename):
+        '''
+        experimental: works with DMDPiv class
+        '''
+
+        fwm = h5py.File(filename, 'r')
+        
+        keys = fwm['dict'].keys()
+        
+        for k in keys:
+            self.result[k]=fwm['dict'][k].value
+            
+        fwm.close()
+        #self.result['modes']=np.matrix(self.result['modes'])
+        #self.dt=self.result['dt']
+        self.inputShape=tuple(self.result['inputShape'])
 
 class PODPiv(POD):
     def __init__(self,surfaceList,subslice=None):
@@ -111,7 +144,7 @@ class PODPiv(POD):
         else:
             FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice],s.data['Uz'][subslice]] for s in surfaceList])
         inputShape=FourD.shape
-        vecs=FourD.reshape((inputShape[0],inputShape[1]*inputShape[2]*inputShape[3])).T
+        vecs = FourD.reshape((inputShape[0],np.prod(inputShape[1:]))).T
         
         super(PODPiv,self).__init__(vecs)
         self.inputShape=inputShape
