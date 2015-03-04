@@ -9,6 +9,7 @@ import matplotlib.tri as tri
 
 #import CoordinateTransformation as coorTrans
 #import TriSurfaceMesh as TriSurfaceMesh
+
 import TriSurfaceFunctions
 from TriSurface import TriSurface
 
@@ -141,7 +142,7 @@ class TriSurfaceVector(TriSurface):
         '''
 
         #get vectors (in vecsTgt)
-        vecsSrc = TriSurfaceFunctions.parseFoamFile_sampledSurface(varsFile)
+        vecsSrc = ParserFunctions.parseFoamFile_sampledSurface(varsFile)
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
@@ -184,7 +185,7 @@ class TriSurfaceVector(TriSurface):
              surface. 
         '''     
         # read VTK file
-        ptsSrc, triangles, vecsSrc = TriSurfaceFunctions.parseVTK_ugly_sampledSurface(vtkFile)
+        ptsSrc, triangles, vecsSrc = ParserFunctions.parseVTK_ugly_sampledSurface(vtkFile)
             
         # transform the data
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
@@ -378,3 +379,4 @@ class TriSurfaceVector(TriSurface):
         This method makes sense only if vx, vy and vz are velocity componants.
         '''
         self.data['Q'] = self.Q()
+

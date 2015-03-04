@@ -1,5 +1,7 @@
 import numpy as np
 import modred
+import scipy.signal as sp
+import h5py
 
 class POD(object):
     def __init__(self,vecs):
@@ -63,6 +65,7 @@ class POD(object):
     
     def projectOnMode(self,vec):
         nSnap = self.result['nSnap']
+        nSnap=vec.shape[1]
         nMode = self.result['nMode']
         
         # compute the time dependent coefficients ai
@@ -96,12 +99,17 @@ class POD(object):
         self.surfaces=None
 
 class PODPiv(POD):
-    def __init__(self,surfaceList):
+    def __init__(self,surfaceList,subslice=None):
         '''
         Arguments:
-            *surfaceList*: numpy array of Surfaces.
+            *surfaceList*: numpy array of Surfaces (N).
+            *dt*: float, timestep
+            *subslice*: numpy index tuples, created wit np.s_
         '''
-        FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+        if subslice is None:
+            FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+        else:
+            FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice],s.data['Uz'][subslice]] for s in surfaceList])
         inputShape=FourD.shape
         vecs=FourD.reshape((inputShape[0],inputShape[1]*inputShape[2]*inputShape[3])).T
         
@@ -144,38 +152,16 @@ class DMD(object):
         self.vecs=vecs
         self.result=dict()
         self.dt=dt
-
-    
-    def eig(self):
-        return self.result['ritz_vals']
-        
-    def eigReal(self):
-        return np.real(self.result['ritz_vals'])
-        
-    def eigImag(self):
-        return np.imag(self.result['ritz_vals'])    
-        
-    def eigAbs(self):
-        return np.absolute(self.result['ritz_vals'])
-        
-    def eigAngle(self):
-        return np.angle(self.result['ritz_vals'])
         
     def decompose(self,nMode=0,method='snap',subtractMean=False):
         '''
-        Compute the Dynamic Mode Decomposition/Koopman Mode Decomposition (DMD) from 
-        a list of N snapshots. 
-        The snapshots are PIV surfaces of size (surfX,surfY) of field F. F can be any
-        scalar field (Ux, ux, T, vorticity, R11,...)
+        Compute the Dynamic Mode Decomposition/Koopman Mode Decomposition (DMD)
         
         Arguments:
-            *surfaces*: numpy array of shape (N,surfX,surfY).
-             Surfaces from a PIV measurment (for example).
-            
             *nMode*: python integer.
              Number of modes of theDMD.
             
-            *DMDmethod*: python string. Default='snap'
+            *method*: python string. Default='snap'
              Type of DMD algorithm used. For the snapshot method, use DMDmethod='snap' and
              for the direct method, use DMDmethod='direct'. The default value is 'snap'.
              
@@ -183,11 +169,11 @@ class DMD(object):
              method, it should increase the coputational speed for only a little loss in 
              precision.
              
-            *returnDMD*: python bool. Default=False.
-             If True, the 1D DMD vectors are also returned
-             
-        Returns:
-            *tons of cool stuff...*
+            *subtractMean*: python bool. Default=False.
+             If True, the DMD reduces to a DFT, see:
+             Chen, K., Tu, J., & Rowley, C. (2012). Variants of dynamic mode 
+             decomposition: boundary condition, Koopman, and Fourier analyses.
+             Journal of Nonlinear Science.
             
         Remarks:
         use the key 'mode_norms' to plot the power spectral density, since:
@@ -224,6 +210,60 @@ class DMD(object):
         self.result['ai']=np.array([self.result['ritz_vals']**t for t in range(self.vecs.shape[1])])
         self.result['m']=self.result['modes'].shape[1]
         
+    def saveResult(self,filename):
+        '''
+        experimental: works with DMDPiv class
+        '''
+        
+        self.result['inputShape']=self.inputShape
+        self.result['dt']=self.dt
+        
+        keys = self.result.keys()
+        fwm = h5py.File(filename, 'w')
+        gDict = fwm.create_group('dict')
+        for k in keys:
+            gDict.create_dataset(k,data=self.result[k])
+        
+        fwm.close()
+        
+    def loadResult(self,filename):
+        '''
+        experimental: works with DMDPiv class
+        '''
+
+        fwm = h5py.File(filename, 'r')
+        
+        keys = fwm['dict'].keys()
+        
+        for k in keys:
+            self.result[k]=fwm['dict'][k].value
+            
+        fwm.close()
+        self.result['modes']=np.matrix(self.result['modes'])
+        self.dt=self.result['dt']
+        self.inputShape=tuple(self.result['inputShape'])
+        
+    def getKey(self,key,idx=None):
+        if idx==None:
+            return self.result[key]
+        else:
+            return self.result[key][idx]    
+            
+    def getEig(self,idx=None):
+        return self.getKey('ritz_vals',idx=idx)
+            
+    def getEigReal(self,idx=None):
+        return np.real(self.getEig(idx=idx))
+
+    def getEigImag(self,idx=None):
+        return np.imag(self.getEig(idx=idx))    
+        
+    def getEigAbs(self,idx=None):
+        return np.absolute(self.getEig(idx=idx))
+        
+    def getEigAngle(self,idx=None):
+        return np.angle(self.getEig(idx=idx))
+        
     def getMode(self,nMode):
         return self.getModeLst()[nMode]
         
@@ -238,7 +278,13 @@ class DMD(object):
         
     def getResidual(self):
         return np.linalg.norm(self.getResidualVec())
-    
+        
+    def getResidualRelative(self):
+        k=self.result['m']
+        xm=self.vecs[:,k]
+        xm_rec=DMD.reconstructDMD(self,k)
+        return np.linalg.norm(xm-xm_rec)/np.linalg.norm(xm)
+
     def reconstructDMD(self,k,idx=None,verbose=False):
         '''
         TODO: correct 
@@ -248,13 +294,8 @@ class DMD(object):
             idx=range(self.result['modes'].shape[1])
         for i in idx:
             t=self.result['ritz_vals'][i]**k*self.result['modes'][:,i]
-            #print t,dmd_ritz_vals[i]
             tmp=tmp+np.array(t)[:,0]
-        #if verbose:
-        #    print 'Frq Band:',np.imag(self.result['ritz_vals'][idx[0]])*600/(2*np.pi),'Hz -',np.imag(self.result['ritz_vals'][idx[-1]])*600/(2*np.pi),'Hz'
-        #tmp_real=np.asarray(np.real(tmp)).T.reshape(self.surfShape[1],self.surfShape[2])
-        #tmp_imag=np.asarray(np.imag(tmp)).T.reshape(self.surfShape[1],self.surfShape[2])
-        #return tmp, tmp_real, tmp_imag
+
         return tmp
     
     def getFrqSortedIdx(self,verbose=False):
@@ -272,21 +313,56 @@ class DMD(object):
             frq_idx_pos=frq_idx_pos[:l+1]
             frq_idx_neg=frq_idx_neg[:l+1]
         return frq_idx_pos,frq_idx_neg,self.getFrqList(frq_idx_pos)
+            
+    def getNorm(self,idx=None):
+        return self.getKey('mode_norms',idx=idx)
         
-    def getNormSortedIdx(self):
+    def getNormSortedIdx(self,idx=None):
         '''
         returns norm_idx
         '''
-        norm_idx=np.argsort(self.result['mode_norms'])
+        norm_idx=np.argsort(self.getNorm())
         return norm_idx
+
+    def getSortedIdx(self,function,idx=None):
+        '''
+        returns norm_idx
+        '''
+        if idx==None:
+            sorted_idx=np.argsort(function())
+            return sorted_idx
+        else:
+            tmp=function()
+            #print tmp
+            sorted_idx=idx[np.argsort(tmp[idx])]
+            return sorted_idx
         
     def getGrowthSortedIdx(self):
         '''
         returns growth_idx
         '''
-        growth_idx=np.argsort(np.absolute(self.result['ritz_vals']))
+        growth_idx=np.argsort(self.getEigAbs())
         return growth_idx
+
+    def getStabSortedIdx(self):
+        '''
+        returns indices of modes sorted by stability
+        with 0 being the closest to the unity circle
+        '''
+        stab_idx=np.argsort(np.abs(np.log(self.getEigAbs())))
+        return stab_idx
         
+    def getFilteredIndex(self,min_norm=1.0,min_abs=0.001,positiveOnly=False):
+        '''
+        returns indices that according to filter
+        '''
+        idx_norm=np.where(self.result['mode_norms']>=min_norm)
+        idx_stab=np.where(np.abs(1.0-self.getEigAbs())<=min_abs)
+        idx_intersect=np.intersect1d(idx_norm[0],idx_stab[0])
+        if positiveOnly:
+            idx_intersect=idx_intersect[np.where(self.getEigImag(idx_intersect)>=0)]
+        return self.getSortedIdx(self.getNorm,idx=idx_intersect)
+    
     def getIdxforFrq(self,f,verbose=False):
         '''
         Get the dmd index corresponding to a frequency
@@ -338,27 +414,50 @@ class DMD(object):
         return res
         
 class DMDPiv(DMD):
-    def __init__(self,surfaceList,dt):
+    def __init__(self,surfaceList,dt,subslice=None,filter_kernel_size=0):
         '''
         Arguments:
             *surfaceList*: numpy array of Surfaces (N).
+            *dt*: float, timestep
+            *subslice*: numpy index tuples, created wit np.s_
         '''
-        FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+        if subslice is None:
+            FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+        else:
+            FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice],s.data['Uz'][subslice]] for s in surfaceList])
+            
+        if filter_kernel_size>0:
+            print 'start smoothing'
+            for s in FourD:
+                s[0]=sp.medfilt(s[0],kernel_size=filter_kernel_size)
+                s[1]=sp.medfilt(s[1],kernel_size=filter_kernel_size)
+                s[2]=sp.medfilt(s[2],kernel_size=filter_kernel_size)
+                '''
+                '''
+            print 'stop'
         inputShape=FourD.shape
         vecs = FourD.reshape((inputShape[0],np.prod(inputShape[1:]))).T
         
         super(DMDPiv,self).__init__(vecs,dt)
         self.inputShape=inputShape
+        
+    def reconstructDMD(self,k,idx=None,verbose=False):
+        tmp = DMD.reconstructDMD(self,k=k,idx=idx,verbose=verbose)
+        #tmp = super(DMDscalarFieldList,self).reconstructDMD(k=k,idx=idx,verbose=verbose)
+        return tmp.T.reshape(self.inputShape[1:])
+        
+    def getMode(self,nMode,component=0):
+        return DMD.getMode(self,nMode)[component]
 
 class DMDscalarFieldList(DMD):
-    def __init__(self,scalarFieldList,dt):
+    def __init__(self,scalarFieldList,dt,subslice=None):
         '''
         Arguments:
             *scalarFieldList*: numpy array of shape (N,surfX,surfY).
              Surfaces from a PIV measurment (for example one component of a SurfaceList).
         '''
-        inputShape=scalarFieldList.shape
-        vecs = scalarFieldList.reshape(inputShape[0],np.prod(inputShape[1:])).T
+        inputShape=scalarFieldList[subslice].shape
+        vecs = scalarFieldList[subslice].reshape(inputShape[0],np.prod(inputShape[1:])).T
         super(DMDscalarFieldList,self).__init__(vecs,dt)
         #self.surfaces=scalarFieldList
         self.inputShape=inputShape
