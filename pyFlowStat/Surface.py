@@ -234,8 +234,8 @@ class Surface(object):
         
     def computeGradients(self,method='numpy'):
         if method=='numpy':
-            dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
-            dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
+            dudy,dudx=np.gradient(self.data['Ux'],-self.dy/1000,self.dx/1000)
+            dvdy,dvdx=np.gradient(self.data['Uy'],-self.dy/1000,self.dx/1000)
             self.data['dudy']=dudy
             self.data['dudx']=dudx
             self.data['dvdy']=dvdy
@@ -248,10 +248,36 @@ class Surface(object):
             self.data['dudx_r']=dudx_r
         elif method=='ls':
             dudx_ls = np.zeros(self.data['Ux'].shape)
+            dudy_ls = np.zeros(self.data['Ux'].shape)
+            dvdx_ls = np.zeros(self.data['Ux'].shape)
+            dvdy_ls = np.zeros(self.data['Ux'].shape)
+            
             for i in range(2,self.data['Ux'].shape[0]-2):
                 for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudx_ls[i,j]=(2.0*self.data['Ux'][i,j-2]+self.data['Ux'][i,j-1]-self.data['Ux'][i,j+1]-2.0*self.data['Ux'][i,j+2])/(-10.0*self.dx/1000.0) 
+            
+            for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudy_ls[i,j]=(2.0*self.data['Ux'][i-2,j]+self.data['Ux'][i-1,j]-self.data['Ux'][i+1,j]-2.0*self.data['Ux'][i+2,j])/(10.0*self.dx/1000.0)
+                    
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdx_ls[i,j]=(2.0*self.data['Uy'][i,j-2]+self.data['Uy'][i,j-1]-self.data['Uy'][i,j+1]-2.0*self.data['Uy'][i,j+2])/(-10.0*self.dx/1000.0)  
+                    
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdy_ls[i,j]=(2.0*self.data['Uy'][i-2,j]+self.data['Uy'][i-1,j]-self.data['Uy'][i+1,j]-2.0*self.data['Uy'][i+2,j])/(10.0*self.dx/1000.0)
+            
+            '''for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
                     dudx_ls[i,j]=(2.0*self.data['Ux'][i,j+2]+self.data['Ux'][i,j+1]-self.data['Ux'][i,j-1]-2.0*self.data['Ux'][i,j-2])/(10.0*self.dx/1000.0)
-            self.data['dudx_ls']=dudx_ls
+            '''
+            
+            
+            self.data['dudx']=dudx_ls
+            self.data['dvdx']=dvdx_ls
+            self.data['dudy']=dudy_ls
+            self.data['dvdy']=dvdy_ls
             
     
     def computeQ(self):
@@ -508,7 +534,7 @@ class Surface(object):
         ReadIMX64.DestroyBuffer(tmpBuffer)
         self.data[key]=s
 
-    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
+    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic',kind='min_E'):
         '''
         helper function
         methode=linear,cubic (default)
