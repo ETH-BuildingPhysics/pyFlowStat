@@ -2,15 +2,18 @@
 # load modules
 #===========================================================================#
 #standard modules
-import sys
+#import sys
 
 #scientific modules
 import numpy as np
-import scipy as sp
+#import scipy as sp
 import os
 import matplotlib.tri as tri
-from pyFlowStat.TriSurface import TriSurface
-from pyFlowStat.TriSurface import parseFoamFile
+from pyFlowStat.TriSurfaceMesh import TriSurfaceMesh
+from pyFlowStat.TriSurfaceVector import TriSurfaceVector
+from pyFlowStat.TriSurfaceScalar import TriSurfaceScalar
+from pyFlowStat.TriSurfaceSymmTensor import TriSurfaceSymmTensor
+#from pyFlowStat.TriSurface import parseFoamFile
 
 # special modules
 from ctypes import *
@@ -508,10 +511,11 @@ class Surface(object):
         ReadIMX64.DestroyBuffer(tmpBuffer)
         self.data[key]=s
 
-    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic'):
+    def interpolateField(self,values,grid_x,grid_y,triangulation,method='cubic',kind='min_E'):
         '''
         helper function
-        methode=linear,cubic (default)
+        method=linear,cubic (default)
+        kind = geom, min_E (default)
         '''
         if method=='cubic':
             itp=tri.CubicTriInterpolator(triangulation,values,kind=kind)
@@ -583,20 +587,19 @@ class Surface(object):
 
         print 'Reading Velocity'
 
-        s=TriSurface()
-        #s.storeMesh=False
-        s.readFromFoamFile(varsFile=velFile,
-                           pointsFile=pointsFile,
-                           facesFile=facesFile,
-                           viewAnchor=viewAnchor,
-                           xViewBasis=xViewBasis,
-                           yViewBasis=yViewBasis)
+        tsm = TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
+                                              facesFile=facesFile,
+                                              viewAnchor=viewAnchor,
+                                              xViewBasis=xViewBasis,
+                                              yViewBasis=yViewBasis)
+                                              
+        tsv = TriSurfaceVector.readFromFoamFile(varsFile=velFile,
+                                                triSurfaceMesh=tsm,
+                                                time=0,
+                                                projectedField=False)                  
 
-        points=s.xys
-        faces=s.faces
-        #points=parseFoamFile(pointsFile)
-        #faces = parseFoamFile(facesFile)[:,1:4]
-
+        points = np.vstack((tsv.x,tsv.y)).T
+        
         print 'Creating Grid and Interpolator'
         if dx==None:
             dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
@@ -610,18 +613,17 @@ class Surface(object):
         MaxY=np.max(points[:,1])
         MinY=np.min(points[:,1])
         extent=[MinX-dx/2,MaxX+dx/2,MinY-dy/2,MaxY+dy/2]
-        #extent=[MinX,MaxX,MinY,MaxY]
 
         cellsX=int((MaxX-MinX)/dx)+1
         cellsY=int((MaxY-MinY)/dy)+1
 
         grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-        triang = tri.Triangulation(points[:,0], points[:,1], faces)
+        triang = tsv.triangulation
 
         print 'Interpolating Velocity'
-        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
-        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
-        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod,kind=kind)
+        vx_i=self.interpolateField(tsv.vx,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vy_i=self.interpolateField(tsv.vy,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vz_i=self.interpolateField(tsv.vz,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
         self.vz=np.flipud(vz_i)
@@ -638,20 +640,20 @@ class Surface(object):
         for scalarFile in scalarFileList:
             varName=os.path.basename(scalarFile)
             print 'Reading Scalar',varName
-            s.vars=parseFoamFile(scalarFile)
-            scalar_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
+            tsv.addFieldFromFoamFile(fieldFile=scalarFile,fieldname=varName)
+            scalar_i=self.interpolateField(tsv[varName],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             self.data[varName]=np.flipud(scalar_i)
 
         for symTensorFile in symTensorFileList:
             varName=os.path.basename(symTensorFile)
             print 'Reading Tenstor',varName
-            s.vars=parseFoamFile(symTensorFile)
-            tensor_11=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang,method=interpolationMethod)
-            tensor_12=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang,method=interpolationMethod)
-            tensor_13=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang,method=interpolationMethod)
-            tensor_22=self.interpolateField(s.vars[:,3],grid_x, grid_y, triang,method=interpolationMethod)
-            tensor_23=self.interpolateField(s.vars[:,4],grid_x, grid_y, triang,method=interpolationMethod)
-            tensor_33=self.interpolateField(s.vars[:,5],grid_x, grid_y, triang,method=interpolationMethod)
+            tsv.addFieldFromFoamFile(fieldFile=symTensorFile,fieldname=varName)
+            tensor_11=self.interpolateField(tsv[varName][:,0],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            tensor_12=self.interpolateField(tsv[varName][:,1],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            tensor_13=self.interpolateField(tsv[varName][:,2],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            tensor_22=self.interpolateField(tsv[varName][:,3],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            tensor_23=self.interpolateField(tsv[varName][:,4],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            tensor_33=self.interpolateField(tsv[varName][:,5],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
 
             tensor_11=np.flipud(tensor_11)
             tensor_12=np.flipud(tensor_12)
@@ -675,13 +677,34 @@ class Surface(object):
 
 
 
-    def readVelFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+    def readVelFromFoamFile(self,
+                            varsFile,
+                            pointsFile,
+                            facesFile,
+                            viewAnchor=(0,0,0),
+                            xViewBasis=(1,0,0),
+                            yViewBasis=(0,1,0),
+                            dx=None,
+                            dy=None,
+                            interpolationMethod='cubic',
+                            kind='min_E'):
+        '''
+        '''
 
+        tsm = TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
+                                              facesFile=facesFile,
+                                              viewAnchor=viewAnchor,
+                                              xViewBasis=xViewBasis,
+                                              yViewBasis=yViewBasis)
+                                              
+        tsv = TriSurfaceVector.readFromFoamFile(varsFile=varsFile,
+                                                triSurfaceMesh=tsm,
+                                                time=0,
+                                                projectedField=False)                  
 
-        s=TriSurface()
-        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
-
-        points=s.xys
+        points = np.vstack((tsv.x,tsv.y)).T
+        
+        print 'Creating Grid and Interpolator'
         if dx==None:
             dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
             dx=np.min(dxlist)
@@ -693,21 +716,22 @@ class Surface(object):
         MinX=np.min(points[:,0])
         MaxY=np.max(points[:,1])
         MinY=np.min(points[:,1])
-        extent=[MinX,MaxX,MinY,MaxY]
-        #print MinX,MaxX,MinY,MaxY
-        cellsX=int((MaxX-MinX)/dx)
-        cellsY=int((MaxY-MinY)/dy)
-        #print cellsX,cellsY
-        grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-        triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
+        extent=[MinX-dx/2,MaxX+dx/2,MinY-dy/2,MaxY+dy/2]
 
-        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y,triang)
-        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y,triang)
-        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y,triang)
+        cellsX=int((MaxX-MinX)/dx)+1
+        cellsY=int((MaxY-MinY)/dy)+1
+
+        grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
+        triang = tsv.triangulation
+
+        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
 
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
         self.vz=np.flipud(vz_i)
+        
         self.dx=dx
         self.dy=dy
         self.minX=MinX
@@ -717,13 +741,32 @@ class Surface(object):
         self.createDataDict()
         self.extent=extent
 
-    def readScalarFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+    def readScalarFromFoamFile(self,
+                               varsFile,
+                               pointsFile,
+                               facesFile,
+                               viewAnchor=(0,0,0),
+                               xViewBasis=(1,0,0),
+                               yViewBasis=(0,1,0),
+                               dx=None,
+                               dy=None,
+                               interpolationMethod='cubic',
+                               kind='min_E'):
+        '''
+        '''
+        varName=os.path.basename(varsFile)        
+        tsm = TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
+                                              facesFile=facesFile,
+                                              viewAnchor=viewAnchor,
+                                              xViewBasis=xViewBasis,
+                                              yViewBasis=yViewBasis)
+                                              
+        tss = TriSurfaceScalar.readFromFoamFile(varsFile=varsFile,
+                                                triSurfaceMesh=tsm,
+                                                time=0,
+                                                projectedField=False)                  
 
-
-        varName=os.path.basename(varsFile)
-        s=TriSurface()
-        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
-        points=s.xys
+        points = np.vstack((tss.x,tss.y)).T
 
         #if not hasattr(self,'data'):
             #print 'dict does not exists'
@@ -743,14 +786,12 @@ class Surface(object):
             extent=[MinX,MaxX,MinY,MaxY]
             #print MinX,MaxX,MinY,MaxY
 
-
-
             cellsX=int((MaxX-MinX)/dx)
             cellsY=int((MaxY-MinY)/dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
-            scalar_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            triang = tsv.triangulation
+            scalar_i=doInterp(triang,tss.s,grid_x, grid_y)
             vx_i=np.empty(scalar_i.shape)
             vy_i=np.empty(scalar_i.shape)
             vz_i=np.empty(scalar_i.shape)
@@ -782,18 +823,37 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/self.dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
-            scalar_i=doInterp(triang,s.vars[:,0],grid_x, grid_y)
+            triang = tsv.triangulation
+            scalar_i=doInterp(triang,tss.s,grid_x, grid_y)
             print 'adding scalar',varName
             self.data[varName]=np.flipud(scalar_i)
 
 
-    def readReStressFromFoamFile(self,varsFile,pointsFile,facesFile,viewAnchor=(0,0,0),xViewBasis=(1,0,0),yViewBasis=(0,1,0),dx=None,dy=None):
+    def readReStressFromFoamFile(self,
+                                 varsFile,
+                                 pointsFile,
+                                 facesFile,
+                                 viewAnchor=(0,0,0),
+                                 xViewBasis=(1,0,0),
+                                 yViewBasis=(0,1,0),
+                                 dx=None,
+                                 dy=None,
+                                 interpolationMethod='cubic',
+                                 kind='min_E'):
+        '''
+        '''
+        tsm = TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
+                                              facesFile=facesFile,
+                                              viewAnchor=viewAnchor,
+                                              xViewBasis=xViewBasis,
+                                              yViewBasis=yViewBasis)
+                                              
+        tsst = TriSurfaceSymmTensor.readFromFoamFile(varsFile=varsFile,
+                                                     triSurfaceMesh=tsm,
+                                                     time=0,
+                                                     projectedField=False)                  
 
-
-        s=TriSurface()
-        s.readFromFoamFile(varsFile,pointsFile,facesFile,viewAnchor,xViewBasis,yViewBasis)
-        points=s.xys
+        points = np.vstack((tsst.x,tsst.y)).T
 
         #if not hasattr(self,'data'):
         if not data.has_key('dx') or data.has_key('dy'):
@@ -818,13 +878,13 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
-            uu_bar=doInterp(triang,s.vars[:,0],grid_x, grid_y)
-            uv_bar=doInterp(triang,s.vars[:,1],grid_x, grid_y)
-            uw_bar=doInterp(triang,s.vars[:,2],grid_x, grid_y)
-            vv_bar=doInterp(triang,s.vars[:,3],grid_x, grid_y)
-            vw_bar=doInterp(triang,s.vars[:,4],grid_x, grid_y)
-            ww_bar=doInterp(triang,s.vars[:,5],grid_x, grid_y)
+            triang = tsv.triangulation
+            uu_bar=doInterp(triang,tsst.txx,grid_x, grid_y)
+            uv_bar=doInterp(triang,tsst.txy,grid_x, grid_y)
+            uw_bar=doInterp(triang,tsst.txz,grid_x, grid_y)
+            vv_bar=doInterp(triang,tsst.tyy,grid_x, grid_y)
+            vw_bar=doInterp(triang,tsst.tyz,grid_x, grid_y)
+            ww_bar=doInterp(triang,tsst.tzz,grid_x, grid_y)
             vx_i=np.empty(scalar_i.shape)
             vy_i=np.empty(scalar_i.shape)
             vz_i=np.empty(scalar_i.shape)
@@ -864,13 +924,13 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/self.dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tri.Triangulation(points[:,0], points[:,1], s.faces)
-            uu_bar=doInterp(triang,s.vars[:,0],grid_x, grid_y)
-            uv_bar=doInterp(triang,s.vars[:,1],grid_x, grid_y)
-            uw_bar=doInterp(triang,s.vars[:,2],grid_x, grid_y)
-            vv_bar=doInterp(triang,s.vars[:,3],grid_x, grid_y)
-            vw_bar=doInterp(triang,s.vars[:,4],grid_x, grid_y)
-            ww_bar=doInterp(triang,s.vars[:,5],grid_x, grid_y)
+            triang = tsv.triangulation
+            uu_bar=doInterp(triang,tsst.txx,grid_x, grid_y)
+            uv_bar=doInterp(triang,tsst.txy,grid_x, grid_y)
+            uw_bar=doInterp(triang,tsst.txz,grid_x, grid_y)
+            vv_bar=doInterp(triang,tsst.tyy,grid_x, grid_y)
+            vw_bar=doInterp(triang,tsst.tyz,grid_x, grid_y)
+            ww_bar=doInterp(triang,tsst.tzz,grid_x, grid_y)
             print 'adding Tensor'
             self.data['uu_bar']=np.flipud(uu_bar)
             self.data['uv_bar']=np.flipud(uv_bar)
