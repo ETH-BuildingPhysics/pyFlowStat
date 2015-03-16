@@ -724,9 +724,9 @@ class Surface(object):
         grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
         triang = tsv.triangulation
 
-        vx_i=self.interpolateField(s.vars[:,0],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
-        vy_i=self.interpolateField(s.vars[:,1],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
-        vz_i=self.interpolateField(s.vars[:,2],grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vx_i=self.interpolateField(tsv.vx,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vy_i=self.interpolateField(tsv.vx,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+        vz_i=self.interpolateField(tsv.vx,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
 
         self.vx=np.flipud(vx_i)
         self.vy=np.flipud(vy_i)
@@ -770,7 +770,7 @@ class Surface(object):
 
         #if not hasattr(self,'data'):
             #print 'dict does not exists'
-        if not data.has_key('dx') or data.has_key('dy'):
+        if not self.data.has_key('dx') or self.data.has_key('dy'):
             print 'keys dx and dy does not exist'
             if dx==None:
                 dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
@@ -790,8 +790,9 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tsv.triangulation
-            scalar_i=doInterp(triang,tss.s,grid_x, grid_y)
+            triang = tss.triangulation
+#            scalar_i=doInterp(triang,tss.s,grid_x, grid_y)
+            scalar_i=self.interpolateField(tss.s,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             vx_i=np.empty(scalar_i.shape)
             vy_i=np.empty(scalar_i.shape)
             vz_i=np.empty(scalar_i.shape)
@@ -824,7 +825,7 @@ class Surface(object):
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
             triang = tsv.triangulation
-            scalar_i=doInterp(triang,tss.s,grid_x, grid_y)
+            scalar_i=self.interpolateField(tss.s,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             print 'adding scalar',varName
             self.data[varName]=np.flipud(scalar_i)
 
@@ -856,7 +857,7 @@ class Surface(object):
         points = np.vstack((tsst.x,tsst.y)).T
 
         #if not hasattr(self,'data'):
-        if not data.has_key('dx') or data.has_key('dy'):
+        if not self.data.has_key('dx') or self.data.has_key('dy'):
             print 'keys dx and dy does not exist'
             if dx==None:
                 dxlist=[a for a in np.abs(np.diff(points[:,0])) if a>0]
@@ -878,16 +879,16 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tsv.triangulation
-            uu_bar=doInterp(triang,tsst.txx,grid_x, grid_y)
-            uv_bar=doInterp(triang,tsst.txy,grid_x, grid_y)
-            uw_bar=doInterp(triang,tsst.txz,grid_x, grid_y)
-            vv_bar=doInterp(triang,tsst.tyy,grid_x, grid_y)
-            vw_bar=doInterp(triang,tsst.tyz,grid_x, grid_y)
-            ww_bar=doInterp(triang,tsst.tzz,grid_x, grid_y)
-            vx_i=np.empty(scalar_i.shape)
-            vy_i=np.empty(scalar_i.shape)
-            vz_i=np.empty(scalar_i.shape)
+            triang = tsst.triangulation            
+            uu_bar=self.interpolateField(tsst.txx, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            uv_bar=self.interpolateField(tsst.txy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            uw_bar=self.interpolateField(tsst.tyy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            vv_bar=self.interpolateField(tsst.tyy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            vw_bar=self.interpolateField(tsst.tyz, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            ww_bar=self.interpolateField(tsst.tzz, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            vx_i=np.empty(uu_bar.shape)
+            vy_i=np.empty(uu_bar.shape)
+            vz_i=np.empty(uu_bar.shape)
             vx_i[:]=np.NAN
             vy_i[:]=np.NAN
             vz_i[:]=np.NAN
@@ -925,12 +926,12 @@ class Surface(object):
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
             triang = tsv.triangulation
-            uu_bar=doInterp(triang,tsst.txx,grid_x, grid_y)
-            uv_bar=doInterp(triang,tsst.txy,grid_x, grid_y)
-            uw_bar=doInterp(triang,tsst.txz,grid_x, grid_y)
-            vv_bar=doInterp(triang,tsst.tyy,grid_x, grid_y)
-            vw_bar=doInterp(triang,tsst.tyz,grid_x, grid_y)
-            ww_bar=doInterp(triang,tsst.tzz,grid_x, grid_y)
+            uu_bar=self.interpolateField(tsst.txx, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            uv_bar=self.interpolateField(tsst.txy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            uw_bar=self.interpolateField(tsst.tyy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            vv_bar=self.interpolateField(tsst.tyy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            vw_bar=self.interpolateField(tsst.tyz, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
+            ww_bar=self.interpolateField(tsst.tzz, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             print 'adding Tensor'
             self.data['uu_bar']=np.flipud(uu_bar)
             self.data['uv_bar']=np.flipud(uv_bar)
