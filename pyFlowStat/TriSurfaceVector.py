@@ -7,12 +7,11 @@ TriSurfaceVector.py
 import numpy as np
 import matplotlib.tri as tri
 
-#import CoordinateTransformation as coorTrans
-#import TriSurfaceMesh as TriSurfaceMesh
+import pyFlowStat.TriSurface as TriSurface
 import pyFlowStat.ParserFunctions as ParserFunctions
 
 
-class TriSurfaceVector(object):
+class TriSurfaceVector(TriSurface.TriSurface):
     '''
     class TriSurfaceVector.
     
@@ -32,8 +31,6 @@ class TriSurfaceVector(object):
     "readFromFoamFile" or "readFromVTK".
 
     Member variables:
-        *triSurfaceMesh* :  TriSurfaceMesh object.
-         
         *vx*: numpy array of shape (N,)
          
         *vy*: numpy array of shape (N,)
@@ -98,7 +95,11 @@ class TriSurfaceVector(object):
              "min_E". Default="geom". "min_E" is supposed to be the more 
              accurate, but "geom" is way faster.
         '''
-        self.triSurfaceMesh = triSurfaceMesh
+        super(TriSurfaceVector,self).__init__(time=time,
+                                        triSurfaceMesh=triSurfaceMesh,
+                                        projectedField=projectedField,
+                                        interpolation=interpolation,
+                                        kind=kind)
 
         self.vx=np.asarray(vx)
         self.vy=np.asarray(vy)
@@ -110,13 +111,7 @@ class TriSurfaceVector(object):
         
         self.data = dict()
         self.data_i = dict()
-        
-        self.time = float(time)
 
-        # "private" member variable. Don't play with them if you are not sure...        
-        self.__interType = interpolation
-        self.__interKind  = kind
-        self.__projectedField = projectedField
         
     @classmethod
     def readFromFoamFile(cls,
@@ -208,42 +203,7 @@ class TriSurfaceVector(object):
                    kind=None)
   
     # getters #
-    #---------#
-    @property
-    def x(self):
-        return self.triSurfaceMesh.x
-        
-    @property    
-    def y(self):
-        return self.triSurfaceMesh.y
-        
-    @property
-    def triangulation(self):
-        return self.triSurfaceMesh.triangulation
-        
-    @property
-    def triangles(self):
-        return self.triSurfaceMesh.triangles
-        
-    @property
-    def affTrans(self):
-        return self.triSurfaceMesh.affTrans
-    
-    @property
-    def linTrans(self):
-        return self.triSurfaceMesh.linTrans
-        
-    @property
-    def interType(self):
-        return self.__interType
-        
-    @property
-    def interKind(self):
-        return self.__interKind
-
-    @property
-    def projectedField(self):
-        return self.__projectedField
+    #---------#      
 
 
     # setters #
@@ -252,16 +212,6 @@ class TriSurfaceVector(object):
 
     # class methods #
     #---------------#
-    def rawPoints(self):
-        '''
-        Return the grid points in the source coordinate system.
-        
-        Returns:
-            *rawPoints*: numpy array of shape (N,3)
-        '''
-        return self.triSurfaceMesh.rawPoints()
-            
-     
     def rawVars(self):
         '''
         Return the vector field defined the source coordinate system.
@@ -271,7 +221,7 @@ class TriSurfaceVector(object):
         '''
         surfaceData = self.surfaceVars()
         rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
-        if self.__projectedField==True:
+        if self.projectedField==True:
             for i in range(surfaceData.shape[0]):
                 rawData[i,:] = self.linTrans.tgtToSrc(surfaceData[i,:])
         else:
@@ -359,32 +309,7 @@ class TriSurfaceVector(object):
             raise ValueError('this method needs interpolators. Please run',
                              'method "addInterpolator" first.')
 
-
-    def mat(self,varName):
-        '''
-        '''
-        return TriSurfaceFunctions.mat(self.data[varName])
-        
-        
-    def unmat(self,varName):
-        '''
-        '''
-        return TriSurfaceFunctions.unmat(self.data[varName])
-    
-    
-    def __getitem__(self, key):
-        '''
-        Getter for key "key" on member dictionnary "data"
-        '''
-        return self.data[key]
-
-
-    def __setitem__(self, key, item):
-        '''
-        Setter for key "key" on member dictionnary "data"
-        '''
-        self.data[key] = item
-        
+  
     # class methods - adders #
     #------------------------#
         
@@ -392,79 +317,20 @@ class TriSurfaceVector(object):
         '''
         Add interpolator Object to the vector field.
         '''
-        self.__interType = interpolation
-        self.__interKind = kind
-        if self.__interType=='cubic':
-            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.__interKind)
-            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.__interKind)
-            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.__interKind)
-        elif self.__interType=='linear':
+        self.interType = interpolation
+        self.interKind = kind
+        if self.interType=='cubic':
+            self.vx_i = tri.CubicTriInterpolator(self.triangulation, self.vx, kind=self.interKind)
+            self.vy_i = tri.CubicTriInterpolator(self.triangulation, self.vy, kind=self.interKind)
+            self.vz_i = tri.CubicTriInterpolator(self.triangulation, self.vz, kind=self.interKind)
+        elif self.interType=='linear':
             self.vx_i = tri.LinearTriInterpolator(self.triangulation, self.vx)
             self.vy_i = tri.LinearTriInterpolator(self.triangulation, self.vy)
             self.vz_i = tri.LinearTriInterpolator(self.triangulation, self.vz)
         else:
             raise ValueError('Interpolation must be "cubic" or "linear".')
             
-    
-    def addField(self,field,fieldname):
-        '''
-        Add a field F of dimension d (e.g: d=3 for a vector filed) to the
-        current TriSurfaceVector object TSV. The grid of F (N points) must be
-        identical, in term of number of points and their location, as the grid
-        of TSV. F will be stored in TSV.data['fieldName'] or TSV['fieldName'].
-        
-        Arguments:
-            *field*: numpy array of shape (N,d).
-            
-            *fieldName*: python string.
-        '''
-        fieldSrc = field
-        fieldShape = fieldSrc.shape
-        fieldTgt = np.zeros(fieldShape)
 
-        if (self.__projectedField==True and len(fieldShape)>1):            
-            if fieldShape[1]==3:
-                for i in range(fieldShape[0]):
-                    fieldTgt[i,:] = self.linTrans.srcToTgt(fieldSrc[i,:])
-            if fieldShape[1]==6:
-                for i in range(fieldShape[0]):
-                    a = fieldSrc[i,:]
-                    A = np.array([[a[0],a[1],a[2]],
-                                  [a[1],a[3],a[4]],
-                                  [a[2],a[4],a[5]]])
-                    B = self.linTrans.srcToTgt(A)
-                    fieldTgt[i,:] = np.array([B[0,0],B[0,1],B[0,2],B[1,1],B[1,2],B[2,2]])
-                    
-                
-        else:
-            fieldTgt = fieldSrc
-        self.data[fieldname] = fieldTgt
-            
-        
-    def addFieldFromFoamFile(self,fieldFile,fieldname):
-        '''
-        Add a field F (shape d) stored in a foamFile to the current
-        TriSurfaceVector object. See docstring from self.addField() for more
-        information.
-
-        '''
-        #get field
-        fieldSrc = ParserFunctions.parseFoamFile_sampledSurface(fieldFile)
-        self.addField(fieldSrc,fieldname)
-        
-        
-    def addFieldFromVTK(self,fieldFile,fieldname):
-        '''
-        Add a field F (shape d) stored in a VTK file to the current
-        TriSurfaceVector object. See docstring from self.addField() for more
-        information.
-
-        '''
-        #get field
-        points, polygon, fieldSrc = ParserFunctions.parseVTK_ugly_sampledSurface(fieldFile)
-        self.addField(fieldSrc,fieldname)
-    
-    
     def addGradient(self):
         '''
         Calculate and save the gradient at all point of the grid. As expected,
@@ -479,7 +345,7 @@ class TriSurfaceVector(object):
         
         self.data['dvzdx'] = dvzdx
         self.data['dvzdy'] = dvzdy
-        
+
 
     def addUmag(self):
         '''
@@ -510,70 +376,4 @@ class TriSurfaceVector(object):
         This method makes sense only if vx, vy and vz are velocity componants.
         '''
         self.data['Q'] = self.Q()
-        
-    
-def mat(field):
-        '''
-        return a symmTensor field (shape=[N,6]) or Tensor field (shape=[N,9])
-        as a "real" tensor field (shape=[N,3,3]). if "field" is a vector or a
-        scalar, nothing is done and return as given.
-        
-        In the TriSurface ecosystem, a symmTenor field is stored as a line to
-        save memory. For consistency, a Tensor field is also stored as a line.
-        Nevertheless this memory efficient storing is incompatible with linear
-        algebra calculus. Therefore the function mat() converts a tensor like
-        field into "real" Tensor field.
-        
-        Arguments:
-            *field*: numpy array. Shape=[N,d], with d an int.
-             Field to convert.
-             
-        Returns:
-            *realField* numpy array. shape=[N,3,3]
-             Return the field as a "real" tensor. If "field" is not tensor
-             like, the field is returned unmodified.
-        '''
-        tensorType = len(field[0])
-        
-        if tensorType==6:
-            tgt = np.zeros([field.shape[0],3,3])   # target field
-            # fill line by line
-            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
-            tgt[:,1,:] = np.array([field[:,1],field[:,3],field[:,4]]).T  # add index 21,22,23 to tgt
-            tgt[:,2,:] = np.array([field[:,2],field[:,4],field[:,5]]).T # add index 31,32,33 to tgt
-            return tgt
-        elif tensorType==9:
-            tgt = np.zeros([field.shape[0],3,3])   # target field
-            # fill line by line
-            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
-            tgt[:,1,:] = field[:,3:6]  # add index 21,22,23 to tgt
-            tgt[:,2,:] = field[:,6:9] # add index 31,32,33 to tgt
-            return tgt
-        else:
-            return field
-   
-         
-def unmat(field):
-    '''
-    Opposite of mat()....
-    '''
-    # get field type
-    fieldType = None
-    if (len(field.shape)==3 and field.shape[1]==3 and field.shape[2]==3):  #field is a 3x3 tensor
-        if [field[0,0,1],field[0,0,2],field[0,1,2]]==[field[0,1,0],field[0,2,0],field[0,2,1]]: #field is symmTensor
-            fieldType = 'symmTensor'
-        else:
-           fieldType = 'tensor'
-    else:
-       fieldType = 'notTensor'
-           
-    # convert field and return it
-    if fieldType=='symmTensor':
-        return np.hstack(( field[:,0,:] , field[:,1,1:3] , field[:,2,2].reshape(field.shape[0],1) ))
-    elif fieldType=='tensor':
-        return np.hstack(( field[:,0,:] , field[:,1,:] , field[:,2,:]))
-    elif fieldType=='notTensor':
-        return field            
-    
-    
- 
+

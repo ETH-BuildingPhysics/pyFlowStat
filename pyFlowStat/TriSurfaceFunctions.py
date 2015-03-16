@@ -3,10 +3,11 @@ TriSurfaceFunctions.py
 
 Collection of functions for the following classes:
     * TriSurfaceMesh
+    * TriSurfaceScalar
     * TriSurfaceVector
+    * TriSurfaceSymmTensor
     * TriSurfaceTensor (to be implemented)
-    * TriSurfaceScalar (to be implemented)
-
+    
 Functions included:
     * getSubTriSurfaceMesh
     * compressArray
@@ -31,9 +32,10 @@ import numpy as np
 import matplotlib.tri as tri
 import matplotlib.path as mplPath
 
-import CoordinateTransformation as coorTrans
-import TriSurfaceVector as TriSurfaceVector
-import TriSurfaceMesh as TriSurfaceMesh
+#import pyFlowStat.CoordinateTransformation as coorTrans
+import pyFlowStat.TriSurface as TriSurface
+import pyFlowStat.TriSurfaceMesh as TriSurfaceMesh
+import pyFlowStat.TriSurfaceVector as TriSurfaceVector
 
 
 
@@ -183,7 +185,7 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
     comp_vy = compressArray(tsvSource.vy,node_renum)
     comp_vz = compressArray(tsvSource.vz,node_renum)
 
-    subProjectedField = tsvSource._TriSurfaceVector__projectedField
+    subProjectedField = tsvSource.projectedField
 
     subTsv = TriSurfaceVector.TriSurfaceVector(vx=comp_vx,
                                                vy=comp_vy,
@@ -244,7 +246,7 @@ def getSubTriSurfaceVectorList(tsvListSource,
         comp_vy = compressArray(tsvSource.vy,node_renum)
         comp_vz = compressArray(tsvSource.vz,node_renum)
     
-        subProjectedField = tsvSource._TriSurfaceVector__projectedField
+        subProjectedField = tsvSource.projectedField
     
         subTsv = TriSurfaceVector.TriSurfaceVector(vx=comp_vx,
                                                    vy=comp_vy,
@@ -263,20 +265,27 @@ def getSubTriSurfaceVectorList(tsvListSource,
 
         
    
-def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,indexingMode='time'):
+def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,extraVar=[],indexingMode='time'):
     '''
     Save a list of TriSurface<type> in a hdf5 file.
     
     Arguments:
         *triSurfaceList*: python list
          Python list of TriSurface<type> objects.
+         
+        *varName* python string.
+         Name of the variable <type>.
         
         *hdf5file*: python string
          Name of the target hdf5 file. It can also include the path.
          
+        *extraVar*: python list of string.
+         TriSurface<type> can holds extra data in the dict TriSurface<type>.data.
+         Use extraVar to include them. Default=[] (empty list).
+         
         *indexingMode*: python string
          Defines the key of each surfaces saved in the hdf5. Can be 'time' or
-         'index'. Delault='time' (stick to it...).
+         'index'. Delault='time'.
          
     Returns:
         None
@@ -306,6 +315,10 @@ def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,indexingMode='time')
         gsurfi.create_dataset('time',data=triSurfaceList[i].time)
         gsurfi.create_dataset(varName,data=triSurfaceList[i].rawVars())
         
+        if len(extraVar)!=0:
+            for var in extraVar:
+                gsurfi.create_dataset(var,data=triSurfaceList[i][var])
+        
     fwm.close()
 
 
@@ -318,10 +331,10 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
     Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
     # create the transformation objects
-    afftrans, lintrans = getTransformation(viewAnchor=viewAnchor,
-                                           xViewBasis=xViewBasis,
-                                           yViewBasis=yViewBasis,
-                                           srcBasisSrc=srcBasisSrc)
+    afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
+                                                      xViewBasis=xViewBasis,
+                                                      yViewBasis=yViewBasis,
+                                                      srcBasisSrc=srcBasisSrc)
   
     # get mest data
     gName = 'mesh'
@@ -342,6 +355,46 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
                                         linTrans=lintrans)
     return tsm    
 
+
+def loadTriSurfaceVector_hdf5Parser(hdf5Parser,
+                                    varName,
+                                    time,
+                                    TriSurfaceMesh,
+                                    extraVar=[],
+                                    projectedField=True):
+    '''
+    '''
+    gName = str(time)
+    try:
+        time = hdf5Parser[gName]['time'].value
+        data = hdf5Parser[gName][varName].value 
+    except:
+        print('Field '+varName+' in time '+gName+' does not exist. Skip.')
+
+
+    #get vectors (in vecsTgt)
+    vecsSrc = data
+    vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
+    if projectedField==True:
+        for i in range(vecsSrc.shape[0]):
+            vecsTgt[i,:] = TriSurfaceMesh.lintrans.srcToTgt(vecsSrc[i,:])
+    else:
+        vecsTgt = vecsSrc
+    
+    tsv = TriSurfaceVector.TriSurfaceVector(vx=vecsTgt[:,0],
+                                            vy=vecsTgt[:,1],
+                                            vz=vecsTgt[:,2],
+                                            time=time,
+                                            triSurfaceMesh=TriSurfaceMesh,
+                                            projectedField=projectedField,
+                                            interpolation=None,
+                                            kind=None,)
+    if len(extraVar)!=0:
+        for var in extraVar:
+            tsv.data[var] = hdf5Parser[gName][var].value 
+    return tsv
+
+
 def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
                                         varName,
                                         TriSurfaceMesh,
@@ -360,35 +413,17 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
         pass
     
     for key in keys:
-        gName = str(key)
-        try:
-            time = hdf5Parser[gName]['time'].value
-            data = hdf5Parser[gName][varName].value 
-        except:
-            print('Field '+varName+' in time '+gName+' does not exist. Skip.')
-
-
-        #get vectors (in vecsTgt)
-        vecsSrc = data
-        vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
-        if projectedField==True:
-            for i in range(vecsSrc.shape[0]):
-                vecsTgt[i,:] = TriSurfaceMesh.lintrans.srcToTgt(vecsSrc[i,:])
-        else:
-            vecsTgt = vecsSrc
+        tsv = loadTriSurfaceVector_hdf5Parser(hdf5Parser=hdf5Parser,
+                                              varName=varName,
+                                              time=key,
+                                              TriSurfaceMesh=TriSurfaceMesh,
+                                              extraVar=extraVar,
+                                              projectedField=projectedField)
         
-        tsv = TriSurfaceVector.TriSurfaceVector(vx=vecsTgt[:,0],
-                                                vy=vecsTgt[:,1],
-                                                vz=vecsTgt[:,2],
-                                                time=time,
-                                                triSurfaceMesh=TriSurfaceMesh,
-                                                projectedField=projectedField,
-                                                interpolation=None,
-                                                kind=None,)
-        if len(extraVar)==0:
-            for var in extraVar:
-                tsv.data[var] = hdf5Parser[gName][var].value 
+        
         triSurfaceList.append(tsv)
+        
+        
     return triSurfaceList
 
 
