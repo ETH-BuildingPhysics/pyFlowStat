@@ -175,4 +175,28 @@ class TriSurfaceMesh(object):
         rawPoints = np.zeros((surfacePoints.shape[0],surfacePoints.shape[1]))
         for i in range(surfacePoints.shape[0]):
             rawPoints[i,:] = self.affTrans.tgtToSrc(surfacePoints[i,:])
-        return rawPoints                   
+        return rawPoints
+
+
+    def area(self):
+        '''
+        Calculate and return the area of the surface. This algorithm uses
+        the Green theorem. From it, one can derived a general formula to
+        calculate the area A of any simple polygon of n summits:
+        
+        $$A = \frac{(x_{0}+x_n)(y_{0}-y_n)}{2} + \sum_{i=0}^{n-1}\frac{(x_{i+1}+x_i)(y_{i+1}-y_i)}{2}$$
+        
+        Arguments:
+            *none*
+            
+        Returns
+            *area*: python float()
+             The total area of the mesh.
+        '''
+        xtri = self.x[self.triangles]
+        ytri = self.y[self.triangles]
+        
+        return np.sum( 0.5*( (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
+                            +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
+                            +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])) )
+                           

@@ -361,7 +361,7 @@ def loadTriSurfaceVector_hdf5Parser(hdf5Parser,
                                     time,
                                     TriSurfaceMesh,
                                     extraVar=[],
-                                    projectedField=True):
+                                    projectedField=False):
     '''
     '''
     gName = str(time)
@@ -399,7 +399,7 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
                                         varName,
                                         TriSurfaceMesh,
                                         extraVar=[],
-                                        projectedField=True):
+                                        projectedField=False):
     '''
     Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
@@ -434,7 +434,7 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
                                   yViewBasis,
                                   extraVar=[],
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                                  projectedField=True):
+                                  projectedField=False):
     '''
     Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
     object associated to the surfaces is also returned.

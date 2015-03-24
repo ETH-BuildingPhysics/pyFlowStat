@@ -58,7 +58,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
                  vz,
                  time,
                  triSurfaceMesh,
-                 projectedField=True,
+                 projectedField=False,
                  interpolation=None,
                  kind=None):
         '''
@@ -118,7 +118,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
                          varsFile,
                          triSurfaceMesh,
                          time,
-                         projectedField=True):
+                         projectedField=False):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         
@@ -133,7 +133,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
             *triSurfaceMesh* :  TriSurfaceMesh object.
              TriSurfaceMesh object, which holds the mesh information.
              
-            *projectedField* python bool (default=True)
+            *projectedField* python bool (default=False)
              Defines if the data fields has to be projected in the basis of the
              surface. 
         '''
@@ -162,7 +162,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
                     vtkFile,
                     triSurfaceMesh,
                     time,
-                    projectedField=True):
+                    projectedField=False):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         
@@ -177,7 +177,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
             *triSurfaceMesh* :  TriSurfaceMesh object.
              TriSurfaceMesh object, which holds the mesh information.
              
-            *projectedField* python bool (default=True)
+            *projectedField* python bool (default=False)
              Defines if the data fields has to be projected in the basis of the
              surface. 
         '''     

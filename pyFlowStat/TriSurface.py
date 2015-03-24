@@ -21,7 +21,7 @@ class TriSurface(object):
     def __init__(self,
                  time,
                  triSurfaceMesh,
-                 projectedField=True,
+                 projectedField=False,
                  interpolation=None,
                  kind=None):
         '''
@@ -44,7 +44,7 @@ class TriSurface(object):
                          varsFile,
                          triSurfaceMesh,
                          time,
-                         projectedField=True):
+                         projectedField=False):
         '''    
         '''
         raise NotImplementedError('TriSurface subclasses should implement readFromFoamFile.')
@@ -55,7 +55,7 @@ class TriSurface(object):
                     vtkFile,
                     triSurfaceMesh,
                     time,
-                    projectedField=True):
+                    projectedField=False):
         '''
         '''     
         raise NotImplementedError('TriSurface subclasses should implement readFromVTK.')
@@ -103,7 +103,40 @@ class TriSurface(object):
             *rawPoints*: numpy array of shape (N,3)
         '''
         return self.triSurfaceMesh.rawPoints()
-            
+       
+       
+    def area(self):
+        '''
+        Returns the total area of the surface. See method
+        pyFlowStat.TriSurfaceMesh.area() for more information about the 
+        algorithm
+        
+        Returns
+            *area*: python float()
+             The total area of the mesh.
+        '''
+        return self.triSurfaceMesh.area()
+        
+        
+    def surfIntegralTrap(self,field):
+        '''
+        Return the surface integral of field. It use the trapezoidal rule
+        on each triangle to compute the intergral. Therefore, it is a first
+        order method.
+        
+        Argument:
+            *field*: numpy array of shape (N,)
+             field to integrate. 
+        '''
+        xtri = self.x[self.triangles]
+        ytri = self.y[self.triangles]
+        ztri = field[self.triangles]
+        
+        return np.sum( (0.5*(  (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
+                              +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
+                              +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])))
+                           *(ztri[:,0]+ztri[:,1]+ztri[:,2])/3.0 )
+                           
      
     def rawVars(self):
         '''
@@ -115,8 +148,6 @@ class TriSurface(object):
         '''
         '''
         raise NotImplementedError('TriSurface subclasses should implement surfaceVars.')
-
-
 
 
     def gradientxy(self,x,y):
@@ -318,7 +349,7 @@ def mat(field):
          
 def unmat(field):
     '''
-    Opposite of mat()....
+    Opposite of method mat()...
     '''
     # get field type
     fieldType = None

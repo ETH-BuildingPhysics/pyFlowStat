@@ -80,7 +80,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                          varsFile,
                          triSurfaceMesh,
                          time,
-                         projectedField=True):
+                         projectedField=False):
         '''
         Construct from a surface saved  by OpenFOAM in foamFile format.
         
@@ -117,7 +117,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                     vtkFile,
                     triSurfaceMesh,
                     time,
-                    projectedField=True):
+                    projectedField=False):
         '''
         Construct from a surface saved by OpenFOAM in VTK format.
         
@@ -132,7 +132,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
             *triSurfaceMesh* :  TriSurfaceMesh object.
              TriSurfaceMesh object, which holds the mesh information.
              
-            *projectedField* python bool (default=True)
+            *projectedField* python bool (default=False)
              Defines if the data fields has to be projected in the basis of the
              surface. 
         '''     
