@@ -100,7 +100,7 @@ def nextpow2(i):
     return int(math.pow(2,buf))
 
 
-def dofft(sig,samplefrq,nperseg=512):
+def dofft(sig,samplefrq,nperseg=512,detrend='constant'):
     """
     Estimate power spectral density using Welch's method. For more informations
     on the Welch's method implemented in python, visit:
@@ -129,7 +129,7 @@ def dofft(sig,samplefrq,nperseg=512):
     #amp = 2*abs(amp[:NFFT/2+1])
     #return frq,amp
 
-    frq, psd = spsig.welch(sig,fs=samplefrq, window='hanning', noverlap=None, nperseg=nperseg, return_onesided=True, scaling='density', axis=-1)
+    frq, psd = spsig.welch(sig,fs=samplefrq, window='hanning', noverlap=None, nperseg=nperseg, return_onesided=True, scaling='density', axis=-1,detrend=detrend)
     return frq, psd
 
 def movingave(x, window_len):
