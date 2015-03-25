@@ -6,7 +6,6 @@ TriSurfaceSymmTensor.py
 
 import numpy as np
 import matplotlib.tri as tri
-
 import pyFlowStat.TriSurface as TriSurface
 import pyFlowStat.ParserFunctions as ParserFunctions
 
@@ -102,9 +101,6 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
         self.tyy_i = None 
         self.tyz_i = None 
         self.tzz_i = None 
-        
-        self.data = dict()
-        self.data_i = dict()
 
         
     @classmethod
@@ -138,7 +134,7 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
         stensTgt = np.zeros((stensSrc.shape[0],stensSrc.shape[1]))
         if projectedField==True:
             for i in range(stensSrc.shape[0]):
-                stenAsMat = cls.mat(stensSrc[i,:])
+                stenAsMat = TriSurface.mat(stensSrc[i,:])
                 stensTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(stenAsMat)
         else:
             stensTgt = stensSrc
@@ -202,6 +198,19 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
 #
 #    # class methods #
 #    #---------------#
+    def component(self,dim):
+        if dim==0:
+            return self.txx
+        if dim==1:
+            return self.txy
+        if dim==2:
+            return self.txz
+        if dim==3:
+            return self.tyy
+        if dim==4:
+            return self.tyz
+        if dim==5:
+            return self.tzz
 #    def rawVars(self):
 #        '''
 #        Return the scalar field defined in the source coordinate system.

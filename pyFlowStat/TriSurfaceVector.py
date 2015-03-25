@@ -108,9 +108,6 @@ class TriSurfaceVector(TriSurface.TriSurface):
         self.vx_i = None
         self.vy_i = None
         self.vz_i = None
-        
-        self.data = dict()
-        self.data_i = dict()
 
         
     @classmethod
@@ -212,6 +209,14 @@ class TriSurfaceVector(TriSurface.TriSurface):
 
     # class methods #
     #---------------#
+    def component(self,dim):
+        if dim==0:
+            return self.vx
+        if dim==1:
+            return self.vy
+        if dim==2:
+            return self.vz
+            
     def rawVars(self):
         '''
         Return the vector field defined the source coordinate system.

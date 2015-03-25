@@ -37,9 +37,9 @@ class TriSurfaceMesh(object):
     def readFromFoamFile(cls,
                          pointsFile,
                          facesFile,
-                         viewAnchor,
                          xViewBasis,
-                         yViewBasis,
+                         yViewBasis=None,
+                         viewAnchor=(0,0,0),
                          srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
 
         '''
@@ -61,10 +61,75 @@ class TriSurfaceMesh(object):
              
             *xViewBasis*: python of numpy array. Shape = 3.
             
-            *yViewBasis*: python of numpy array. Shape = 3.
+            *yViewBasis*: python of numpy array. Shape = 3. If it's None, it 
+             will be estimated. Works for surfaces normal to one coordinate
+             direction
             
-            *srcBasisSrc*: python of numpy array. Shape = 3,3.
+            *srcBasisSrc*: python of numpy array. Shape = 3,3. Keep default.
         '''
+        
+        def getN(rawPoints):
+            '''
+            get normal of plane
+            
+            *rawPoints*: numpy array of shape (N,3)
+            
+            returns n, numpy array of shape 3
+            '''
+            norm=0
+            while norm==0:
+                idx_points=np.random.randint(0,len(rawPoints),size=3)
+                p1=rawPoints[idx_points[0]]
+                p2=rawPoints[idx_points[1]]
+                p3=rawPoints[idx_points[2]]
+                v1=p1-p2
+                v2=p1-p3
+                n=np.cross(v1,v2)
+                norm=np.linalg.norm(n)
+            return np.round(np.abs(n)/norm)
+        
+        def getYBasis(n,xViewBasis):
+            '''
+            get y basis vector from x basis and plane normal
+            
+            *n*: python of numpy array. Shape = 3.
+            
+            *xViewBasis*: python of numpy array. Shape = 3.
+            
+            returns yViewBasis, python of numpy array. Shape = 3.
+            '''
+            yViewBasis=np.cross(n,xViewBasis)
+            norm=np.linalg.norm(yViewBasis)
+            if norm==0:
+                raise ValueError("n and xViewBasis are collinar")
+            return np.round(np.abs(yViewBasis)/norm)
+        
+        def getBasis(rawPoints,zIsVertical=True):
+            '''
+            fully automatic basis estimation (currently unused)
+            
+            *rawPoints*: numpy array of shape (N,3)
+            
+            returns xViewBasis,yViewBasis
+            '''
+            n=getN(rawPoints)
+            xViewBasis=np.array([1.0,0.0,0.0])
+            try:
+                yViewBasis=getYBasis(n,xViewBasis)
+            except:
+                if zIsVertical:
+                    xViewBasis=np.array([0.0,1.0,0.0])
+                else:
+                    xViewBasis=np.array([0.0,0.0,1.0])
+                yViewBasis=getYBasis(n,xViewBasis)
+        
+            return xViewBasis,yViewBasis
+                
+        ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
+        if not yViewBasis:
+            n=getN(ptsSrc)
+            yViewBasis=getYBasis(n,xViewBasis)
+            
         afftrans, lintrans = TriSurface.getTransformation(viewAnchor,
                                                           xViewBasis,
                                                           yViewBasis,
@@ -72,6 +137,7 @@ class TriSurfaceMesh(object):
                                        
         # get x and y vector (in ptsTgt)
         ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
+        
         ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
         for i in range(ptsSrc.shape[0]):
             ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
@@ -163,7 +229,7 @@ class TriSurfaceMesh(object):
         
     # class methods #
     #---------------#
-        
+
     def rawPoints(self):
         '''
         Return the grid points in the source coordinate system.

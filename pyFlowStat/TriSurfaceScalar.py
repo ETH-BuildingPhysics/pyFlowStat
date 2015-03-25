@@ -70,9 +70,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                                         kind=kind)
 
         self.s = np.asarray(s)     
-        self.s_i = None        
-        self.data = dict()
-        self.data_i = dict()
+        self.s_i = None
 
         
     @classmethod
@@ -158,6 +156,9 @@ class TriSurfaceScalar(TriSurface.TriSurface):
 
     # class methods #
     #---------------#
+    def component(self,dim):
+        return self.s
+        
     def rawVars(self):
         '''
         Return the scalar field defined in the source coordinate system.

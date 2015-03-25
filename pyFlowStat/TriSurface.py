@@ -5,9 +5,11 @@ TriSurface.py
 
 import numpy as np
 #import matplotlib.tri as tri
+import matplotlib.tri as tri
 
 import pyFlowStat.CoordinateTransformation as coorTrans
 import pyFlowStat.ParserFunctions as ParserFunctions
+
 
 
 class TriSurface(object):
@@ -95,6 +97,11 @@ class TriSurface(object):
 
     # class methods #
     #---------------#
+    def component(self,dim):
+        '''
+        '''
+        raise NotImplementedError('TriSurface subclasses should implement component.')
+        
     def rawPoints(self):
         '''
         Return the grid points in the source coordinate system.
