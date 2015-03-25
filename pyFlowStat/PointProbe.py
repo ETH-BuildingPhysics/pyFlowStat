@@ -536,9 +536,9 @@ class PointProbe(object):
         self.data['r23'],self.data['taur23'] = tt.xcorr_fft(uy,y=uz, maxlags=None, norm='coeff')
         self.data['rmag'],self.data['taurmag'] = tt.xcorr_fft(umag, maxlags=None, norm='coeff')
         # auto correlation of u
-        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='none')
-        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='none')
-        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='none')
+        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='biased')
+        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='biased')
+        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='biased')
 
 
         #u in frequency domain
