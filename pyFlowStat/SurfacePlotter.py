@@ -15,7 +15,7 @@ def PlotField(ax,surface,field,vmin,vmax,offset=[0,0],interpolation='nearest',mo
         im=ax.imshow(modifier(surface.data[field]),vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent,**kwargs)
     return im
     
-def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11):
+def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11,**kwargs):
     ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
     xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
     yrange=np.linspace(surface.minY,surface.maxY,ysteps)
@@ -29,11 +29,12 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, conto
     contour_levels = np.linspace(vmin, vmax, contourlevels)
     contour_levels_label = np.linspace(vmin, vmax, contourlabels)
     print field
-    cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=.75)
+    cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=.75,**kwargs)
 #    ax.colorbar()
 
     C = ax.contour(X,Y,surface.data[field], contour_levels_label, colors='black', linewidth=.5)
     ax.clabel(C, inline=1, fontsize=10)
+    ax.set_aspect('equal')
     return cts
 
 #    xfill=[-100,0,0,100,100,200,200,-100]
@@ -42,7 +43,7 @@ def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, conto
 #    
 #    xlim([-30,130])
 #    ylim([-105,130])
-def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
+def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0],**kwargs):
     ysteps=int((surface.maxY-surface.minY)/surface.dy)+1
     xsteps=int((surface.maxX-surface.minX)/surface.dy)+1
     yrange=np.linspace(surface.minY,surface.maxY,ysteps)
@@ -55,7 +56,7 @@ def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
 
     cnorm=mpl.colors.Normalize(vmin=vmin,vmax=vmax)
 
-    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color='k')
+    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color='k',**kwargs)
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
 def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
