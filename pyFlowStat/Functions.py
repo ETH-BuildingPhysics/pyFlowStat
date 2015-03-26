@@ -1,3 +1,5 @@
+import numpy as np
+
 def sortNumStrList(numStrList):
     '''
     Sort a list of number stored as a list of string. StrNumList is the list of

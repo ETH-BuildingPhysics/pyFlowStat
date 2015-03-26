@@ -530,6 +530,6 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
                                                                  srcBasisSrc=srcBasisSrc)
     for ts in allTs:                                   
         tsc.addFieldFromHdf5(hdf5Parser,names=varNames,time=ts,projectedField=False)
-        tscList.append()
+        tscList.append(tsc)
         
     return tscList                                        
