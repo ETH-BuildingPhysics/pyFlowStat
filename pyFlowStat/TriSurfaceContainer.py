@@ -31,7 +31,12 @@ class TriSurfaceContainer(object):
         self.triSurfaceMesh = triSurfaceMesh
         self.fields=dict()
         self.data=dict()
-
+        
+    @classmethod
+    def createFromTriSurface(cls,triSurface,name):
+        c=cls(triSurfaceMesh=triSurface.triSurfaceMesh)
+        self.fields[name]=triSurface
+    
     @classmethod
     def readFromFoamFile(cls,pathname,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],loadFields=True):
         pointsFile=os.path.join(pathname,'points')
@@ -56,9 +61,14 @@ class TriSurfaceContainer(object):
         
     def __getitem__(self, key):
         '''
-        Getter for key "key" on member dictionnary "data"
+        Getter for key "key" on member dictionary "fields"
         '''
         return self.fields[key]
+        
+    def addTriSurface(self,triSurface,name):
+        if triSurface.triSurfaceMesh is not self.triSurfaceMesh:
+            raise ValueError("triSurfaceMesh is not identical")
+        self.fields[name]=triSurface
         
     def addFoamScalarField(self,field,name,time,projectedField=False):
         tSurf=TriSurfaceScalar.readFromFoamFile(field,self.triSurfaceMesh,time=time,projectedField=projectedField)
