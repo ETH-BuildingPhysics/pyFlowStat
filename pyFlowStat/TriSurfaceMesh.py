@@ -70,21 +70,11 @@ class TriSurfaceMesh(object):
         
                 
         ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
-        if not yViewBasis:
-            n=getN(ptsSrc)
-            yViewBasis=getYBasis(n,xViewBasis)
-            
-        afftrans, lintrans = TriSurface.getTransformation(viewAnchor,
-                                                          xViewBasis,
-                                                          yViewBasis,
-                                                          srcBasisSrc)
-                                       
-        # get x and y vector (in ptsTgt)
-        ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
-        
-        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-        for i in range(ptsSrc.shape[0]):
-            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+        ptsTgt,afftrans,lintrans=transformPoints(ptsSrc=ptsSrc,
+                                                xViewBasis=xViewBasis,
+                                                yViewBasis=yViewBasis,
+                                                viewAnchor=viewAnchor,
+                                                srcBasisSrc=srcBasisSrc)
 
         #get triangles
         if facesFile==None:
@@ -161,20 +151,12 @@ class TriSurfaceMesh(object):
         triangles = hdf5Parser[gName]['faces'].value
         
         # create the transformation objects
-        if not yViewBasis:
-            n = getN(ptsSrc)
-            yViewBasis = getYBasis(n,xViewBasis)
-    
-        afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
-                                                          xViewBasis=xViewBasis,
-                                                          yViewBasis=yViewBasis,
-                                                          srcBasisSrc=srcBasisSrc)
-    
-        # transform the points from the source basis to the target basis
-        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-        for i in range(ptsSrc.shape[0]):
-            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
-        
+        ptsTgt,afftrans,lintrans=transformPoints(ptsSrc=ptsSrc,
+                                            xViewBasis=xViewBasis,
+                                            yViewBasis=yViewBasis,
+                                            viewAnchor=viewAnchor,
+                                            srcBasisSrc=srcBasisSrc)
+
         # update class member variables
         return cls(x=ptsTgt[:,0],
                    y=ptsTgt[:,1],
@@ -354,3 +336,28 @@ def getBasis(rawPoints,zIsVertical=True):
         yViewBasis=getYBasis(n,xViewBasis)
 
     return xViewBasis,yViewBasis
+    
+def transformPoints(ptsSrc,
+                     xViewBasis,
+                     yViewBasis=None,
+                     viewAnchor=(0,0,0),
+                     srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
+    '''
+    '''
+    # create basis vectors if missing
+    if not yViewBasis:
+        n=getN(ptsSrc)
+        yViewBasis=getYBasis(n,xViewBasis)
+    
+    # create the transformation objects    
+    afftrans, lintrans = TriSurface.getTransformation(viewAnchor,
+                                          xViewBasis,
+                                          yViewBasis,
+                                          srcBasisSrc)
+    
+    # transform the points from the source basis to the target basis
+    ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
+    for i in range(ptsSrc.shape[0]):
+        ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+        
+    return ptsTgt,afftrans,lintrans
