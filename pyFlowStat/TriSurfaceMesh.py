@@ -68,62 +68,6 @@ class TriSurfaceMesh(object):
             *srcBasisSrc*: python of numpy array. Shape = 3,3. Keep default.
         '''
         
-        def getN(rawPoints):
-            '''
-            get normal of plane
-            
-            *rawPoints*: numpy array of shape (N,3)
-            
-            returns n, numpy array of shape 3
-            '''
-            norm=0
-            while norm==0:
-                idx_points=np.random.randint(0,len(rawPoints),size=3)
-                p1=rawPoints[idx_points[0]]
-                p2=rawPoints[idx_points[1]]
-                p3=rawPoints[idx_points[2]]
-                v1=p1-p2
-                v2=p1-p3
-                n=np.cross(v1,v2)
-                norm=np.linalg.norm(n)
-            return np.round(np.abs(n)/norm)
-        
-        def getYBasis(n,xViewBasis):
-            '''
-            get y basis vector from x basis and plane normal
-            
-            *n*: python of numpy array. Shape = 3.
-            
-            *xViewBasis*: python of numpy array. Shape = 3.
-            
-            returns yViewBasis, python of numpy array. Shape = 3.
-            '''
-            yViewBasis=np.cross(n,xViewBasis)
-            norm=np.linalg.norm(yViewBasis)
-            if norm==0:
-                raise ValueError("n and xViewBasis are collinar")
-            return np.round(np.abs(yViewBasis)/norm)
-        
-        def getBasis(rawPoints,zIsVertical=True):
-            '''
-            fully automatic basis estimation (currently unused)
-            
-            *rawPoints*: numpy array of shape (N,3)
-            
-            returns xViewBasis,yViewBasis
-            '''
-            n=getN(rawPoints)
-            xViewBasis=np.array([1.0,0.0,0.0])
-            try:
-                yViewBasis=getYBasis(n,xViewBasis)
-            except:
-                if zIsVertical:
-                    xViewBasis=np.array([0.0,1.0,0.0])
-                else:
-                    xViewBasis=np.array([0.0,0.0,1.0])
-                yViewBasis=getYBasis(n,xViewBasis)
-        
-            return xViewBasis,yViewBasis
                 
         ptsSrc = ParserFunctions.parseFoamFile_sampledSurface(pointsFile)
         if not yViewBasis:
@@ -265,4 +209,64 @@ class TriSurfaceMesh(object):
         return np.sum( 0.5*( (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
                             +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
                             +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])) )
-                           
+
+                            
+# helper functions #
+#------------------#      
+                      
+def getN(rawPoints):
+    '''
+    get normal of plane
+    
+    *rawPoints*: numpy array of shape (N,3)
+    
+    returns n, numpy array of shape 3
+    '''
+    norm=0
+    while norm==0:
+        idx_points=np.random.randint(0,len(rawPoints),size=3)
+        p1=rawPoints[idx_points[0]]
+        p2=rawPoints[idx_points[1]]
+        p3=rawPoints[idx_points[2]]
+        v1=p1-p2
+        v2=p1-p3
+        n=np.cross(v1,v2)
+        norm=np.linalg.norm(n)
+    return np.round(np.abs(n)/norm)
+
+def getYBasis(n,xViewBasis):
+    '''
+    get y basis vector from x basis and plane normal
+    
+    *n*: python of numpy array. Shape = 3.
+    
+    *xViewBasis*: python of numpy array. Shape = 3.
+    
+    returns yViewBasis, python of numpy array. Shape = 3.
+    '''
+    yViewBasis=np.cross(n,xViewBasis)
+    norm=np.linalg.norm(yViewBasis)
+    if norm==0:
+        raise ValueError("n and xViewBasis are collinar")
+    return np.round(np.abs(yViewBasis)/norm)
+
+def getBasis(rawPoints,zIsVertical=True):
+    '''
+    fully automatic basis estimation (currently unused)
+    
+    *rawPoints*: numpy array of shape (N,3)
+    
+    returns xViewBasis,yViewBasis
+    '''
+    n=getN(rawPoints)
+    xViewBasis=np.array([1.0,0.0,0.0])
+    try:
+        yViewBasis=getYBasis(n,xViewBasis)
+    except:
+        if zIsVertical:
+            xViewBasis=np.array([0.0,1.0,0.0])
+        else:
+            xViewBasis=np.array([0.0,0.0,1.0])
+        yViewBasis=getYBasis(n,xViewBasis)
+
+    return xViewBasis,yViewBasis
