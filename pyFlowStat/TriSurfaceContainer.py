@@ -189,9 +189,10 @@ class TriSurfaceContainer(object):
         if len(names)==0:
             names = hdf5Parser[gTime].keys()
             names.pop(names.index('time'))
-        
+
         for name in names:
             try:
+                
                 dataShape = hdf5Parser[gTime][name].value.shape
                 if len(dataShape)==1:  #data is a scalar
                     tss = TriSurfaceScalar.readFromHdf5(hdf5Parser=hdf5Parser,

@@ -342,7 +342,6 @@ def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
         n=TriSurfaceMesh.getN(ptsSrc)
         yViewBasis=TriSurfaceMesh.getYBasis(n,xViewBasis)
     
-    print(yViewBasis)
     afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
                                                       xViewBasis=xViewBasis,
                                                       yViewBasis=yViewBasis,
