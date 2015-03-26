@@ -209,6 +209,9 @@ class TriSurfaceVector(TriSurface.TriSurface):
 
     # class methods #
     #---------------#
+    def __call__(self,dim):
+        return self.component(dim)
+        
     def component(self,dim):
         if dim==0:
             return self.vx
