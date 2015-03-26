@@ -101,6 +101,90 @@ class TriSurfaceMesh(object):
                    affTrans=afftrans,
                    linTrans=lintrans)
 
+    
+    @classmethod
+    def readFromHdf5(cls,
+                     hdf5Parser,
+                     xViewBasis,
+                     yViewBasis=None,
+                     viewAnchor=(0,0,0),
+                     srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
+        '''
+        Construct from a Hdf5Parser. The source Hdf5File must have at least the
+        following structure:
+        
+        hdf5file
+        {
+            mesh
+            {
+                points: list of points. Shape=(N,3)
+                triangles: list of triangles (connectivity). Shape=(M,3)
+            }
+            otherKey1
+            otherKey2
+            ...
+            
+        }
+        
+        Arguments:
+            *hdf5Parser*: a h5py parser.
+             the hdf5Parser can by created as follow:
+             >>> import h5py
+             >>> hdf5Parser = h5py.File('sourceHdf5File','r')
+             
+            *xViewBasis*: python array of shape=3.
+             x direction of the triSurface, defined in the source coordinate
+             system.
+        
+            *yViewBasis*: python array of shape=3.
+             y direction of the triSurface, defined in the source coordinate
+             system. Default=None
+        
+            *viewAnchor*: python array of shape=3.
+             Origin of the surface coordinate system, defined in the source
+             coordinate system. Default=(0,0,0)
+             
+            *srcBasisSrc*: python array of shape=3x3.
+             Default=[[1,0,0],[0,1,0],[0,0,1]].
+             
+        Usage:
+             >>> import h5py
+             >>> from pyFlowStat.TriSurfaceMesh import TriSurfaceMesh
+             >>> hdf5Parser = h5py.File('sourceHdf5File','r')
+             >>> tsm = TriSurfaceMesh.readFromHdf5(hdf5Parser,xViewBasis=(1,0,0))
+             >>> hdf5Parser.close()
+        
+        '''
+        # get mest data
+        gName = 'mesh'
+        ptsSrc = hdf5Parser[gName]['points'].value
+        triangles = hdf5Parser[gName]['faces'].value
+        
+        # create the transformation objects
+        if not yViewBasis:
+            n = getN(ptsSrc)
+            yViewBasis = getYBasis(n,xViewBasis)
+    
+        afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
+                                                          xViewBasis=xViewBasis,
+                                                          yViewBasis=yViewBasis,
+                                                          srcBasisSrc=srcBasisSrc)
+    
+        # transform the points from the source basis to the target basis
+        ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
+        for i in range(ptsSrc.shape[0]):
+            ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
+        
+        # update class member variables
+        return cls(x=ptsTgt[:,0],
+                   y=ptsTgt[:,1],
+                   z=ptsTgt[:,2],
+                   triangles=triangles,
+                   mask=None,
+                   affTrans=afftrans,
+                   linTrans=lintrans)  
+
+
     @classmethod   
     def readFromVTK(cls,
                     vtkFile,

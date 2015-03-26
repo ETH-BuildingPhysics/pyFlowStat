@@ -110,6 +110,29 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                    interpolation=None,
                    kind=None)
  
+ 
+    @classmethod 
+    def readFromHdf5(cls,
+                     hdf5Parser,
+                     varName,
+                     triSurfaceMesh,
+                     time,
+                     projectedField=False):
+        '''
+        '''
+        gTime = str(time)
+        time = hdf5Parser[gTime]['time'].value
+        slrsTgt = hdf5Parser[gTime][varName].value
+        
+        # update class member variables
+        return cls(s=slrsTgt,
+                   time=time,
+                   triSurfaceMesh=triSurfaceMesh,
+                   projectedField=projectedField,
+                   interpolation=None,
+                   kind=None)
+    
+    
     @classmethod   
     def readFromVTK(cls,
                     vtkFile,

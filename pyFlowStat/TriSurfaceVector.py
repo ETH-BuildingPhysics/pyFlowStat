@@ -154,6 +154,37 @@ class TriSurfaceVector(TriSurface.TriSurface):
                    interpolation=None,
                    kind=None)
  
+    @classmethod 
+    def readFromHdf5(cls,
+                     hdf5Parser,
+                     varName,
+                     triSurfaceMesh,
+                     time,
+                     projectedField=False):
+        '''
+        '''
+        gTime = str(time)
+        time = hdf5Parser[gTime]['time'].value
+        vecsSrc = hdf5Parser[gTime][varName].value
+        vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))  
+        if projectedField==True:
+            for i in range(vecsSrc.shape[0]):
+                vecsTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(vecsSrc[i,:])
+        else:
+            vecsTgt = vecsSrc
+        
+        # update class member variables
+        return cls(vx=vecsTgt[:,0],
+                   vy=vecsTgt[:,1],
+                   vz=vecsTgt[:,2],
+                   time=time,
+                   triSurfaceMesh=triSurfaceMesh,
+                   projectedField=projectedField,
+                   interpolation=None,
+                   kind=None)    
+    
+    
+    
     @classmethod   
     def readFromVTK(cls,
                     vtkFile,

@@ -151,7 +151,42 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
                    projectedField=projectedField,
                    interpolation=None,
                    kind=None)
-# 
+
+
+    @classmethod 
+    def readFromHdf5(cls,
+                     hdf5Parser,
+                     varName,
+                     triSurfaceMesh,
+                     time,
+                     projectedField=False):
+        '''
+        '''
+        gTime = str(time)
+        time = hdf5Parser[gTime]['time'].value
+        stensSrc = hdf5Parser[gTime][varName].value
+        stensTgt = np.zeros((stensSrc.shape[0],stensSrc.shape[1]))
+        if projectedField==True:
+            for i in range(stensSrc.shape[0]):
+                stenAsMat = TriSurface.mat(stensSrc[i,:])
+                stensTgt[i,:] = triSurfaceMesh.linTrans.srcToTgt(stenAsMat)
+        else:
+            stensTgt = stensSrc
+        
+        # update class member variables
+        return cls(txx=stensTgt[:,0],
+                   txy=stensTgt[:,1],
+                   txz=stensTgt[:,2],
+                   tyy=stensTgt[:,3],
+                   tyz=stensTgt[:,4],
+                   tzz=stensTgt[:,5],
+                   time=time,
+                   triSurfaceMesh=triSurfaceMesh,
+                   projectedField=projectedField,
+                   interpolation=None,
+                   kind=None) 
+                   
+                   
 #    @classmethod   
 #    def readFromVTK(cls,
 #                    vtkFile,
@@ -201,7 +236,8 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
 
     def __call__(self,dim):
         return self.component(dim)
-        
+      
+      
     def component(self,dim):
         if dim==0:
             return self.txx
@@ -215,6 +251,7 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
             return self.tyz
         if dim==5:
             return self.tzz
+            
             
     def interpolate(self,x,y,dim):
         try:
@@ -233,6 +270,7 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
         except:
             raise ValueError('this method needs interpolators. Please run',
                                  'method "addInterpolator" first.')
+
 #    def rawVars(self):
 #        '''
 #        Return the scalar field defined in the source coordinate system.

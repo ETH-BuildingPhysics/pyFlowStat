@@ -51,6 +51,18 @@ class TriSurface(object):
         '''
         raise NotImplementedError('TriSurface subclasses should implement readFromFoamFile.')
 
+
+    @classmethod
+    def readFromHdf5(cls,
+                     hdf5Parser,
+                     varName,
+                     triSurfaceMesh,
+                     time,
+                     projectedField=False):
+        '''    
+        '''
+        raise NotImplementedError('TriSurface subclasses should implement readFromHdf5.')
+ 
  
     @classmethod   
     def readFromVTK(cls,

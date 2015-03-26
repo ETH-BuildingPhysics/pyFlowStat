@@ -36,6 +36,8 @@ import matplotlib.path as mplPath
 import pyFlowStat.TriSurface as TriSurface
 import pyFlowStat.TriSurfaceMesh as TriSurfaceMesh
 import pyFlowStat.TriSurfaceVector as TriSurfaceVector
+import pyFlowStat.Functions as func
+import pyFlowStat.TriSurfaceContainer as TriSurfaceContainer
 
 
 
@@ -501,3 +503,34 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
    
     fr.close()    
     return tsvList, tsm
+
+
+def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
+                                           varNames,
+                                           xViewBasis,
+                                           yViewBasis=None,
+                                           viewAnchor=(0,0,0),
+                                           srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
+                                           projectedField=False):
+    '''
+    '''
+    tscList = []
+    # create the TriSurface list
+    allTs = []
+    allTs = hdf5Parser.keys()
+    try:
+        allTs.pop(allTs.index('mesh'))
+    except:
+        pass
+    allTs = func.sortNumStrList(allTs)
+    
+    tsc = TriSurfaceContainer.TriSurfaceContainer.createFromHdf5(hdf5Parser=hdf5Parser,
+                                                                 xViewBasis=xViewBasis,
+                                                                 yViewBasis=yViewBasis,
+                                                                 viewAnchor=viewAnchor,
+                                                                 srcBasisSrc=srcBasisSrc)
+    for ts in allTs:                                   
+        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,time=ts,projectedField=False)
+        tscList.append()
+        
+    return tscList                                        
