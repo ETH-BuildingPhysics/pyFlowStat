@@ -156,8 +156,8 @@ class TriSurfaceScalar(TriSurface.TriSurface):
 
     # class methods #
     #---------------#
-    def __call__(self,dim):
-        return self.component()
+    def __call__(self,dim=0):
+        return self.component(dim=dim)
         
     def component(self,dim=0):
         return self.s
