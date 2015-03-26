@@ -159,7 +159,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
     def __call__(self,dim):
         return self.component()
         
-    def component(self,dim):
+    def component(self,dim=0):
         return self.s
         
     def interpolate(self,x,y,dim=0):
