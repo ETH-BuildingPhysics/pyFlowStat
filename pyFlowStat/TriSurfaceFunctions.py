@@ -322,97 +322,10 @@ def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,extraVar=[],indexing
                 gsurfi.create_dataset(var,data=triSurfaceList[i][var])
         
     fwm.close()
-
-
-def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
-                                  xViewBasis,
-                                  yViewBasis=None,
-                                  viewAnchor=(0,0,0),
-                                  srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
-    '''
-    Helper function. See loadTriSurfaceVectorList_hdf5.
-    '''
-    # get mest data
-    gName = 'mesh'
-    ptsSrc = hdf5Parser[gName]['points'].value
-    triangles = hdf5Parser[gName]['faces'].value
-    
-    # create the transformation objects
-    if not yViewBasis:
-        n=TriSurfaceMesh.getN(ptsSrc)
-        yViewBasis=TriSurfaceMesh.getYBasis(n,xViewBasis)
-    
-    afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
-                                                      xViewBasis=xViewBasis,
-                                                      yViewBasis=yViewBasis,
-                                                      srcBasisSrc=srcBasisSrc)
-
-    # transform the points from the source basis to the target basis
-    ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
-    for i in range(ptsSrc.shape[0]):
-        ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
-    
-    tsm = TriSurfaceMesh.TriSurfaceMesh(x=ptsTgt[:,0],
-                                        y=ptsTgt[:,1],
-                                        z=ptsTgt[:,2],
-                                        triangles=triangles,
-                                        mask=None,
-                                        affTrans=afftrans,
-                                        linTrans=lintrans)
-    return tsm    
-
-
-def loadTriSurfaceVector_hdf5Parser(hdf5Parser,
-                                    varName,
-                                    time,
-                                    TriSurfaceMesh,
-                                    extraVar=[],
-                                    projectedField=False):
-    '''
-    Helper function. See loadTriSurfaceVectorList_hdf5.
-    '''
-    gName = str(time)
-    try:
-        time = hdf5Parser[gName]['time'].value
-        data = hdf5Parser[gName][varName].value 
-    except:
-        print('Field '+varName+' in time '+gName+' does not exist. Skip.')
-
-
-    #get vectors (in vecsTgt)
-    vecsSrc = data
-    vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))
-    if projectedField==True:
-        for i in range(vecsSrc.shape[0]):
-            vecsTgt[i,:] = TriSurfaceMesh.lintrans.srcToTgt(vecsSrc[i,:])
-    else:
-        vecsTgt = vecsSrc
-    
-    tsv = TriSurfaceVector.TriSurfaceVector(vx=vecsTgt[:,0],
-                                            vy=vecsTgt[:,1],
-                                            vz=vecsTgt[:,2],
-                                            time=time,
-                                            triSurfaceMesh=TriSurfaceMesh,
-                                            projectedField=projectedField,
-                                            interpolation=None,
-                                            kind=None,)
-    if len(extraVar)!=0 and extraVar!='all':
-        for var in extraVar:
-            tsv.data[var] = hdf5Parser[gName][var].value
-    elif extraVar=='all':
-        extraKeys = hdf5Parser[gName].keys()
-        extraKeys.pop(extraKeys.index(varName))
-        extraKeys.pop(extraKeys.index('time'))
-        for var in extraKeys:
-            tsv.data[var] = hdf5Parser[gName][var].value
-        
-    return tsv
-
-
+ 
 def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
                                         varName,
                                         TriSurfaceMesh,
-                                        extraVar=[],
                                         projectedField=False):
     '''
     Helper function. See loadTriSurfaceVectorList_hdf5.
@@ -427,16 +340,12 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
         pass
     
     for key in keys:
-        tsv = loadTriSurfaceVector_hdf5Parser(hdf5Parser=hdf5Parser,
-                                              varName=varName,
-                                              time=key,
-                                              TriSurfaceMesh=TriSurfaceMesh,
-                                              extraVar=extraVar,
-                                              projectedField=projectedField)
-        
-        
+        tsv = TriSurfaceVector.TriSurfaceVector.readFromHdf5(hdf5Parser=hdf5Parser,
+                                                             varName=varName,
+                                                             triSurfaceMesh=TriSurfaceMesh,
+                                                             time=key,
+                                                             projectedField=projectedField)
         triSurfaceList.append(tsv)
-        
         
     return triSurfaceList
 
@@ -447,7 +356,6 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
                                   yViewBasis=None,
                                   viewAnchor=(0,0,0),
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                                  extraVar=[],
                                   projectedField=False):
     '''
     Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
@@ -470,10 +378,6 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
         *srcBasisSrc*: python array of shape=3x3.
          Default=[[1,0,0],[0,1,0],[0,0,1]].
          
-        *extraVar*: python list of string or string only for 'all'.
-         Specify if more extra variable must be loaded. If extraVar='all', all
-         the variable are loaded. Default=[], no extra var
-         
         *projectedField*: bool.
          Default=False.
     
@@ -487,17 +391,16 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
     fr = h5py.File(hdf5file, 'r')
     
     # load the mesh
-    tsm = loadTriSurfaceMesh_hdf5Parser(hdf5Parser=fr,
-                                        viewAnchor=viewAnchor,
-                                        xViewBasis=xViewBasis,
-                                        yViewBasis=yViewBasis,
-                                        srcBasisSrc=srcBasisSrc)
+    tsm = TriSurfaceMesh.TriSurfaceMesh.readFromHdf5(hdf5Parser=fr,
+                                                     xViewBasis=xViewBasis,
+                                                     yViewBasis=yViewBasis,
+                                                     viewAnchor=viewAnchor,
+                                                     srcBasisSrc=srcBasisSrc)
     
    
     tsvList = loadTriSurfaceVectorList_hdf5Parser(hdf5Parser=fr,
                                                   varName=varName,
                                                   TriSurfaceMesh=tsm,
-                                                  extraVar=extraVar,
                                                   projectedField=projectedField)  
    
     fr.close()    
