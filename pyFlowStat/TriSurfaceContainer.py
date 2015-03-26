@@ -39,21 +39,22 @@ class TriSurfaceContainer(object):
         return c
     
     @classmethod
-    def readFromFoamFile(cls,pathname,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],loadFields=True):
+    def createFromFoamFolder(cls,pathname,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),time=0.0,names=[]):
+        '''
+        This function creates a TriSurfaceContainer for an OpenFOAM sampled surface folder (e.g./postProcessing/surfaces/0/planeXY/) and loads all the fields.
+        '''
         pointsFile=os.path.join(pathname,'points')
         facesFile=os.path.join(pathname,'faces')
         tsm=TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
-                                                           facesFile=facesFile,
-                                                           viewAnchor=viewAnchor,
-                                                           xViewBasis=xViewBasis,
-                                                           yViewBasis=yViewBasis,
-                                                           srcBasisSrc=srcBasisSrc)
+                                           facesFile=facesFile,
+                                           viewAnchor=viewAnchor,
+                                           xViewBasis=xViewBasis,
+                                           yViewBasis=yViewBasis)
         
         c=cls(triSurfaceMesh=tsm)
         c.data['name']=os.path.basename(pathname)
         c.data['pathname']=pathname
-        if loadFields:
-            c.addFieldFromFoamFile()
+        c.addFieldFromFoamFile(names=names,time=time)
         return c
         
     @property
@@ -71,19 +72,25 @@ class TriSurfaceContainer(object):
             raise ValueError("triSurfaceMesh is not identical")
         self.fields[name]=triSurface
         
-    def addFoamScalarField(self,field,name,time,projectedField=False):
-        tSurf=TriSurfaceScalar.readFromFoamFile(field,self.triSurfaceMesh,time=time,projectedField=projectedField)
+    def addFoamScalarField(self,fieldpath,name,time,projectedField=False):
+        '''
+        '''
+        tSurf=TriSurfaceScalar.readFromFoamFile(fieldpath,self.triSurfaceMesh,time=time,projectedField=projectedField)
         self.fields[name] = tSurf
     
-    def addFoamVectorField(self,field,name,time,projectedField=False):
-        tSurf=TriSurfaceVector.readFromFoamFile(field,self.triSurfaceMesh,time=time,projectedField=projectedField)
+    def addFoamVectorField(self,fieldpath,name,time,projectedField=False):
+        '''
+        '''
+        tSurf=TriSurfaceVector.readFromFoamFile(fieldpath,self.triSurfaceMesh,time=time,projectedField=projectedField)
         self.fields[name] = tSurf
                                
-    def addFoamSymmTensorField(self,field,name,time,projectedField=False):
-        tSurf=TriSurfaceSymmTensor.readFromFoamFile(field,self.triSurfaceMesh,time=time,projectedField=projectedField)           
+    def addFoamSymmTensorField(self,fieldpath,name,time,projectedField=False):
+        '''
+        '''
+        tSurf=TriSurfaceSymmTensor.readFromFoamFile(fieldpath,self.triSurfaceMesh,time=time,projectedField=projectedField)           
         self.fields[name] = tSurf
         
-    def addFieldFromFoamFile(self,surfacepath='',names=[],time=0):
+    def addFieldFromFoamFolder(self,surfacepath='',names=[],time=0.0):
         '''
         '''
         if surfacepath=='':
@@ -114,5 +121,5 @@ class TriSurfaceContainer(object):
                 if key in names:
                     self.addFoamSymmTensorField(field,key,time)
         else:
-            raise IOError
+            raise IOError("Folder does not exist")
         
