@@ -211,6 +211,24 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
             return self.tyz
         if dim==5:
             return self.tzz
+            
+    def interpolate(self,x,y,dim):
+        try:
+            if dim==0:
+                return self.txx_i(x,y)
+            if dim==1:
+                return self.txy_i(x,y)
+            if dim==2:
+                return self.txz_i(x,y)
+            if dim==3:
+                return self.tyy_i(x,y)
+            if dim==4:
+                return self.tyz_i(x,y)
+            if dim==5:
+                return self.tzz_i(x,y)
+        except:
+            raise ValueError('this method needs interpolators. Please run',
+                                 'method "addInterpolator" first.')
 #    def rawVars(self):
 #        '''
 #        Return the scalar field defined in the source coordinate system.
@@ -258,18 +276,28 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
 #    # class methods - adders #
 #    #------------------------#
 #        
-#    def addInterpolator(self,interpolation='cubic', kind='geom'):
-#        '''
-#        Add interpolator Object.
-#        '''
-#        self.interType = interpolation
-#        self.interKind = kind
-#        if self.interType=='cubic':
-#            self.s_i = tri.CubicTriInterpolator(self.triangulation, self.s, kind=self.interKind)
-#        elif self.interType=='linear':
-#            self.s_i = tri.LinearTriInterpolator(self.triangulation, self.s)
-#        else:
-#            raise ValueError('Interpolation must be "cubic" or "linear".')
+    def addInterpolator(self,interpolation='cubic', kind='geom'):
+        '''
+        Add interpolator Object to the vector field.
+        '''
+        self.interType = interpolation
+        self.interKind = kind
+        if self.interType=='cubic':
+            self.txx_i = tri.CubicTriInterpolator(self.triangulation, self.txx, kind=self.interKind)
+            self.txy_i = tri.CubicTriInterpolator(self.triangulation, self.txy, kind=self.interKind)
+            self.txz_i = tri.CubicTriInterpolator(self.triangulation, self.txz, kind=self.interKind)
+            self.tyy_i = tri.CubicTriInterpolator(self.triangulation, self.tyy, kind=self.interKind)
+            self.tyz_i = tri.CubicTriInterpolator(self.triangulation, self.tyz, kind=self.interKind)
+            self.tzz_i = tri.CubicTriInterpolator(self.triangulation, self.tzz, kind=self.interKind)
+        elif self.interType=='linear':
+            self.txx_i = tri.LinearTriInterpolator(self.triangulation, self.txx)
+            self.txy_i = tri.LinearTriInterpolator(self.triangulation, self.txy)
+            self.txz_i = tri.LinearTriInterpolator(self.triangulation, self.txz)
+            self.tyy_i = tri.LinearTriInterpolator(self.triangulation, self.tyy)
+            self.tyz_i = tri.LinearTriInterpolator(self.triangulation, self.tyz)
+            self.tzz_i = tri.LinearTriInterpolator(self.triangulation, self.tzz)
+        else:
+            raise ValueError('Interpolation must be "cubic" or "linear".')
 #            
 #
 #    def addGradient(self):

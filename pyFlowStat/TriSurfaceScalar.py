@@ -159,6 +159,13 @@ class TriSurfaceScalar(TriSurface.TriSurface):
     def component(self,dim):
         return self.s
         
+    def interpolate(self,x,y,dim=0):
+        try:
+            return self.s_i(x,y)
+        except:
+            raise ValueError('this method needs interpolators. Please run',
+                                 'method "addInterpolator" first.')
+        
     def rawVars(self):
         '''
         Return the scalar field defined in the source coordinate system.

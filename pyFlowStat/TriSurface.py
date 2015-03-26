@@ -102,6 +102,11 @@ class TriSurface(object):
         '''
         raise NotImplementedError('TriSurface subclasses should implement component.')
         
+    def interpolate(self,x,y,dim):
+        '''
+        '''
+        raise NotImplementedError('TriSurface subclasses should implement interpolate.')
+        
     def rawPoints(self):
         '''
         Return the grid points in the source coordinate system.

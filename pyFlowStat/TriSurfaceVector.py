@@ -217,6 +217,18 @@ class TriSurfaceVector(TriSurface.TriSurface):
         if dim==2:
             return self.vz
             
+    def interpolate(self,x,y,dim):
+        try:
+            if dim==0:
+                return self.vx_i(x,y)
+            if dim==1:
+                return self.vy_i(x,y)
+            if dim==2:
+                return self.vz_i(x,y)
+        except:
+            raise ValueError('this method needs interpolators. Please run',
+                                 'method "addInterpolator" first.')
+            
     def rawVars(self):
         '''
         Return the vector field defined the source coordinate system.
