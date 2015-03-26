@@ -323,25 +323,30 @@ def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,extraVar=[],indexing
 
 
 def loadTriSurfaceMesh_hdf5Parser(hdf5Parser,
-                                  viewAnchor,
                                   xViewBasis,
-                                  yViewBasis,
+                                  yViewBasis=None,
+                                  viewAnchor=(0,0,0),
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
     '''
     Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
+    # get mest data
+    gName = 'mesh'
+    ptsSrc = hdf5Parser[gName]['points'].value
+    triangles = hdf5Parser[gName]['faces'].value
+    
     # create the transformation objects
+    if not yViewBasis:
+        n=TriSurfaceMesh.getN(ptsSrc)
+        yViewBasis=TriSurfaceMesh.getYBasis(n,xViewBasis)
+    
+    print(yViewBasis)
     afftrans, lintrans = TriSurface.getTransformation(viewAnchor=viewAnchor,
                                                       xViewBasis=xViewBasis,
                                                       yViewBasis=yViewBasis,
                                                       srcBasisSrc=srcBasisSrc)
-  
-    # get mest data
-    gName = 'mesh'
-    points = hdf5Parser[gName]['points'].value
-    triangles = hdf5Parser[gName]['faces'].value
-    
-    ptsSrc = points
+
+    # transform the points from the source basis to the target basis
     ptsTgt = np.zeros((ptsSrc.shape[0],ptsSrc.shape[1]))
     for i in range(ptsSrc.shape[0]):
         ptsTgt[i,:] = afftrans.srcToTgt(ptsSrc[i,:])
@@ -363,6 +368,7 @@ def loadTriSurfaceVector_hdf5Parser(hdf5Parser,
                                     extraVar=[],
                                     projectedField=False):
     '''
+    Helper function. See loadTriSurfaceVectorList_hdf5.
     '''
     gName = str(time)
     try:
@@ -389,9 +395,16 @@ def loadTriSurfaceVector_hdf5Parser(hdf5Parser,
                                             projectedField=projectedField,
                                             interpolation=None,
                                             kind=None,)
-    if len(extraVar)!=0:
+    if len(extraVar)!=0 and extraVar!='all':
         for var in extraVar:
-            tsv.data[var] = hdf5Parser[gName][var].value 
+            tsv.data[var] = hdf5Parser[gName][var].value
+    elif extraVar=='all':
+        extraKeys = hdf5Parser[gName].keys()
+        extraKeys.pop(extraKeys.index(varName))
+        extraKeys.pop(extraKeys.index('time'))
+        for var in extraKeys:
+            tsv.data[var] = hdf5Parser[gName][var].value
+        
     return tsv
 
 
@@ -429,17 +442,39 @@ def loadTriSurfaceVectorList_hdf5Parser(hdf5Parser,
 
 def loadTriSurfaceVectorList_hdf5(hdf5file,
                                   varName,
-                                  viewAnchor,
                                   xViewBasis,
-                                  yViewBasis,
-                                  extraVar=[],
+                                  yViewBasis=None,
+                                  viewAnchor=(0,0,0),
                                   srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
+                                  extraVar=[],
                                   projectedField=False):
     '''
     Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
     object associated to the surfaces is also returned.
     
     Arguments:
+        *hdf5file*: python string.
+         Name or path to the source hdf5 file.
+         
+        *varName*: python string.
+         Name of the variable to load.
+         
+        *xViewBasis*: python array of shape=3.
+         X direction of the surface, defined in the source base.
+         
+        *viewAnchor*: python array of shape=3.
+         Origin of the surface coordinate system, defined in the source base.
+         Default=(0,0,0)
+         
+        *srcBasisSrc*: python array of shape=3x3.
+         Default=[[1,0,0],[0,1,0],[0,0,1]].
+         
+        *extraVar*: python list of string or string only for 'all'.
+         Specify if more extra variable must be loaded. If extraVar='all', all
+         the variable are loaded. Default=[], no extra var
+         
+        *projectedField*: bool.
+         Default=False.
     
     Returns:
         *tsvList*: python list with N entries
