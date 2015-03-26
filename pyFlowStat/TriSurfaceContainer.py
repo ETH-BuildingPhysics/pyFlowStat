@@ -54,7 +54,7 @@ class TriSurfaceContainer(object):
         c=cls(triSurfaceMesh=tsm)
         c.data['name']=os.path.basename(pathname)
         c.data['pathname']=pathname
-        c.addFieldFromFoamFile(names=names,time=time)
+        c.addFieldFromFoamFolder(names=names,time=time)
         return c
         
     @property
