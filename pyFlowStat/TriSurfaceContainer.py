@@ -35,7 +35,8 @@ class TriSurfaceContainer(object):
     @classmethod
     def createFromTriSurface(cls,triSurface,name):
         c=cls(triSurfaceMesh=triSurface.triSurfaceMesh)
-        self.fields[name]=triSurface
+        c.fields[name]=triSurface
+        return c
     
     @classmethod
     def readFromFoamFile(cls,pathname,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],loadFields=True):

@@ -824,7 +824,7 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/self.dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tsv.triangulation
+            triang = tss.triangulation
             scalar_i=self.interpolateField(tss.s,grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             print 'adding scalar',varName
             self.data[varName]=np.flipud(scalar_i)
@@ -925,7 +925,7 @@ class Surface(object):
             cellsY=int((MaxY-MinY)/self.dy)
             #print cellsX,cellsY
             grid_y, grid_x = np.mgrid[MinY:MaxY:np.complex(0,cellsY),MinX:MaxX:np.complex(0,cellsX)]
-            triang = tsv.triangulation
+            triang = tsst.triangulation
             uu_bar=self.interpolateField(tsst.txx, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             uv_bar=self.interpolateField(tsst.txy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
             uw_bar=self.interpolateField(tsst.tyy, grid_x, grid_y, triang, method=interpolationMethod, kind=kind)
@@ -1065,7 +1065,7 @@ class IM7(object):
         BufferFormat_t["-4"]='BUFFER_FORMAT_WORD'
         return BufferFormat_t[str(self.myBuffer.image_sub_type)]
         
-    def getData(self,frame):
+    def getData(self,frame,v=False):
         s=None
         if self.myBuffer.image_sub_type < 0:
             if v:

@@ -1,6 +1,4 @@
-import sys
 import numpy as np
-import pyFlowStat
 from pyFlowStat import Statistics
 from pyFlowStat import Math
 from pyFlowStat import TurbulenceTools as tt
@@ -96,7 +94,7 @@ def xcut_min(r11):
     return len(r11)-1
     
 def xcut_value(r11,value=0.0):
-    lag=range(len(r11))
+    #lag=range(len(r11))
     for i in range(1,len(r11)):
         if r11[i]<value:
             xi=Math.interpy_lin_1d(i-1,i,r11[i-1],r11[i],value)
@@ -104,13 +102,13 @@ def xcut_value(r11,value=0.0):
     return len(r11)-1
     
 def xcut_conv(N,r11,z=1.96):
-    lag=range(len(r11))
+    #lag=range(len(r11))
     for i in range(1,len(r11)):
         varr=Statistics.VarR_k(N,r11,i,z=z)
         if r11[i]<varr:
             xi=Math.interpy_lin_1d(i-1,i,r11[i-1],r11[i],varr)
             return xi
-    return nan
+    return np.nan
     
 def removeAdd(N,r11,z=1.96):
     r_out=remove(N,r11,z=z)

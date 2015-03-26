@@ -314,45 +314,45 @@ def getTransformation(viewAnchor,
 
     
 def mat(field):
-        '''
-        return a symmTensor field (shape=[N,6]) or Tensor field (shape=[N,9])
-        as a "real" tensor field (shape=[N,3,3]). if "field" is a vector or a
-        scalar, nothing is done and return as given.
-        
-        In the TriSurface ecosystem, a symmTenor field is stored as a line to
-        save memory. For consistency, a Tensor field is also stored as a line.
-        Nevertheless this memory efficient storing is incompatible with linear
-        algebra calculus. Therefore the function mat() converts a tensor like
-        field into "real" Tensor field.
-        
-        Arguments:
-            *field*: numpy array. Shape=[N,d], with d an int.
-             Field to convert.
-             
-        Returns:
-            *realField* numpy array. shape=[N,3,3]
-             Return the field as a "real" tensor. If "field" is not tensor
-             like, the field is returned unmodified.
-        '''
-        tensorType = len(field[0])
-        
-        if tensorType==6:
-            tgt = np.zeros([field.shape[0],3,3])   # target field
-            # fill line by line
-            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
-            tgt[:,1,:] = np.array([field[:,1],field[:,3],field[:,4]]).T  # add index 21,22,23 to tgt
-            tgt[:,2,:] = np.array([field[:,2],field[:,4],field[:,5]]).T # add index 31,32,33 to tgt
-            return tgt
-        elif tensorType==9:
-            tgt = np.zeros([field.shape[0],3,3])   # target field
-            # fill line by line
-            tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
-            tgt[:,1,:] = field[:,3:6]  # add index 21,22,23 to tgt
-            tgt[:,2,:] = field[:,6:9] # add index 31,32,33 to tgt
-            return tgt
-        else:
-            return field
-   
+    '''
+    return a symmTensor field (shape=[N,6]) or Tensor field (shape=[N,9])
+    as a "real" tensor field (shape=[N,3,3]). if "field" is a vector or a
+    scalar, nothing is done and return as given.
+    
+    In the TriSurface ecosystem, a symmTenor field is stored as a line to
+    save memory. For consistency, a Tensor field is also stored as a line.
+    Nevertheless this memory efficient storing is incompatible with linear
+    algebra calculus. Therefore the function mat() converts a tensor like
+    field into "real" Tensor field.
+    
+    Arguments:
+        *field*: numpy array. Shape=[N,d], with d an int.
+         Field to convert.
+         
+    Returns:
+        *realField* numpy array. shape=[N,3,3]
+         Return the field as a "real" tensor. If "field" is not tensor
+         like, the field is returned unmodified.
+    '''
+    tensorType = len(field[0])
+    
+    if tensorType==6:
+        tgt = np.zeros([field.shape[0],3,3])   # target field
+        # fill line by line
+        tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+        tgt[:,1,:] = np.array([field[:,1],field[:,3],field[:,4]]).T  # add index 21,22,23 to tgt
+        tgt[:,2,:] = np.array([field[:,2],field[:,4],field[:,5]]).T # add index 31,32,33 to tgt
+        return tgt
+    elif tensorType==9:
+        tgt = np.zeros([field.shape[0],3,3])   # target field
+        # fill line by line
+        tgt[:,0,:] = field[:,0:3]  # add index 11,12,13 to tgt
+        tgt[:,1,:] = field[:,3:6]  # add index 21,22,23 to tgt
+        tgt[:,2,:] = field[:,6:9] # add index 31,32,33 to tgt
+        return tgt
+    else:
+        return field
+       
          
 def unmat(field):
     '''
