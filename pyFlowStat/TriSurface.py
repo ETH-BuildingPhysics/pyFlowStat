@@ -278,8 +278,28 @@ class TriSurface(object):
         the dvidz does not exist.
         '''   
         raise NotImplementedError('TriSurface subclasses should implement addGradient.')
-        
-        
+
+
+
+class TriSurfaceDict(dict): 
+    '''
+    A class which has the same behavior than a classic python dict(), but it
+    can be filled only with object of type TriSurface.
+    
+    Usage:
+        >>> tsDict = TriSurfaceDict()
+        >>> tsDict['U'] = myTriSurfaceVectorObject
+        >>> tsDict['T'] = myTriSurfaceScalarObject
+        >>> tsDict['afloat'] = 12,927
+        TypeError: item is not of type "TriSurface"
+    '''      
+    def __setitem__(self, key, item):
+        if isinstance(item,TriSurface):
+            super(TriSurfaceDict,self).__setitem__(key, item)
+        else:
+            raise TypeError('Item is not of type "TriSurface"')  
+            
+ 
 def getTransformation(viewAnchor,
                       xViewBasis,
                       yViewBasis,

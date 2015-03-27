@@ -7,6 +7,7 @@ import glob
 #import matplotlib.tri as tri
 import matplotlib.tri as tri
 
+from pyFlowStat.TriSurface import TriSurfaceDict
 from pyFlowStat.TriSurfaceVector import TriSurfaceVector
 from pyFlowStat.TriSurfaceScalar import TriSurfaceScalar
 from pyFlowStat.TriSurfaceSymmTensor import TriSurfaceSymmTensor
@@ -26,7 +27,7 @@ class TriSurfaceContainer(object):
         base constructor.
         '''
         self.triSurfaceMesh = triSurfaceMesh
-        self.fields=dict()
+        self.fields=TriSurfaceDict()
         self.data=dict()
         
     @classmethod
@@ -110,6 +111,13 @@ class TriSurfaceContainer(object):
         Getter for key "key" on member dictionary "fields"
         '''
         return self.fields[key]
+        
+    def __setitem__(self, key, item):
+        '''
+        Add an existing TriSurface<type> (for example: TriSurfaceScalar or 
+        TriSurfaceVector) to TriSurfaceContainer.
+        '''
+        self.addTriSurface(item,key)
 
         
     def addTriSurface(self,triSurface,name):
@@ -221,4 +229,3 @@ class TriSurfaceContainer(object):
             except:
                 raise IOError('time "'+gTime+'" and/or name "'+name+'" does not '
                               'exist as key in the HDF5 parser.')
-        
