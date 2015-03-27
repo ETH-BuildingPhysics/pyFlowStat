@@ -416,8 +416,10 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
                                            projectedField=False):
     '''
     '''
+    # create the TriSurfaceContainer list
     tscList = []
-    # create the TriSurface list
+    
+    # get a valid list of all time step 
     allTs = []
     allTs = hdf5Parser.keys()
     try:
@@ -426,13 +428,17 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
         pass
     allTs = func.sortNumStrList(allTs)
     
-    tsc = TriSurfaceContainer.TriSurfaceContainer.createFromHdf5(hdf5Parser=hdf5Parser,
-                                                                 xViewBasis=xViewBasis,
-                                                                 yViewBasis=yViewBasis,
-                                                                 viewAnchor=viewAnchor,
-                                                                 srcBasisSrc=srcBasisSrc)
-    for ts in allTs:                                   
-        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,time=ts,projectedField=False)
+    # load the mesh
+    tsm = TriSurfaceMesh.TriSurfaceMesh.readFromHdf5(hdf5Parser=hdf5Parser,
+                                                     xViewBasis=xViewBasis,
+                                                     yViewBasis=yViewBasis,
+                                                     viewAnchor=viewAnchor,
+                                                     srcBasisSrc=srcBasisSrc)
+    
+    # TriSurfaceContainer list
+    for ts in allTs: 
+        tsc = TriSurfaceContainer.TriSurfaceContainer(tsm)                                  
+        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,time=ts,projectedField=projectedField)
         tscList.append(tsc)
         
     return tscList                                        

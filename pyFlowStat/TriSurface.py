@@ -142,24 +142,47 @@ class TriSurface(object):
         return self.triSurfaceMesh.area()
         
         
-    def surfIntegralTrap(self,field):
+    def trapz(self,dim):
         '''
-        Return the surface integral of field. It use the trapezoidal rule
-        on each triangle to compute the intergral. Therefore, it is a first
-        order method.
+        Return the surface integrate of a given componant using the composite
+        trapezoidal rule.
         
-        Argument:
-            *field*: numpy array of shape (N,)
-             field to integrate. 
+        Aguments:
+            *dim*: int
+             Componant on which the integral is done.
+             
+        Returns:
+            *trapz*: float
+             Definite integral as approximated by trapezoidal rule.        
         '''
         xtri = self.x[self.triangles]
         ytri = self.y[self.triangles]
-        ztri = field[self.triangles]
+        ztri = self.component(dim)[self.triangles]
         
         return np.sum( (0.5*(  (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
                               +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
                               +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])))
                            *(ztri[:,0]+ztri[:,1]+ztri[:,2])/3.0 )
+        
+        
+#    def surfIntegralTrap(self,field):
+#        '''
+#        Return the surface integral of field. It use the trapezoidal rule
+#        on each triangle to compute the intergral. Therefore, it is a first
+#        order method.
+#        
+#        Argument:
+#            *field*: numpy array of shape (N,)
+#             field to integrate. 
+#        '''
+#        xtri = self.x[self.triangles]
+#        ytri = self.y[self.triangles]
+#        ztri = field[self.triangles]
+#        
+#        return np.sum( (0.5*(  (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
+#                              +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
+#                              +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])))
+#                           *(ztri[:,0]+ztri[:,1]+ztri[:,2])/3.0 )
                            
      
     def rawVars(self):
