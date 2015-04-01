@@ -72,9 +72,11 @@ import numpy as np
 import scipy.fftpack as spfft
 import scipy.signal as spsig
 import scipy as sp
-import pylab as pl
+#import pylab as pl
 from scipy.optimize import curve_fit
 from scipy.integrate import simps
+
+from pyFlowStat import Statistics as stat
 
 #===========================================================================#
 # functions
@@ -166,7 +168,6 @@ def smooth(x,window_len=5,window='hanning'):
             w=eval('np.'+window+'(window_len)')
     y=np.convolve(w/w.sum(),s,mode='same')
     return y[window_len:-window_len+1]
-    
 #def movingavesmart(x,window_len,window='flat'):
 #    '''
 #    smooth the data using a window with requested size.
@@ -279,7 +280,7 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
         res = res[lags] / (float(N)-abs(np.arange(-N+1, N)))[lags]
     elif norm == 'coeff':
         Nf = float(N)
-        rms = pl.rms_flat(x) * pl.rms_flat(y)
+        rms = stat.rms(x) * stat.rms(y)
         #rms = (np.mean(x**2)*np.mean(y**2))**(0.5)
         res = res[lags] / rms / Nf
     else:
@@ -359,7 +360,7 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False,oneSided=Tru
         res = res[lags] / (float(N)-abs(np.arange(-N+1, N)))[lags]
     elif norm == 'coeff':
         Nf = float(N)
-        rms = pl.rms_flat(x) * pl.rms_flat(y)
+        rms = stat.rms(x) * stat.rms(y)
         if rms==0:
             rms=1
         #rms = (np.mean(x**2)*np.mean(y**2))**(0.5)
@@ -575,7 +576,7 @@ def lowpass(data, freq, df, corners=4, zerophase=False,axis=-1):
         return spsig.lfilter(b, a, data,axis=axis)
 
 
-def highpass(data, freq, df, corners=4, zerophase=False,axis=-1):
+def highpass(data, freq, df, corners=4, zerophase=False):
     """
     Butterworth-Highpass Filter.
 

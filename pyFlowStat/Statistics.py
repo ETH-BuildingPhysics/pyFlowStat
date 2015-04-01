@@ -72,4 +72,6 @@ def SE_r_k(N,r11,k):
     tmpsum=np.sum(rsq[1:(k-1)+1])
     #tmpsum=sum(r**2 for r in r11[:k])
     return np.sqrt(1.0/N*(1.0+2.0*tmpsum))
-    
+   
+def rms(x):
+    return np.sqrt(np.mean(x**2))
