@@ -229,7 +229,7 @@ class PointProbe(object):
     def probeVarType(self):
         '''
         '''
-        if self.probeVar[0].shape==(1,):
+        if self.probeVar[0].shape==():
             return 'scalar'
         elif self.probeVar[0].shape==(3,):
             return 'vector'
