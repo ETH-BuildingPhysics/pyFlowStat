@@ -564,21 +564,12 @@ class PointProbe(object):
 
 
         '''
-        self.data['Uoo_c']=np.zeros(self.data['U'].shape)
-
-        self.data['Uoo_c'][0,0]=self.data['U'][0,0]
-        self.data['Uoo_c'][0,1]=self.data['U'][0,1]
-        self.data['Uoo_c'][0,2]=self.data['U'][0,2]
-
-        for i in range(1,len(self.probeTimes)):
-            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i-1,0]+self.data['U'][i,0]
-            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i-1,1]+self.data['U'][i,1]
-            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i-1,2]+self.data['U'][i,2]
-
-        for i in range(1,len(self.probeTimes)):
-            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i,0]/(i+1)
-            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i,1]/(i+1)
-            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i,2]/(i+1)
+        N = self.probeTimes.shape[0]
+        div = np.arange(1,N+1)
+        self.data['Uoo_cf'] = np.cumsum(self.probeVar,axis=0)
+        for i in range(3):
+            self.data['Uoo_cf'][:,i] = self.data['Uoo_cf'][:,i]/div
+            
 
     def lengthScale(self):
         '''
