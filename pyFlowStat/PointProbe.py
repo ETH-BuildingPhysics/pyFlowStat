@@ -566,9 +566,9 @@ class PointProbe(object):
         '''
         N = self.probeTimes.shape[0]
         div = np.arange(1,N+1)
-        self.data['Uoo_cf'] = np.cumsum(self.probeVar,axis=0)
+        self.data['Uoo_c'] = np.cumsum(self.probeVar,axis=0)
         for i in range(3):
-            self.data['Uoo_cf'][:,i] = self.data['Uoo_cf'][:,i]/div
+            self.data['Uoo_c'][:,i] = self.data['Uoo_c'][:,i]/div
             
 
     def lengthScale(self):
