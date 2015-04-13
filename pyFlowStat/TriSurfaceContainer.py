@@ -32,6 +32,8 @@ class TriSurfaceContainer(object):
         
     @classmethod
     def createFromTriSurface(cls,triSurface,name):
+        '''
+        '''
         c=cls(triSurfaceMesh=triSurface.triSurfaceMesh)
         c.fields[name]=triSurface
         return c
@@ -39,7 +41,35 @@ class TriSurfaceContainer(object):
     @classmethod
     def createFromFoamFolder(cls,pathname,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),time=0.0,names=[]):
         '''
-        This function creates a TriSurfaceContainer for an OpenFOAM sampled surface folder (e.g./postProcessing/surfaces/0/planeXY/) and loads all the fields.
+        This function creates a TriSurfaceContainer for an OpenFOAM sampled
+        surface folder (e.g./postProcessing/surfaces/0/planeXY/) and loads all
+        the fields.
+        
+        Arguments:
+            *pathname*: string.
+             Path ot the surface (e.g:/postProcessing/surfaces/0/planeXY/)
+             
+            *xViewBasis*: list or numpy.array of shape=3.
+             x direction of the surface defined in the OpenFOAM coordinate
+             system.
+             
+            *yViewBasis*: list or numpy.array of shape=3.
+             y direction of the surface defined in the OpenFOAM coordinate
+             system.Automatically cacluated with the normal of the surface if
+             set to None. Default=None
+             
+            *viewAnchor*: list or numpy.array of shape=3.
+             Anchor location of the surface defined in the OpenFOAM coordinate
+             system. Default=(0,0,0)
+             
+            *time* float.
+             timeStep of the surface. Default=0
+             
+            *names*: python list
+             List of surface to load in the container.
+             
+        Returns:
+            *tsc*: pyflowStat.TriSurfaceContainer object 
         '''
         pointsFile=os.path.join(pathname,'points')
         facesFile=os.path.join(pathname,'faces')
@@ -164,9 +194,9 @@ class TriSurfaceContainer(object):
             surfacepath=self.data['pathname']
         
         if os.path.exists(surfacepath):
-            scalarFields=glob.glob(os.path.join(surfacepath,'scalarField\*'))
-            vectorFields=glob.glob(os.path.join(surfacepath,'vectorField\*'))
-            symmTensorFields=glob.glob(os.path.join(surfacepath,'symmTensorField\*'))
+            scalarFields=glob.glob(os.path.join(surfacepath,'scalarField','*'))
+            vectorFields=glob.glob(os.path.join(surfacepath,'vectorField','*'))
+            symmTensorFields=glob.glob(os.path.join(surfacepath,'symmTensorField','*'))
             if len(names)<1:
                 for name in scalarFields:
                     names.append(os.path.basename(name))
@@ -190,8 +220,32 @@ class TriSurfaceContainer(object):
         else:
             raise IOError("Folder does not exist")
             
-    def addFieldFromHdf5(self,hdf5Parser,names=[],time=0,projectedField=False):
+    def addFieldFromHdf5(self,hdf5Parser,time,names=[],projectedField=False):
         '''
+        Add a list field stored in a hdf5 to the TriSurfaceContainer.
+        
+        Arguments:
+            *hdf5Parser*: h5py parser object.
+             Parser object of the source hdf5 file.
+             
+            *time*: python float.
+             The time to extract from the HDF5. If it does not exist, IOError
+             is returned.
+             
+            *names*: python list of string.
+             Name of the fields to extract from the HDF5. It can be a single
+             field (names=['oneField']) or multiple. if names=[], all the
+             fields are loaded. Default: names=[].
+             
+            *projectedField*: python bool
+             Project the fields in the surface coordinate system.
+             Default: projectedField=False.
+        
+        Usages:
+            >>> import h5py
+            >>> parser = h5py.File('myfile.h5','r')
+            >>> tsc = TriSurfaceContainer.createFromHdf5(parser,xViewBasis=[1,0,0])
+            >>> tsc.addFieldFromHdf5(parser,time=1.5,names=['U','S'])
         '''
         gTime = str(time)
         if len(names)==0:
