@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.gridspec as gridspec
 import numpy as np
 
-def plotEigenvals(myDMD,ax,k=1,idx=None,mark=False,cmap=plt.cm.jet):
+def plotEigenvals(myDMD,ax,k=1,idx=None,mark=False,cmap=plt.cm.jet,min_size=10.0,max_size=1000.0):
     ritz = myDMD.result['ritz_vals']**k
     norms = myDMD.result['mode_norms']
     norms_val=np.sqrt(norms)
@@ -24,8 +24,6 @@ def plotEigenvals(myDMD,ax,k=1,idx=None,mark=False,cmap=plt.cm.jet):
     circle2=plt.Circle((0,0),1.0,color='k',fill=False,zorder=1)
     ax.add_artist(circle2)
 
-    max_size=1000.0
-    min_size=10.0
     A=np.min(norms_val[idx_sorted])
     B=np.max(norms_val[idx_sorted])
     s=min_size + (norms_val[idx_sorted]-A)*(max_size-min_size)/(B-A)
@@ -37,7 +35,7 @@ def plotEigenvals(myDMD,ax,k=1,idx=None,mark=False,cmap=plt.cm.jet):
         s=min_size + (norms_val-A)*(max_size-min_size)/(B-A)
         ax.scatter(np.real(ritz)[idx_sorted],np.imag(ritz)[idx_sorted],facecolors='none',edgecolors='orange',s=s[idx_sorted]+10,lw = 1.0,zorder=3)
         idx_sorted2=np.argsort(norms)
-        ax.scatter(np.real(ritz)[idx_sorted2],np.imag(ritz)[idx_sorted2],c=norms_val[idx_sorted2],edgecolors='gray',s=s[idx_sorted2],cmap=cmap,zorder=2,lw=0.5)
+        ax.scatter(np.real(ritz)[idx_sorted2],np.imag(ritz)[idx_sorted2],c=norms_val[idx_sorted2],edgecolors='none',s=s[idx_sorted2],cmap=cmap,zorder=2,lw=0.5)
     else:
         ax.scatter(np.real(ritz)[idx_sorted],np.imag(ritz)[idx_sorted],c=norms_val[idx_sorted],edgecolors='none',s=s,zorder=2,cmap=cmap)
     
