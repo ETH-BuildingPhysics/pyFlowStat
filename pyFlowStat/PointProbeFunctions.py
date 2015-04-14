@@ -11,7 +11,7 @@ Functions included:
 #=============================================================================#
 # load modules
 #=============================================================================#
-#import sys
+import sys
 #import re
 #import os
 #import csv
@@ -169,6 +169,7 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
 
         return pt
     except:
+        print "Unexpected error:", sys.exc_info()[0]
         return None
  
 def createFromArray(dt,u,v,w,doDetrend=True):
