@@ -99,19 +99,25 @@ def modeAnalyzerGrowth(myDMD_Uy,k=(0,100),m=(0,500),vmin=-0.1,vmax=0.1,xscale='l
         #idx=[myDMD_Uy.getIdxforFrq(65.0)]
         
         if sorting==0:
-            idx=[idx_pos[m]]
+            idx_sel=myDMD_Uy.getFilteredIndex(min_norm=min_norm,min_abs=min_abs)[::-1]
+            idx_sel=[idx for idx in idx_pos if idx in idx_sel]
+            idx=[idx_sel[m]]
+            
         elif sorting==1:
             #idx=[myDMD_Uy.getGrowthSortedIdx()[::-1][m]]
             idx_norm=np.argsort(normList)[::-1]
-            
+            idx_sel=idx_norm
 
             #idx=[idx_stab[m]]
             idx=[idx_norm[m]]
         elif sorting==2:
             idx_stab=np.argsort(np.abs(np.log(stabList)))
+            idx_sel=idx_stab
             idx=[idx_stab[m]]
         elif sorting==3:
             idx_none=np.linspace(0,len(normList),len(normList)+1)
+            idx_sel=idx_none
+            print idx_sel
             idx=[idx_none[m]]
         elif sorting==4:
             idx_sel=myDMD_Uy.getFilteredIndex(min_norm=min_norm,min_abs=min_abs)[::-1]
@@ -123,6 +129,7 @@ def modeAnalyzerGrowth(myDMD_Uy,k=(0,100),m=(0,500),vmin=-0.1,vmax=0.1,xscale='l
             out=out[component]
         ax1.imshow(np.real(out),vmin=vmin,vmax=vmax,extent=extent)
         ax1.set_title(str(idx[0]))
+        #md=myDMD_Uy.getMode(idx[0],component=component)
         md=myDMD_Uy.getMode(idx[0],component=component)
         print md.shape
         if len(md.shape)>2:
@@ -137,9 +144,10 @@ def modeAnalyzerGrowth(myDMD_Uy,k=(0,100),m=(0,500),vmin=-0.1,vmax=0.1,xscale='l
             f1=np.abs(myDMD_Uy.getFrq(idx[0]))
             #ax4.plot(f,normList)
             flist=myDMD_Uy.getFrqList()
-            if sorting==4:
+            if sorting==4 or sorting==0:
                 DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,idx=idx_sel[::-1])
             else:
+                #DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,idx=idx_sel[::-1])
                 DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k)
             ritz_sel=np.log(myDMD_Uy.result['ritz_vals'][idx[0]]**k)
             ax4.plot(np.imag(ritz_sel),np.real(ritz_sel),'rx')
@@ -162,8 +170,8 @@ def modeAnalyzerGrowth(myDMD_Uy,k=(0,100),m=(0,500),vmin=-0.1,vmax=0.1,xscale='l
     mw.min=m[0]
     mw.max=m[1]
     mw.value=0
-    sw=widgets.DropdownWidget()
-    sw.values={'Frequency':0,'Norm':1,'Growth':2,'None':3,'Importance':4}
+    sw=widgets.Dropdown(options={'Frequency':0,'Norm':1,'Growth':2,'None':3,'Importance':4})
+    #sw.values={'Frequency':0,'Norm':1,'Growth':2,'None':3,'Importance':4}
     ws=widgets.interaction.interactive(plotTime,k=kw,m=mw,vmin=widgets.FloatTextWidget(value=vmin),vmax=widgets.FloatTextWidget(value=vmax),plotSpectrum=True,sorting=sw)
        
     return ws
