@@ -76,11 +76,22 @@ class POD(object):
         return ai
         
         
-    def plotEnegry(self,ax,start,end,**kwargs):
-        ax.plot(self.result['eigVals'][start:end]/np.sum(self.result['eigVals'][start:]),**kwargs)
+    def plotEnegry(self,ax,start,end,energyStart=0,relative=True,**kwargs):
+        totalEnergy=np.sum(self.result['eigVals'][energyStart:])
+        if relative:
+            ax.plot(range(start,end),self.result['eigVals'][start:end]/totalEnergy,**kwargs)
+        else:
+            ax.plot(range(start,end),self.result['eigVals'][start:end],**kwargs)
         
-    def plotCumulativeEnegry(self,ax,start,end,**kwargs):
-        ax.plot(np.cumsum(self.result['eigVals'][start:end])/np.sum(self.result['eigVals'][start:]),**kwargs)
+    def plotCumulativeEnegry(self,ax,start,end,energyStart=0,relative=True,**kwargs):
+        totalEnergy=np.sum(self.result['eigVals'][energyStart:])
+        print totalEnergy
+        print np.cumsum(self.result['eigVals'][start:end])[-1]
+
+        if relative:
+            ax.plot(range(start,end),np.cumsum(self.result['eigVals'][start:end])/totalEnergy,**kwargs)
+        else:
+            ax.plot(range(start,end),np.cumsum(self.result['eigVals'][start:end]),**kwargs)
         
     def reconstructFrame(self,frame,modeIdxList):
         res=np.zeros(shape=self.result['modes'].shape[1:])
@@ -89,10 +100,12 @@ class POD(object):
         return res
             
     def reconstructFrames(self,frameList,modeIdxList):
-        res=np.zeros(shape=(len(frameList),self.result['modes'].shape[1],self.result['modes'].shape[2]))
-        for frame in frameList:
+        print self.result['raw_modes'].shape
+        res=np.zeros(shape=(len(frameList),self.result['raw_modes'].shape[0]))
+        #print res.shape
+        for i,frame in enumerate(frameList):
             for idx in modeIdxList:
-                res[frame,:]=res[frame,:]+self.result['ai'][frame,idx]*self.result['modes'][idx]
+                res[i,:]=res[i,:]+self.result['ai'][frame,idx]*self.result['raw_modes'][:,idx]
         return res
                 
     def clearInputData(self):
@@ -114,7 +127,7 @@ class POD(object):
         
         fwm.close()
         
-    def loadResult(self,filename):
+    def loadResult(self,filename,keyList=[]):
         '''
         experimental: works with DMDPiv class
         '''
@@ -123,7 +136,10 @@ class POD(object):
         
         keys = fwm['dict'].keys()
         
-        for k in keys:
+        if len(keyList)==0:
+            keyList=keys
+            
+        for k in [k for k in keys if k in keyList]:
             self.result[k]=fwm['dict'][k].value
             
         fwm.close()
@@ -153,7 +169,14 @@ class PODPiv(POD):
         super(PODPiv,self).decompose(nMode=nMode,method=method,subtractMean=subtractMean)
         # reshape modes: from 1D array to 2D array (an image)
         modes = np.asarray(self.result['raw_modes']).T.reshape(nMode,self.inputShape[1],self.inputShape[2],self.inputShape[3])
-        self.result['modes']=modes 
+        self.result['modes']=modes
+        
+    def reconstructFrames(self,frameList,modeIdxList):
+        tmp=super(PODPiv,self).reconstructFrames(frameList,modeIdxList)
+        print self.inputShape
+        print tmp.shape
+        res=np.asarray(tmp).reshape(tmp.shape[0],self.inputShape[1],self.inputShape[2],self.inputShape[3])
+        return res
         
 class PODscalarFieldList(POD):
     def __init__(self,scalarFieldList):
@@ -242,6 +265,7 @@ class DMD(object):
         self.result['mode_norms']=mode_norms
         self.result['ai']=np.array([self.result['ritz_vals']**t for t in range(self.vecs.shape[1])])
         self.result['m']=self.result['modes'].shape[1]
+        self.addResiduals()
         
     def saveResult(self,filename):
         '''
@@ -259,7 +283,7 @@ class DMD(object):
         
         fwm.close()
         
-    def loadResult(self,filename):
+    def loadResult(self,filename,keyList=[]):
         '''
         experimental: works with DMDPiv class
         '''
@@ -268,13 +292,29 @@ class DMD(object):
         
         keys = fwm['dict'].keys()
         
-        for k in keys:
+        if len(keyList)==0:
+            keyList=keys
+        
+        keysToLoad=[k for k in keys if k in keyList]
+        for k in keysToLoad:
             self.result[k]=fwm['dict'][k].value
             
         fwm.close()
-        self.result['modes']=np.matrix(self.result['modes'])
+        if 'modes' in keysToLoad:
+            self.result['modes']=np.matrix(self.result['modes'])
         self.dt=self.result['dt']
         self.inputShape=tuple(self.result['inputShape'])
+        
+    def getModeH5(self,filename,idx):
+        '''
+        experimental: works with DMDPiv class
+        '''
+        fwm = h5py.File(filename, 'r')
+        inputShape=fwm['dict']['inputShape'].value
+        dataset=fwm['dict']['modes']
+        mode=dataset[:,idx]
+        fwm.close()
+        return np.asarray(mode.T.reshape(inputShape[1:]))
         
     def getKey(self,key,idx=None):
         if idx==None:
@@ -297,7 +337,7 @@ class DMD(object):
     def getEigAngle(self,idx=None):
         return np.angle(self.getEig(idx=idx))
         
-    def getMode(self,nMode):
+    def getMode(self,nMode,component=0):
         return self.getModeLst()[nMode]
         
     def getModeLst(self):
@@ -311,6 +351,27 @@ class DMD(object):
         
     def getResidual(self):
         return np.linalg.norm(self.getResidualVec())
+        
+    def addResiduals(self):
+        self.result['residualVec']=self.getResidualVec()
+        self.result['residual']=self.getResidual()
+        self.result['residualRel']=self.getResidualRelative()
+        
+        k=self.result['m']
+        xm=self.vecs[:,k]
+        xm_rec=DMD.reconstructDMD(self,k)
+        
+        idx_0=np.array(range(self.result['m']))[self.getEigAngle()==0]
+        idx_mean=idx_0[np.argmin(np.abs(1.0-self.getEigAbs(idx_0)))]
+        
+        xmean_rec=DMD.reconstructDMD(self,0,idx=[idx_mean])
+        xmean=np.mean(self.vecs,axis=1)
+        fluctNorm=np.linalg.norm(np.real(xm-xmean)-np.real(xm_rec-xmean_rec))
+        fluctNormRel=fluctNorm/np.linalg.norm(np.real(xmean))
+        corr=np.mean(np.real(xm-xmean)*np.real(xm_rec-xmean_rec))/(np.std(np.real(xm))*np.std(np.real(xm_rec)))
+        self.result['residualCorr']=corr
+        self.result['residualFluct']=fluctNorm
+        self.result['residualFluctRel']=fluctNormRel
         
     def getResidualRelative(self):
         k=self.result['m']
@@ -447,26 +508,32 @@ class DMD(object):
         return res
         
 class DMDPiv(DMD):
-    def __init__(self,surfaceList,dt,subslice=None,filter_kernel_size=0):
+    def __init__(self,surfaceList,dt,subslice=None,filter_kernel_size=0,stereo=True):
         '''
         Arguments:
             *surfaceList*: numpy array of Surfaces (N).
             *dt*: float, timestep
             *subslice*: numpy index tuples, created wit np.s_
         '''
+        
         if subslice is None:
-            FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+            if stereo:
+                FourD=np.array([[s.data['Ux'],s.data['Uy'],s.data['Uz']] for s in surfaceList])
+            else:
+                FourD=np.array([[s.data['Ux'],s.data['Uy']] for s in surfaceList])
         else:
-            FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice],s.data['Uz'][subslice]] for s in surfaceList])
+            if stereo:            
+                FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice],s.data['Uz'][subslice]] for s in surfaceList])
+            else:
+                FourD=np.array([[s.data['Ux'][subslice],s.data['Uy'][subslice]] for s in surfaceList])
             
         if filter_kernel_size>0:
             print 'start smoothing'
             for s in FourD:
                 s[0]=sp.medfilt(s[0],kernel_size=filter_kernel_size)
                 s[1]=sp.medfilt(s[1],kernel_size=filter_kernel_size)
-                s[2]=sp.medfilt(s[2],kernel_size=filter_kernel_size)
-                '''
-                '''
+                if stereo:
+                    s[2]=sp.medfilt(s[2],kernel_size=filter_kernel_size)
             print 'stop'
         inputShape=FourD.shape
         vecs = FourD.reshape((inputShape[0],np.prod(inputShape[1:]))).T
@@ -482,6 +549,89 @@ class DMDPiv(DMD):
     def getMode(self,nMode,component=0):
         return DMD.getMode(self,nMode)[component]
 
+class DMDPivEnsemble(DMD):
+    def __init__(self,surfaceList,dt,chunckLength,nChuncks=None,subslice=None,filter_kernel_size=0,stereo=True):
+        '''
+        Arguments:
+            *surfaceList*: numpy array of Surfaces (N).
+            *dt*: float, timestep
+            *subslice*: numpy index tuples, created wit np.s_
+        '''
+        if surfaceList==[]:
+            super(DMDPivEnsemble,self).__init__([],dt)
+            return
+        
+        if nChuncks==None:
+            nChuncks=surfaceList.shape[0]//chunckLength
+        print nChuncks*chunckLength
+        print surfaceList.shape[0]
+        assert surfaceList.shape[0]>nChuncks*chunckLength
+        
+        s_shape=surfaceList[0].data['Ux'].shape
+        
+        
+        if subslice is None:
+            s_shape=surfaceList[0].data['Ux'].shape
+            if stereo:
+                nComp=3
+                FourD=np.zeros(shape=(chunckLength,nComp,nChuncks,s_shape[0],s_shape[1]))
+                for i in range(chunckLength):
+                    for k in range(nChuncks):
+                        s=surfaceList[k*chunckLength+i]
+                        FourD[i,0,k,:,:]=s.data['Ux']
+                        FourD[i,1,k,:,:]=s.data['Uy']
+                        FourD[i,2,k,:,:]=s.data['Uz']
+            else:
+                nComp=2
+                FourD=np.zeros(shape=(chunckLength,nComp,nChuncks,s_shape[0],s_shape[1]))
+                for i in range(chunckLength):
+                    for k in range(nChuncks):
+                        s=surfaceList[k*chunckLength+i]
+                        FourD[i,0,k,:,:]=s.data['Ux']
+                        FourD[i,1,k,:,:]=s.data['Uy']
+        else:
+            s_shape=surfaceList[0].data['Ux'][subslice].shape
+            if stereo:
+                nComp=3
+                FourD=np.zeros(shape=(chunckLength,nComp,nChuncks,s_shape[0],s_shape[1]))
+                for i in range(chunckLength):
+                    for k in range(nChuncks):
+                        s=surfaceList[k*chunckLength+i]
+                        FourD[i,0,k,:,:]=s.data['Ux'][subslice]
+                        FourD[i,1,k,:,:]=s.data['Uy'][subslice]
+                        FourD[i,2,k,:,:]=s.data['Uz'][subslice]
+            else:
+                nComp=2
+                FourD=np.zeros(shape=(chunckLength,nComp,nChuncks,s_shape[0],s_shape[1]))
+                for i in range(chunckLength):
+                    for k in range(nChuncks):
+                        s=surfaceList[k*chunckLength+i]
+                        FourD[i,0,k,:,:]=s.data['Ux'][subslice]
+                        FourD[i,1,k,:,:]=s.data['Uy'][subslice]
+        '''    
+        if filter_kernel_size>0:
+            print 'start smoothing'
+            for s in FourD:
+                s[0]=sp.medfilt(s[0],kernel_size=filter_kernel_size)
+                s[1]=sp.medfilt(s[1],kernel_size=filter_kernel_size)
+                if stereo:
+                    s[2]=sp.medfilt(s[2],kernel_size=filter_kernel_size)
+            print 'stop'
+        '''
+        inputShape=FourD.shape
+        vecs = FourD.reshape((inputShape[0],np.prod(inputShape[1:]))).T
+
+        super(DMDPivEnsemble,self).__init__(vecs,dt)
+        self.inputShape=inputShape
+        
+    def reconstructDMD(self,k,idx=None,verbose=False):
+        tmp = DMD.reconstructDMD(self,k=k,idx=idx,verbose=verbose)
+        #tmp = super(DMDscalarFieldList,self).reconstructDMD(k=k,idx=idx,verbose=verbose)
+        return tmp.T.reshape(self.inputShape[1:])[:,0,:,:]
+        
+    def getMode(self,nMode,component=0,chunck=0):
+        return DMD.getMode(self,nMode)[component][chunck]
+        
 class DMDscalarFieldList(DMD):
     def __init__(self,scalarFieldList,dt,subslice=None):
         '''
@@ -489,8 +639,12 @@ class DMDscalarFieldList(DMD):
             *scalarFieldList*: numpy array of shape (N,surfX,surfY).
              Surfaces from a PIV measurment (for example one component of a SurfaceList).
         '''
-        inputShape=scalarFieldList[subslice].shape
-        vecs = scalarFieldList[subslice].reshape(inputShape[0],np.prod(inputShape[1:])).T
+        if subslice==None:
+            inputShape=scalarFieldList.shape
+            vecs = scalarFieldList.reshape(inputShape[0],np.prod(inputShape[1:])).T
+        else:
+            inputShape=scalarFieldList[subslice].shape
+            vecs = scalarFieldList[subslice].reshape(inputShape[0],np.prod(inputShape[1:])).T
         super(DMDscalarFieldList,self).__init__(vecs,dt)
         #self.surfaces=scalarFieldList
         self.inputShape=inputShape
