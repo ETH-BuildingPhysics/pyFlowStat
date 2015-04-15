@@ -574,6 +574,7 @@ class PointProbe(object):
         '''
         N = self.probeTimes.shape[0]
         div = np.linspace(1,N,N)
+        div = np.asarray(div,dtype=int)
         self.data['UMean_c'] = np.cumsum(self.probeVar,axis=0)
         for i in range(3):
             self.data['UMean_c'][:,i] = self.data['UMean_c'][:,i]/div
