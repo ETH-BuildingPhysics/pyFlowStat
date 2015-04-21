@@ -639,7 +639,7 @@ class PointProbe(object):
                     #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
                     self.data[Tkey]=popt*self.data['dt']
                     if Lkey:
-                        self.data[Lkey]=self.data[Tkey]*self.Umean()
+                        self.data[Lkey]=self.data[Tkey]*np.mean(self.Umag())
                 except RuntimeError:
                     print("Error - curve_fit failed")
                     self.data[Tkey]=0
