@@ -136,6 +136,49 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
     fr.close()
     return ppList
 
+def actionPPlist_hdf5(hdf5file,actionFunction):
+    '''
+    Load and return a point probe list from a hdf5 data file. eager evaluation
+    only. The hdf5 file must have the following minimal structure:
+
+    myData.hdf5:
+        * pointProbe1  (GROUP)
+            * 'probeVar'   (DATASET)
+            * 'probeTimes' (DATASET)
+            * 'probeLoc'   (DATASET)
+        * pointProbei  (GROUP)
+            * 'probeVar'   (DATASET)
+            * 'probeTimes' (DATASET)
+            * 'probeLoc'   (DATASET)
+
+    Arguments:
+        * hdf5file: [str] path to source file.
+        * keyrange: [str] keys included in the pointProbe which will be
+          saved in the hdf5 file.
+              * 'raw' = only probeVar, probeTimes and probeLoc (default)
+              * 'full' = 'raw', plus all the other keys included in ppList[i].data
+        * createDict: [bool] create data dict. Usefull if the hdf5 contains
+          only the raw data or if you load only the raw data from a full
+          hdf5.
+
+    Returns:
+        * ppList: [python list] list of PointProbe object.
+    '''
+    ppList = []
+    fr = h5py.File(hdf5file, 'r')
+    resultList=[]
+    for i in range(len(fr.keys())):
+        gName = 'pointProbe'+str(i)
+        #print('load '+str(gName))
+        probe=pp.PointProbe()
+        probe.probeVar = fr[gName]['probeVar'].value
+        probe.probeTimes = fr[gName]['probeTimes'].value
+        probe.probeLoc = fr[gName]['probeLoc'].value
+        resultList.append(actionFunction(probe))
+        probe=None
+        
+    fr.close()
+    return resultList
   
 def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True,createDict=True,genStat=True):
     '''
