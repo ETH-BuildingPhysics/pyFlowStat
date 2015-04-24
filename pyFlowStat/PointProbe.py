@@ -65,7 +65,9 @@ class PointProbe(object):
         return self.UPrime()[:,1]
     def uz(self):
         return self.UPrime()[:,2]
-
+    def Umean(self):
+        return np.mean(self.Umag())
+        
     def UPrime(self):
         return self.data['U']-self.data['UMean']
 
