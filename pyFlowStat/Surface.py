@@ -202,17 +202,31 @@ class Surface(object):
         s.extent=self.extent
         return s
 
-
+    def generateUmag(self):
+        Umag = np.zeros(self.data['Ux'].shape)
+        Umag = np.sqrt(self.data['Ux']**2+self.data['Uy']**2+self.data['Uz']**2)
+        self.data['Umag']=Umag
+        
+    def generateUmagFluct(self):
+        try:
+            Umag = np.zeros(self.data['ux'].shape)
+            Umag = np.sqrt(self.data['ux']**2+self.data['uy']**2+self.data['uz']**2)
+            self.data['umag']=Umag
+        except KeyError as err:
+            print err.message
+            print 'add fluctuating field using addReynoldsDecomposition()'
+        
+    def generateUmag2D(self):
+        Umag2D = np.zeros(self.data['Ux'].shape)
+        Umag2D = np.sqrt(self.data['Ux']**2+self.data['Uy']**2)
+        self.data['Umag2D']=Umag2D
+        
     def generateFields(self):
         '''
         Generates additional dictionary entries.
         '''
-        Umag = np.zeros(self.data['Ux'].shape)
-        Umag2D = np.zeros(self.data['Ux'].shape)
-        Umag = np.sqrt(self.data['Ux']**2+self.data['Uy']**2+self.data['Uz']**2)
-        Umag2D = np.sqrt(self.data['Ux']**2+self.data['Uy']**2)
-        self.data['Umag']=Umag
-        self.data['Umag2D']=Umag2D
+        self.generateUmag()
+        self.generateUmag2D()
 
         self.computeGradients()
         self.computeVorticity()
@@ -256,7 +270,17 @@ class Surface(object):
                     dudx_ls[i,j]=(2.0*self.data['Ux'][i,j+2]+self.data['Ux'][i,j+1]-self.data['Ux'][i,j-1]-2.0*self.data['Ux'][i,j-2])/(10.0*self.dx/1000.0)
             self.data['dudx_ls']=dudx_ls
             
-    
+    def removeGradients(self):
+        for k in self.data.keys():
+            if k.startswith('dudx'):
+                self.data.pop(k)
+            if k.startswith('dudy'):
+                self.data.pop(k)
+            if k.startswith('dvdx'):
+                self.data.pop(k)
+            if k.startswith('dvdy'):
+                self.data.pop(k)
+        
     def computeQ(self):
         
         dudy=self.data['dudy']
@@ -350,7 +374,7 @@ class Surface(object):
                 lam[arow,acol]=l[1]
         return lam*-1.0
 
-    def addReynoldsDecomposition(self,MeanFlowSurface):
+    def addReynoldsDecomposition(self,MeanFlowSurface,addReStresses=True):
         '''
         Generate fluctuations by subtracting the mean flow (surface of same size)
         Adds fluctuation fields ux,uy,uz and correleations uu,vv,ww,uv,uw and TKE
@@ -358,13 +382,14 @@ class Surface(object):
         self.data['ux']=self.data['Ux']-MeanFlowSurface.data['Ux']
         self.data['uy']=self.data['Uy']-MeanFlowSurface.data['Uy']
         self.data['uz']=self.data['Uz']-MeanFlowSurface.data['Uz']
-        self.data['uu']=self.data['ux']**2
-        self.data['vv']=self.data['uy']**2
-        self.data['ww']=self.data['uz']**2
-        self.data['uv']=self.data['ux']*self.data['uy']
-        self.data['uw']=self.data['ux']*self.data['uz']
-        self.data['vw']=self.data['uy']*self.data['uz']
-        self.data['TKE']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
+        if addReStresses:
+            self.data['uu']=self.data['ux']**2
+            self.data['vv']=self.data['uy']**2
+            self.data['ww']=self.data['uz']**2
+            self.data['uv']=self.data['ux']*self.data['uy']
+            self.data['uw']=self.data['ux']*self.data['uz']
+            self.data['vw']=self.data['uy']*self.data['uz']
+            self.data['TKE']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
 
     def readFromVC7(self,filename,v=False):
         '''
