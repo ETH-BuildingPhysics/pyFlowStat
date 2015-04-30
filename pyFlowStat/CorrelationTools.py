@@ -6,7 +6,8 @@ from pyFlowStat import TurbulenceTools as tt
 
 '''
 Methods to calculate the intergal scale from correlation coefficients
-'''    
+'''
+
 def calcTii_fitExp(dt,rii):
     t=fitExp(rii)
     return t*dt
@@ -153,3 +154,6 @@ def cutUpTo(rii,x_max):
         r_temp=np.append(r_temp,r_last)
         
     return xtmp,r_temp
+    
+Tii_FunctionList=[calcTii_fitExp,calcTii_exp,calcTii_intConvTail,calcTii_intFull,calcTii_intMin,calcTii_intZero]
+Tii_FunctionNames=[r'Exp Fitting',r'Exp',r'Integrate (conv, exp tail)',r'Integrate (full)',r'Integrate (first min)',r'Integrate (zero crossing)']
