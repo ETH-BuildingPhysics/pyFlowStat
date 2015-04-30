@@ -397,7 +397,14 @@ def twoPointCorr(x,y,subtractMean=True,norm=False):
     else:
         return cc
     #return np.correlate(x_prime,y_prime)
-        
+    
+def twoPointCorr_fast(x_prime,y_prime,cc_max):
+    '''
+    dot product of two vectors to claculate normalized two point correlation
+    '''
+    cc=np.dot(x_prime,y_prime)
+    return cc/cc_max
+    
 def func_exp_correlation(x, a):
     np.seterr('ignore')
     res = np.exp(-x/a)
