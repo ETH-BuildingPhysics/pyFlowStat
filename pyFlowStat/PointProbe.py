@@ -69,7 +69,10 @@ class PointProbe(object):
         return np.mean(self.Umag())
         
     def UPrime(self):
-        return self.data['U']-self.data['UMean']
+        if 'UPrime' in self.data:
+            return self.data['UPrime']
+        else:
+            return self.data['U']-self.data['UMean']
 
     def uu_bar(self):
         return np.mean(pow(signal.detrend(self.ux()),2))
@@ -404,6 +407,12 @@ class PointProbe(object):
             Umag[i] = nrm2(a)
             #Umag[i] = np.linalg.norm(self.data['U'][i,:])
         self.data['Umag']=Umag
+        
+    def addFluctuations(self):
+        '''
+        adds 'UPrime' key to dict
+        '''
+        self.data['UPrime']=self.data['U']-self.data['UMean']
         
     def createScalarDict(self):
         '''
