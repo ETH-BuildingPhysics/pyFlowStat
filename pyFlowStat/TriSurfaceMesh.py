@@ -34,6 +34,26 @@ class TriSurfaceMesh(object):
         self.__linTrans = linTrans
     
     @classmethod
+    def createFromPlane(cls,x,y,z,xViewBasis,yViewBasis=None,viewAnchor=(0,0,0),
+                        srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]]):
+        ptsSrc=np.vstack([x,y,z]).T
+        ptsTgt,afftrans,lintrans=transformPoints(ptsSrc=ptsSrc,
+                                                xViewBasis=xViewBasis,
+                                                yViewBasis=yViewBasis,
+                                                viewAnchor=viewAnchor,
+                                                srcBasisSrc=srcBasisSrc)
+        triangles = None
+        # update class member variables
+        return cls(x=ptsTgt[:,0],
+                   y=ptsTgt[:,1],
+                   z=ptsTgt[:,2],
+                   triangles=triangles,
+                   mask=None,
+                   affTrans=afftrans,
+                   linTrans=lintrans)
+    
+    
+    @classmethod
     def readFromFoamFile(cls,
                          pointsFile,
                          facesFile,
