@@ -576,7 +576,7 @@ def lowpass(data, freq, df, corners=4, zerophase=False,axis=-1):
         return spsig.lfilter(b, a, data,axis=axis)
 
 
-def highpass(data, freq, df, corners=4, zerophase=False):
+def highpass(data, freq, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Highpass Filter.
 
