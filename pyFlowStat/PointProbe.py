@@ -536,6 +536,21 @@ class PointProbe(object):
         self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='biased')
         self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='biased')
     
+    def generateAutoCorrelations(self,doDetrend=True):
+        # auto correlation corefficient of u
+        if doDetrend:
+            ux=signal.detrend(self.ux());
+            uy=signal.detrend(self.uy());
+            uz=signal.detrend(self.uz());
+        else:
+            ux=self.ux();
+            uy=self.uy();
+            uz=self.uz();
+
+        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=None, norm='coeff')
+        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=None, norm='coeff')
+        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=None, norm='coeff')
+        
     def generateSpectra(self,doDetrend=True):
         '''
         uifrq:  [numpy.array of shape=(?)] u1 in frequency domain. For i=1,2,3
