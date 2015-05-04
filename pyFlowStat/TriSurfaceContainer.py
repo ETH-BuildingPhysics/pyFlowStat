@@ -29,6 +29,7 @@ class TriSurfaceContainer(object):
         self.triSurfaceMesh = triSurfaceMesh
         self.fields=TriSurfaceDict()
         self.data=dict()
+        self.time=0.0
         
     @classmethod
     def createFromTriSurface(cls,triSurface,name):

@@ -266,6 +266,130 @@ def getSubTriSurfaceVectorList(tsvListSource,
         return subTsm, subTsvList, node_renum
 
         
+def saveTriSurfaceContainerList_hdf5(triSurfaceContainerList,hdf5fileName,names=[],indexingMode='time'):
+    '''
+    Save a list of TriSurface<type> in a hdf5 file.
+    
+    Arguments:
+        *triSurfaceList*: python list
+         Python list of TriSurface<type> objects.
+         
+        *varName* python string.
+         Name of the variable <type>.
+        
+        *hdf5fileName*: python string
+         Name of the target hdf5 file. It can also include the path.
+         
+        *extraVar*: python list of string.
+         TriSurface<type> can holds extra data in the dict TriSurface<type>.data.
+         Use extraVar to include them. Default=[] (empty list).
+         
+        *indexingMode*: python string
+         Defines the key of each surfaces saved in the hdf5. Can be 'time' or
+         'index'. Delault='time'.
+         
+    Returns:
+        None
+    '''
+    fwm = h5py.File(hdf5fileName, 'w-')
+    tCont0=triSurfaceContainerList[0]
+    #save the surface mesh
+    gName = 'mesh'
+    gMesh = fwm.create_group(gName)
+
+    gMesh.create_dataset('points',data=tCont0.triSurfaceMesh.rawPoints())
+    gMesh.create_dataset('faces',data=tCont0.triSurfaceMesh.triangles)
+    
+    #TODO: make nicer, get time from triSurfaceContainer, or check surfaces
+    timeList=[[tCont[ts].time for ts in tCont.fields][0] for tCont in triSurfaceContainerList]
+    
+    for i,triSurfaceCont in enumerate(triSurfaceContainerList):
+        # group name
+        gName = str()
+        if indexingMode=='time':
+            gName = str(timeList[i])
+        elif indexingMode=='index':
+            gName = str(i)
+        else:
+            raise ValueError('Argument "indexingMode" must be "time" or "index".')
+        
+        gsurfi = fwm.create_group(gName)
+
+        # save  data
+        gsurfi.create_dataset('time',data=timeList[i])
+
+        if len(names)!=0:
+            for name in names:
+                gsurfi.create_dataset(name,data=triSurfaceCont[name].rawVars())
+        else:
+            for name in triSurfaceCont.fields.keys():
+                gsurfi.create_dataset(name,data=triSurfaceCont[name].rawVars())
+        
+    fwm.close()
+    
+def loadTriSurfaceContainerList_hdf5(hdf5fileName,
+                                  xViewBasis,
+                                  yViewBasis=None,
+                                  viewAnchor=(0,0,0),
+                                  names=[],
+                                  srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
+                                  projectedField=False):
+    '''
+    Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
+    object associated to the surfaces is also returned.
+    
+    Arguments:
+        *hdf5file*: python string.
+         Name or path to the source hdf5 file.
+         
+        *varName*: python string.
+         Name of the variable to load.
+         
+        *xViewBasis*: python array of shape=3.
+         X direction of the surface, defined in the source base.
+         
+        *viewAnchor*: python array of shape=3.
+         Origin of the surface coordinate system, defined in the source base.
+         Default=(0,0,0)
+         
+        *srcBasisSrc*: python array of shape=3x3.
+         Default=[[1,0,0],[0,1,0],[0,0,1]].
+         
+        *projectedField*: bool.
+         Default=False.
+    
+    Returns:
+        *tsvList*: python list with N entries
+         List filled with TriSurfaceVector objects.
+         
+        *tsm* TriSurfaceMesh object
+    '''
+    tsContainerList=[]
+    # open the hdf5 parser
+    fr = h5py.File(hdf5fileName, 'r')
+    
+    # load the mesh
+    tsContainer0=TriSurfaceContainer.TriSurfaceContainer.createFromHdf5(fr,
+                                                                        xViewBasis=xViewBasis,
+                                                                        yViewBasis=yViewBasis,
+                                                                        viewAnchor=viewAnchor,
+                                                                        srcBasisSrc=srcBasisSrc)
+    keys = fr.keys()
+    keys.sort()
+    try:
+        keys.pop(keys.index('mesh'))
+    except:
+        pass
+        
+    for key in keys:
+        tCont_tmp=TriSurfaceContainer.TriSurfaceContainer(tsContainer0.triSurfaceMesh)
+        tCont_tmp.time=float(key)
+        tCont_tmp.addFieldFromHdf5(fr,tCont_tmp.time,names=names)
+        tsContainerList.append(tCont_tmp)
+
+    fr.close()    
+    return tsContainerList
+     
    
 def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,extraVar=[],indexingMode='time'):
     '''
