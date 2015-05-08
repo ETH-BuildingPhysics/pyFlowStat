@@ -7,7 +7,7 @@ Created on Fri Mar 13 16:28:00 2015
 
 import h5py
 
-def saveDict(filename,dictionary,keyList=[],mode='w'):
+def saveDict(filename,dictionary,keyList=[],mode='w',dictName='dict'):
     '''
     Save dict as H5
     mode: 'w' for overwrite, 'w-' for new, 'a' for append
@@ -16,28 +16,28 @@ def saveDict(filename,dictionary,keyList=[],mode='w'):
         keyList = dictionary.keys()
     keys = dictionary.keys()
     fwm = h5py.File(filename, mode)
-    if 'dict' in fwm:
-        gDict=fwm['dict']
+    if dictName in fwm:
+        gDict=fwm[dictName]
     else:
-        gDict = fwm.create_group('dict')
+        gDict = fwm.create_group(dictName)
     for k in [k for k in keys if k in keyList]:
         gDict.create_dataset(k,data=dictionary[k])
     fwm.close()
     
-def loadDict(filename,keyList=[]):
+def loadDict(filename,keyList=[],dictName='dict'):
     '''
     Load dict as H5
     '''
     dictionary=dict()
     fwm = h5py.File(filename, 'r')
     
-    keys = fwm['dict'].keys()
+    keys = fwm[dictName].keys()
     
     if len(keyList)==0:
         keyList=keys
     
     for k in [k for k in keys if k in keyList]:
-        dictionary[k]=fwm['dict'][k].value
+        dictionary[k]=fwm[dictName][k].value
         
     fwm.close()
     return dictionary
