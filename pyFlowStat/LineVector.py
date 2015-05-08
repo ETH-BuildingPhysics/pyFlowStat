@@ -7,7 +7,6 @@ LineVector.py
 import numpy as np
 
 import pyFlowStat.Line as Line
-import pyFlowStat.LineFunctions as LineFunctions
 
 
 class LineVector(Line.Line):

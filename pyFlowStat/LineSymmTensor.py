@@ -7,7 +7,6 @@ LineSymmTensor.py
 import numpy as np
 
 import pyFlowStat.Line as Line
-#import pyFlowStat.ParserFunctions as ParserFunctions
 
 
 class LineSymmTensor(Line.Line):

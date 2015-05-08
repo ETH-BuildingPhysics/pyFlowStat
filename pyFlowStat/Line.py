@@ -5,8 +5,6 @@ Line.py
 
 import numpy as np
 
-#import pyFlowStat.ParserFunctions as ParserFunctions
-
 
 
 class Line(object):
