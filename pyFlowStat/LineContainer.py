@@ -28,13 +28,13 @@ class LineContainer(object):
         self.time=0.0
         
     @classmethod
-    def createFromFoamFolder(cls,pathname,time=0.0,names=[]):
+    def createFromFoamFolder(cls,pathname,time=0.0,names=[],underscoreHeaders=[]):
         c=cls()
         c.data['name']=os.path.basename(pathname)
         c.data['pathname']=pathname
         c.time=time
         #TODO: find names here?
-        c.addLinesFromFoamFolder(names=names,time=time)
+        c.addLinesFromFoamFolder(lineFolder=pathname,underscoreHeaders=underscoreHeaders)
         return c
         
     # class methods #
@@ -73,7 +73,6 @@ class LineContainer(object):
         '''
         '''
         lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
-        print(headers)
         fileData = np.loadtxt(linePath)
         xyz = fileData[:,0:3]
         for i,h in enumerate(headers):
@@ -87,7 +86,6 @@ class LineContainer(object):
         '''
         '''
         lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
-        print(headers)
         fileData = np.loadtxt(linePath)
         xyz = fileData[:,0:3]
         for i,h in enumerate(headers):
@@ -103,7 +101,6 @@ class LineContainer(object):
         '''
         '''
         lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
-        print(headers)
         fileData = np.loadtxt(linePath)
         xyz = fileData[:,0:3]
         for i,h in enumerate(headers):
@@ -117,31 +114,25 @@ class LineContainer(object):
             lst = LineSymmTensor(xyz,txx,txy,txz,tyy,tyz,tzz)
             self.addLine(lst,keyName)
         
-    def addLinesFromFoamFolder(self,lineFolder,lnName=[]):
+    def addLinesFromFoamFolder(self,lineFolder,lnNames=[],underscoreHeaders=[]):
         '''
         '''
-        if os.path.exists(linepath):
-            #def getxyfileType(filePath,headers):
-#    '''
-#    Get the type (scalar, vector, symmtensor, tensor) of xyfile gererated by
-#    the sample tool of OpenFOAM
-#    '''
-#    fr = open(filePath,'r')
-#    line0 = fr.readline()
-#    fr.close()
-#    
-#    entries = line0.split('\t')
-#    dataType = str()
-#    if (len(entries)-3)==len(headers):      #filePath has scalars
-#        dataType = 'scalar'
-#    elif (len(entries)-3)==3*len(headers):  #filePath has vector
-#        dataType = 'vector'
-#    elif (len(entries)-3)==6*len(headers):  #filePath has symmtensor
-#        dataType = 'symmtensor'
-#    elif (len(entries)-3)==6*len(headers):  #filePath has tnesor
-#        dataType = 'tensor'
-#        
-#    return dataType
+        if os.path.exists(lineFolder):
+#            allFilePath = [os.path.join(lineFolder,f) for f in os.listdir(lineFolder) if os.path.isfile(f)]
+            allFilePath = glob.glob(lineFolder+'/*.xy')
+            
+            for filePath in allFilePath:
+                lnName,headers = getxyfileInfo(filePath,underscoreHeaders)
+                fr = open(filePath,'r')
+                line0 = fr.readline()
+                fr.close()
+                entries = line0.split('\t')
+                if len(entries)==len(headers):      #filePath has scalars
+                    self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)
+                elif len(entries)==3*len(headers):  #filePath has vector
+                    self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)
+                elif len(entries)==6*len(headers):  #filePath has symmtensor
+                    self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)  
             pass
         else:
             raise IOError("Folder does not exist")
@@ -156,7 +147,6 @@ def getxyfileInfo(filePath,lnName='',underscoreHeaders=[]):
     if len(lnName)==0:
         lnName = fileName.split('_')[0]
 
-    print(lnName)
     headerOnlyRaw = fileName[(len(lnName)+1):-len(extType)]
     headerOnlyClean = headerOnlyRaw
 
