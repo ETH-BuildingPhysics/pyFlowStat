@@ -231,6 +231,7 @@ class Surface(object):
         self.computeGradients()
         self.computeVorticity()
         self.computeQ()
+        self.computeSignedQ()
         self.computeOWQ()
         self.computeLambda2()
         
@@ -289,7 +290,13 @@ class Surface(object):
         dvdx=self.data['dvdx']
         #self.data['Q']=np.zeros(self.data['Ux'].shape)
         self.data['Q']=0.5*(-2.0*dudy*dvdx-dudx**2-dvdy**2)
-    
+        
+    def computeSignedQ(self):
+        Q_sign=self.data['Q'].copy()
+        Q_sign[Q_sign<0]=0.0
+        Q_sign[self.data['VortZ']<0]=Q_sign[self.data['VortZ']<0]*-1.0
+        self.data['Q_sign']=Q_sign
+        
     def computeSwirlingStrength(self):
         
         dudy=self.data['dudy']
