@@ -21,19 +21,20 @@ class Line(object):
                  xyz):
                      
         self.xyz=xyz
+
     
     # class methods #
     #---------------#
     def component(self,dim):
         '''
         '''
-        raise NotImplementedError('TriSurface subclasses should implement component.')
+        raise NotImplementedError('Line subclasses should implement component.')
 
  
     def rawVars(self):
         '''
         '''
-        raise NotImplementedError('TriSurface subclasses should implement rawVars.')
+        raise NotImplementedError('Line subclasses should implement rawVars.')
     
 class LineDict(dict): 
     '''

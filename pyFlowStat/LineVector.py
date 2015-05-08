@@ -7,7 +7,7 @@ LineVector.py
 import numpy as np
 
 import pyFlowStat.Line as Line
-#import pyFlowStat.ParserFunctions as ParserFunctions
+import pyFlowStat.LineFunctions as LineFunctions
 
 
 class LineVector(Line.Line):
@@ -35,6 +35,7 @@ class LineVector(Line.Line):
         self.vx = np.asarray(vx)
         self.vy = np.asarray(vy)
         self.vz = np.asarray(vz)
+        
         
     # class methods #
     #---------------#

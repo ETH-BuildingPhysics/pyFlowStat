@@ -11,7 +11,6 @@ from pyFlowStat.LineVector import LineVector
 from pyFlowStat.LineSymmTensor import LineSymmTensor
 
 
-
 class LineContainer(object):
     '''
  
@@ -70,51 +69,101 @@ class LineContainer(object):
         self.lines[name]=line
         
 
-    def addFoamScalarLine(self,linepath,name):
+    def addFoamScalarLines(self,linePath,lnName='',underscoreHeaders=[]):
         '''
         '''
-        #TODO: change
-        tLine=LineScalar.readFromFoamFile(linepath)
-        self.lines[name] = tLine
+        lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
+        print(headers)
+        fileData = np.loadtxt(linePath)
+        xyz = fileData[:,0:3]
+        for i,h in enumerate(headers):
+            keyName = lnName+'_'+h
+            s = fileData[:,3+i+0]
+            ls = LineScalar(xyz,s)
+            self.addLine(ls,keyName)
         
     
-    def addFoamVectorLine(self,linepath,name):
+    def addFoamVectorLines(self,linePath,lnName='',underscoreHeaders=[]):
         '''
         '''
-        #TODO: change
-        tLine=LineVector.readFromFoamFile(linepath)
-        self.lines[name] = tLine
+        lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
+        print(headers)
+        fileData = np.loadtxt(linePath)
+        xyz = fileData[:,0:3]
+        for i,h in enumerate(headers):
+            keyName = lnName+'_'+h
+            vx = fileData[:,3+i*3+0]
+            vy = fileData[:,3+i*3+1]
+            vz = fileData[:,3+i*3+2]
+            lv = LineVector(xyz,vx,vy,vz)
+            self.addLine(lv,keyName)
 
                                
-    def addFoamSymmTensorLine(self,linepath,name):
+    def addFoamSymmTensorLines(self,linePath,lnName='',underscoreHeaders=[]):
         '''
         '''
-        #TODO: change
-        tLine=LineSymmTensor.readFromFoamFile(linepath)           
-        self.lines[name] = tLine
+        lnName,headers = getxyfileInfo(linePath,lnName,underscoreHeaders)
+        print(headers)
+        fileData = np.loadtxt(linePath)
+        xyz = fileData[:,0:3]
+        for i,h in enumerate(headers):
+            keyName = lnName+'_'+h
+            txx = fileData[:,3+i*6+0]
+            txy = fileData[:,3+i*6+1]
+            txz = fileData[:,3+i*6+2]
+            tyy = fileData[:,3+i*6+3]
+            tyz = fileData[:,3+i*6+4]
+            tzz = fileData[:,3+i*6+5]
+            lst = LineSymmTensor(xyz,txx,txy,txz,tyy,tyz,tzz)
+            self.addLine(lst,keyName)
         
-    def addLinesFromFoamFolder(self,linepath='',names=[]):
+    def addLinesFromFoamFolder(self,lineFolder,lnName=[]):
         '''
         '''
-        if linepath=='':
-            linepath=self.data['pathname']
-
         if os.path.exists(linepath):
-            #TODO: change
-            '''
-            for line in scalarLines:
-                key=os.path.basename(field)
-                if key in names:
-                    self.addFoamScalarField(field,key)
-            for field in vectorLines:
-                key=os.path.basename(field)
-                if key in names:
-                    self.addFoamVectorField(field,key)
-            for field in symmTensorLines:
-                key=os.path.basename(field)
-                if key in names:
-                    self.addFoamSymmTensorField(field,key)
-            '''
+            #def getxyfileType(filePath,headers):
+#    '''
+#    Get the type (scalar, vector, symmtensor, tensor) of xyfile gererated by
+#    the sample tool of OpenFOAM
+#    '''
+#    fr = open(filePath,'r')
+#    line0 = fr.readline()
+#    fr.close()
+#    
+#    entries = line0.split('\t')
+#    dataType = str()
+#    if (len(entries)-3)==len(headers):      #filePath has scalars
+#        dataType = 'scalar'
+#    elif (len(entries)-3)==3*len(headers):  #filePath has vector
+#        dataType = 'vector'
+#    elif (len(entries)-3)==6*len(headers):  #filePath has symmtensor
+#        dataType = 'symmtensor'
+#    elif (len(entries)-3)==6*len(headers):  #filePath has tnesor
+#        dataType = 'tensor'
+#        
+#    return dataType
             pass
         else:
             raise IOError("Folder does not exist")
+
+         
+def getxyfileInfo(filePath,lnName='',underscoreHeaders=[]):
+    '''
+    '''
+    path,fileName = os.path.split(filePath)
+    extType = '.xy'
+    
+    if len(lnName)==0:
+        lnName = fileName.split('_')[0]
+
+    print(lnName)
+    headerOnlyRaw = fileName[(len(lnName)+1):-len(extType)]
+    headerOnlyClean = headerOnlyRaw
+
+    # check if some stupid named variables are in the header
+    for h in underscoreHeaders:
+        if headerOnlyRaw.find(h)!=0:
+            headerOnlyClean = headerOnlyClean.replace(h,h.replace('_', ''))
+            
+    headers = headerOnlyClean.split('_')
+    return lnName,headers
