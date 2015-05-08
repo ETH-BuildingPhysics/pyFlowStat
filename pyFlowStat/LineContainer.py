@@ -122,17 +122,17 @@ class LineContainer(object):
             allFilePath = glob.glob(lineFolder+'/*.xy')
             
             for filePath in allFilePath:
-                lnName,headers = getxyfileInfo(filePath,underscoreHeaders)
+                lnName,headers = getxyfileInfo(filePath,lnName='',underscoreHeaders=underscoreHeaders)
                 fr = open(filePath,'r')
                 line0 = fr.readline()
                 fr.close()
                 entries = line0.split('\t')
-                if len(entries)==len(headers):      #filePath has scalars
+                if (len(entries)-3)==len(headers):      #filePath has scalars
                     self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)
-                elif len(entries)==3*len(headers):  #filePath has vector
-                    self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)
-                elif len(entries)==6*len(headers):  #filePath has symmtensor
-                    self.addFoamScalarLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)  
+                elif (len(entries)-3)==3*len(headers):  #filePath has vector
+                    self.addFoamVectorLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)
+                elif (len(entries)-3)==6*len(headers):  #filePath has symmtensor
+                    self.addFoamSymmTensorLines(filePath,lnName='',underscoreHeaders=underscoreHeaders)  
             pass
         else:
             raise IOError("Folder does not exist")
@@ -146,7 +146,7 @@ def getxyfileInfo(filePath,lnName='',underscoreHeaders=[]):
     
     if len(lnName)==0:
         lnName = fileName.split('_')[0]
-
+        
     headerOnlyRaw = fileName[(len(lnName)+1):-len(extType)]
     headerOnlyClean = headerOnlyRaw
 
