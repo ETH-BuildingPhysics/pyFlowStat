@@ -237,6 +237,7 @@ class LineContainer(object):
          List of header which have an underscore. For example, if the file
          contains "p_rgh", use underscoreHeaders=["p_rgh"]. Default=[]
         '''
+        # As it is coded now, this function works. But it is horrible code!!!
         if os.path.exists(lineFolder):
             allFilePath = glob.glob(lineFolder+'/*.xy')
             
@@ -247,10 +248,13 @@ class LineContainer(object):
                                       underscoreHeaders=underscoreHeaders)
                 # load only the lines included in lnNames
                 else:
-                    for n in lnNames:
-                        if n in lnNames:
+                    path,fileName = os.path.split(filePath)
+                    for lnToLoad in lnNames:
+#                        print('working with line '+lnToLoad)
+                        if fileName.startswith(lnToLoad)==True:
+#                            print('file "'+fileName+'" starts with '+lnToLoad+' = True')
                             self.addFoamLines(linePath=filePath,
-                                              lnName=n,
+                                              lnName=lnToLoad,
                                               underscoreHeaders=underscoreHeaders)
                         
         else:
