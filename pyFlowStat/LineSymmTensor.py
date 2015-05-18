@@ -64,6 +64,6 @@ class LineSymmTensor(Line.Line):
         Return the scalar field defined in the source coordinate system.
         
         Returns:
-            *rawData*: numpy array of shape (N,)
+            *rawData*: numpy array of shape (N,6)
         '''
         return np.vstack((self.txx,self.txy,self.txz,self.tyy,self.tyz,self.tzz)).T

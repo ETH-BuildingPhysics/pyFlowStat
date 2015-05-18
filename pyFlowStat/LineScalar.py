@@ -24,6 +24,7 @@ class LineScalar(Line.Line):
         Arguments:
             *xyz*: numpy array of shape (npoints,3).
              position vector
+             
             *s*: numpy array of shape (npoints).
              scalar values.
         '''

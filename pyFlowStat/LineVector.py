@@ -26,8 +26,16 @@ class LineVector(Line.Line):
         Arguments:
             *xyz*: numpy array of shape (npoints,3).
              position vector
-            *s*: numpy array of shape (npoints).
-             scalar values.
+             
+            *vx*: numpy array of shape (npoints).
+             x coordinate of the vector.
+             
+            *vy*: numpy array of shape (npoints).
+             y coordinate of the vector.
+            
+            *vz*: numpy array of shape (npoints).
+             z coordinate of the vector.
+             
         '''
         super(LineVector,self).__init__(xyz)
 
@@ -54,6 +62,6 @@ class LineVector(Line.Line):
         Return the scalar field defined in the source coordinate system.
         
         Returns:
-            *rawData*: numpy array of shape (N,)
+            *rawData*: numpy array of shape (N,3)
         '''
         return np.vstack((self.vx,self.vy,self.vz)).T
