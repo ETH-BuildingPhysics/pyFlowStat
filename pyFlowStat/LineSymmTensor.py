@@ -67,3 +67,7 @@ class LineSymmTensor(Line.Line):
             *rawData*: numpy array of shape (N,6)
         '''
         return np.vstack((self.txx,self.txy,self.txz,self.tyy,self.tyz,self.tzz)).T
+        
+    def TKE(self):
+        return 0.5*(self.txx+self.tyy+self.tzz)
+    
