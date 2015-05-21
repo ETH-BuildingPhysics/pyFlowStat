@@ -559,7 +559,23 @@ class Surface(object):
         zi=zi_ma.filled(np.nan)
 
         return zi
+        
+    def getMeshgrid(self,offset=[0,0]):
+        '''
+        returns X and Y meshgrid, usable for contour plotting etc.
+        '''
+        ysteps=int((self.maxY-self.minY)/self.dy)+1
+        xsteps=int((self.maxX-self.minX)/self.dy)+1
+        yrange=np.linspace(self.minY,self.maxY,ysteps)
+        yrange=np.flipud(yrange)
+        xrange = np.linspace(self.minX,self.maxX,xsteps)
 
+        xrange=xrange-offset[0]
+        yrange=yrange-offset[1]
+
+        X,Y = np.meshgrid(xrange, yrange)
+        return X,Y
+        
     def readFromFoamFile(self,
                          pointsFile,
                          facesFile,
