@@ -214,6 +214,7 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
         pt.probeLoc=[i,j]
         pt.createDataDict(action=createDict)
         if genStat==True:
+            pt.addVectorMagnitude()
             pt.generateStatistics(doDetrend=doDetrend)
 
         return pt
