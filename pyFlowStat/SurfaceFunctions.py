@@ -68,35 +68,37 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
         None
     '''
     fwm = h5py.File(hdf5file, 'w-')
-    for i in range(len(surfaceList)):
-        # group name
-        gName = 'Surface'+str(i)
-        gsurfi = fwm.create_group(gName)
+    try:
+        for i in range(len(surfaceList)):
+            # group name
+            gName = 'Surface'+str(i)
+            gsurfi = fwm.create_group(gName)
 
-        # save minimal data
-        gsurfi.create_dataset('vx',data=surfaceList[i].vx)
-        gsurfi.create_dataset('vy',data=surfaceList[i].vy)
-        gsurfi.create_dataset('vz',data=surfaceList[i].vz)
+            # save minimal data
+            gsurfi.create_dataset('vx',data=surfaceList[i].vx)
+            gsurfi.create_dataset('vy',data=surfaceList[i].vy)
+            gsurfi.create_dataset('vz',data=surfaceList[i].vz)
 
-        gsurfi.create_dataset('dx',data=surfaceList[i].dx)
-        gsurfi.create_dataset('dy',data=surfaceList[i].dy)
+            gsurfi.create_dataset('dx',data=surfaceList[i].dx)
+            gsurfi.create_dataset('dy',data=surfaceList[i].dy)
 
-        dim=[surfaceList[i].minX, surfaceList[i].minY, surfaceList[i].maxX, surfaceList[i].maxY]
-        gsurfi.create_dataset('dim',data=dim)
-        gsurfi.create_dataset('dimExtent',data=surfaceList[i].extent)
+            dim=[surfaceList[i].minX, surfaceList[i].minY, surfaceList[i].maxX, surfaceList[i].maxY]
+            gsurfi.create_dataset('dim',data=dim)
+            gsurfi.create_dataset('dimExtent',data=surfaceList[i].extent)
 
-        # save extra data if specified:
-        #save nothing more
-        if keyrange=='raw':
-            pass
-        #add all data from the dictionnary
-        elif keyrange=='full':
-            for key in surfaceList[i].data.keys():
-                if (key=='dx' or key=='dy' or key=='Ux' or key=='Uy' or key=='Uz'):
-                    pass
-                else:
-                    gsurfi.create_dataset(key,data=surfaceList[i].data[key])
-    fwm.close()
+            # save extra data if specified:
+            #save nothing more
+            if keyrange=='raw':
+                pass
+            #add all data from the dictionnary
+            elif keyrange=='full':
+                for key in surfaceList[i].data.keys():
+                    if (key=='dx' or key=='dy' or key=='Ux' or key=='Uy' or key=='Uz'):
+                        pass
+                    else:
+                        gsurfi.create_dataset(key,data=surfaceList[i].data[key])
+    finally:
+        fwm.close()
 
 
 def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
@@ -131,47 +133,49 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
     '''
     surfaceList = []
     fr = h5py.File(hdf5file, 'r')
-    for i in range(len(fr.keys())):
-        gName = 'Surface'+str(i)
-        surfaceList.append(sr.Surface())
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'Surface'+str(i)
+            surfaceList.append(sr.Surface())
 
-        # load minimum data
-        surfaceList[i].vx = fr[gName]['vx'].value
-        surfaceList[i].vy = fr[gName]['vy'].value
-        surfaceList[i].vz = fr[gName]['vz'].value
+            # load minimum data
+            surfaceList[i].vx = fr[gName]['vx'].value
+            surfaceList[i].vy = fr[gName]['vy'].value
+            surfaceList[i].vz = fr[gName]['vz'].value
 
-        surfaceList[i].dx = fr[gName]['dx'].value
-        surfaceList[i].dy = fr[gName]['dy'].value
+            surfaceList[i].dx = fr[gName]['dx'].value
+            surfaceList[i].dy = fr[gName]['dy'].value
 
-        dim = fr[gName]['dim'].value
-        surfaceList[i].minX = dim[0]
-        surfaceList[i].minY = dim[1]
-        surfaceList[i].maxX = dim[2]
-        surfaceList[i].maxY = dim[3]
-        surfaceList[i].extent = fr[gName]['dimExtent'].value
+            dim = fr[gName]['dim'].value
+            surfaceList[i].minX = dim[0]
+            surfaceList[i].minY = dim[1]
+            surfaceList[i].maxX = dim[2]
+            surfaceList[i].maxY = dim[3]
+            surfaceList[i].extent = fr[gName]['dimExtent'].value
 
-        # load extra data if specified:
-        #load nothing more
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in fr[gName].keys():
-                if (key=='dim' or key=='dimExtent'):
-                    pass
-                elif (key=='vx'):
-                    surfaceList[i].data[str('Ux')] = fr[gName][key].value
-                elif (key=='vy'):
-                    surfaceList[i].data[str('Uy')] = fr[gName][key].value
-                elif (key=='vz'):
-                    surfaceList[i].data[str('Uz')] = fr[gName][key].value
-                else:
-                    surfaceList[i].data[str(key)] = fr[gName][key].value
+            # load extra data if specified:
+            #load nothing more
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in fr[gName].keys():
+                    if (key=='dim' or key=='dimExtent'):
+                        pass
+                    elif (key=='vx'):
+                        surfaceList[i].data[str('Ux')] = fr[gName][key].value
+                    elif (key=='vy'):
+                        surfaceList[i].data[str('Uy')] = fr[gName][key].value
+                    elif (key=='vz'):
+                        surfaceList[i].data[str('Uz')] = fr[gName][key].value
+                    else:
+                        surfaceList[i].data[str(key)] = fr[gName][key].value
 
-        if createDict==False:
-            pass
-        else:
-            surfaceList[i].createDataDict()
-    fr.close()
+            if createDict==False:
+                pass
+            else:
+                surfaceList[i].createDataDict()
+    finally:
+        fr.close()
     return surfaceList
 
 

@@ -65,21 +65,23 @@ def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
         * None
     '''
     fwm = h5py.File(hdf5file, 'w-')
-    for i in range(len(ppList)):
-        # group name
-        gName = 'pointProbe'+str(i)
-        #print('save '+str(gName))
-        gppi = fwm.create_group(gName)
-        # iter dict keys
-        gppi.create_dataset('probeVar',data=ppList[i].probeVar)
-        gppi.create_dataset('probeTimes',data=ppList[i].probeTimes)
-        gppi.create_dataset('probeLoc',data=ppList[i].probeLoc)
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in ppList[i].data.keys():
-                gppi.create_dataset(key,data=ppList[i][key])
-    fwm.close()
+    try:
+        for i in range(len(ppList)):
+            # group name
+            gName = 'pointProbe'+str(i)
+            #print('save '+str(gName))
+            gppi = fwm.create_group(gName)
+            # iter dict keys
+            gppi.create_dataset('probeVar',data=ppList[i].probeVar)
+            gppi.create_dataset('probeTimes',data=ppList[i].probeTimes)
+            gppi.create_dataset('probeLoc',data=ppList[i].probeLoc)
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in ppList[i].data.keys():
+                    gppi.create_dataset(key,data=ppList[i][key])
+    finally:
+        fwm.close()
 
 
 def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
@@ -112,28 +114,30 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
     '''
     ppList = []
     fr = h5py.File(hdf5file, 'r')
-    for i in range(len(fr.keys())):
-        gName = 'pointProbe'+str(i)
-        #print('load '+str(gName))
-        ppList.append(pp.PointProbe())
-        ppList[i].probeVar = fr[gName]['probeVar'].value
-        ppList[i].probeTimes = fr[gName]['probeTimes'].value
-        ppList[i].probeLoc = fr[gName]['probeLoc'].value
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'pointProbe'+str(i)
+            #print('load '+str(gName))
+            ppList.append(pp.PointProbe())
+            ppList[i].probeVar = fr[gName]['probeVar'].value
+            ppList[i].probeTimes = fr[gName]['probeTimes'].value
+            ppList[i].probeLoc = fr[gName]['probeLoc'].value
 
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in fr[gName].keys():
-                if (key=='probeVar' or key=='probeTimes' or key=='probeLoc'):
-                    pass
-                else:
-                    ppList[i].data[str(key)] = fr[gName][key].value
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in fr[gName].keys():
+                    if (key=='probeVar' or key=='probeTimes' or key=='probeLoc'):
+                        pass
+                    else:
+                        ppList[i].data[str(key)] = fr[gName][key].value
 
-        if createDict==False:
-            pass
-        else:
-            ppList[i].createDataDict()
-    fr.close()
+            if createDict==False:
+                pass
+            else:
+                ppList[i].createDataDict()
+    finally:
+        fr.close()
     return ppList
 
 def actionPPlist_hdf5(hdf5file,actionFunction):
@@ -165,19 +169,21 @@ def actionPPlist_hdf5(hdf5file,actionFunction):
         * ppList: [python list] list of PointProbe object.
     '''
     ppList = []
-    fr = h5py.File(hdf5file, 'r')
     resultList=[]
-    for i in range(len(fr.keys())):
-        gName = 'pointProbe'+str(i)
-        #print('load '+str(gName))
-        probe=pp.PointProbe()
-        probe.probeVar = fr[gName]['probeVar'].value
-        probe.probeTimes = fr[gName]['probeTimes'].value
-        probe.probeLoc = fr[gName]['probeLoc'].value
-        resultList.append(actionFunction(probe))
-        probe=None
-        
-    fr.close()
+    
+    fr = h5py.File(hdf5file, 'r')
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'pointProbe'+str(i)
+            #print('load '+str(gName))
+            probe=pp.PointProbe()
+            probe.probeVar = fr[gName]['probeVar'].value
+            probe.probeTimes = fr[gName]['probeTimes'].value
+            probe.probeLoc = fr[gName]['probeLoc'].value
+            resultList.append(actionFunction(probe))
+            probe=None
+    finally:
+        fr.close()
     return resultList
   
 def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True,createDict=True,genStat=True):

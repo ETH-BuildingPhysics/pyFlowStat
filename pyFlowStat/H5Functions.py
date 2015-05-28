@@ -16,13 +16,15 @@ def saveDict(filename,dictionary,keyList=[],mode='w',dictName='dict'):
         keyList = dictionary.keys()
     keys = dictionary.keys()
     fwm = h5py.File(filename, mode)
-    if dictName in fwm:
-        gDict=fwm[dictName]
-    else:
-        gDict = fwm.create_group(dictName)
-    for k in [k for k in keys if k in keyList]:
-        gDict.create_dataset(k,data=dictionary[k])
-    fwm.close()
+    try:
+        if dictName in fwm:
+            gDict=fwm[dictName]
+        else:
+            gDict = fwm.create_group(dictName)
+        for k in [k for k in keys if k in keyList]:
+            gDict.create_dataset(k,data=dictionary[k])
+    finally:
+        fwm.close()
     
 def loadDict(filename,keyList=[],dictName='dict'):
     '''
@@ -30,14 +32,14 @@ def loadDict(filename,keyList=[],dictName='dict'):
     '''
     dictionary=dict()
     fwm = h5py.File(filename, 'r')
-    
-    keys = fwm[dictName].keys()
-    
-    if len(keyList)==0:
-        keyList=keys
-    
-    for k in [k for k in keys if k in keyList]:
-        dictionary[k]=fwm[dictName][k].value
+    try:
+        keys = fwm[dictName].keys()
         
-    fwm.close()
+        if len(keyList)==0:
+            keyList=keys
+        
+        for k in [k for k in keys if k in keyList]:
+            dictionary[k]=fwm[dictName][k].value
+    finally:
+        fwm.close()
     return dictionary
