@@ -400,13 +400,7 @@ class PointProbe(object):
         adds 'Umag' key to dict
         '''
         #Umag
-        Umag = np.zeros(self.data['U'].shape[0])
-        for i in range(self.data['U'].shape[0]):
-            a=self.data['U'][i,:]
-            nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
-            Umag[i] = nrm2(a)
-            #Umag[i] = np.linalg.norm(self.data['U'][i,:])
-        self.data['Umag']=Umag
+        self.data['Umag'] = np.linalg.norm(self.data['U'], axis=1)
         
     def addFluctuations(self):
         '''
