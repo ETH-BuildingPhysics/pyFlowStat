@@ -35,7 +35,9 @@ import matplotlib.path as mplPath
 #import pyFlowStat.CoordinateTransformation as coorTrans
 import pyFlowStat.TriSurface as TriSurface
 import pyFlowStat.TriSurfaceMesh as TriSurfaceMesh
+import pyFlowStat.TriSurfaceScalar as TriSurfaceScalar
 import pyFlowStat.TriSurfaceVector as TriSurfaceVector
+import pyFlowStat.TriSurfaceSymmTensor as TriSurfaceSymmTensor
 import pyFlowStat.Functions as func
 import pyFlowStat.TriSurfaceContainer as TriSurfaceContainer
 
@@ -202,6 +204,96 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
         return subTsm, subTsv
     elif return_node_renum==True:
         return subTsm, subTsv, node_renum
+
+
+def getSubTriSurfaceContainer(tscSource, poly, op='in', mode='mid',return_node_renum=False):
+    '''
+    Return a sub TriSurfaceContainer (subTsc) from a source TriSurfaceContainer.
+    The sub part is cut out of a polygon. The part inside or ouside the 
+    polygon can be kept. IF you want to compressed other fields based on the
+    mesh stored in tscSource, switch "return_node_renum" to True, and
+    use the output to feed the function compressArray.
+    
+    Arguments:
+        *tscSource*: TriSurfaceContainer Object
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+         
+        *return_node_renum*: python bool. Default=False
+         If True, returns the node renumbering. Useful to compress array with
+         TriSurfaceFunctions.compressArray()
+         
+    Returns:
+        *subTsc*: TriSurfacContainer object
+        
+        *node_renum*: numpy array. Returned only if return_node_renum=True        
+    '''
+    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tscSource.triSurfaceMesh,
+                                             poly=poly,
+                                             op=op,
+                                             mode=mode)
+    
+    subTsc = TriSurfaceContainer.TriSurfaceContainer(subTsm)
+    
+    for fname,fdata in tscSource.fields.iteritems():
+        if isinstance(fdata,TriSurfaceVector.TriSurfaceVector):
+            comp_vx = compressArray(fdata.vx,node_renum)
+            comp_vy = compressArray(fdata.vy,node_renum)
+            comp_vz = compressArray(fdata.vz,node_renum)
+            subProjectedField = fdata.projectedField
+            subTs = TriSurfaceVector.TriSurfaceVector(vx=comp_vx,
+                                                      vy=comp_vy,
+                                                      vz=comp_vz,
+                                                      time=fdata.time,
+                                                      triSurfaceMesh=subTsm,
+                                                      projectedField=subProjectedField,
+                                                      interpolation=None,
+                                                      kind=None)                                              
+            subTsc.addTriSurface(subTs,fname)
+           
+        if isinstance(fdata,TriSurfaceScalar.TriSurfaceScalar):
+            comp_s = compressArray(fdata.s,node_renum)
+            subProjectedField = fdata.projectedField
+            subTs = TriSurfaceScalar.TriSurfaceScalar(s=comp_s,
+                                                      time=fdata.time,
+                                                      triSurfaceMesh=subTsm,
+                                                      projectedField=subProjectedField,
+                                                      interpolation=None,
+                                                      kind=None)                                              
+            subTsc.addTriSurface(subTs,fname)
+            
+        if isinstance(fdata,TriSurfaceSymmTensor.TriSurfaceSymmTensor):
+            comp_txx = compressArray(fdata.txx,node_renum)
+            comp_txy = compressArray(fdata.txy,node_renum)
+            comp_txz = compressArray(fdata.txz,node_renum)
+            comp_tyy = compressArray(fdata.tyy,node_renum)
+            comp_tyz = compressArray(fdata.tyz,node_renum)
+            comp_tzz = compressArray(fdata.tzz,node_renum)
+            subProjectedField = fdata.projectedField
+            subTs = TriSurfaceSymmTensor.TriSurfaceSymmTensor(txx=comp_txx,
+                                                              txy=comp_txy,
+                                                              txz=comp_txz,
+                                                              tyy=comp_tyy,
+                                                              tyz=comp_tyz,
+                                                              tzz=comp_tzz,
+                                                              time=fdata.time,
+                                                              triSurfaceMesh=subTsm,
+                                                              projectedField=subProjectedField,
+                                                              interpolation=None,
+                                                              kind=None)                                              
+            subTsc.addTriSurface(subTs,fname)
+           
+    if return_node_renum==False:
+        return subTsc
+    elif return_node_renum==True:
+        return subTsc, node_renum
+
 
 
 def getSubTriSurfaceVectorList(tsvListSource,
