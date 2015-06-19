@@ -234,10 +234,7 @@ class Surface(object):
         self.computeSignedQ()
         self.computeOWQ()
         self.computeLambda2()
-        
-        dudx=self.data['dudx']
-        dvdy=self.data['dvdy']
-        self.data['Div2D']=dudx+dvdy
+        self.computeDivergence()
         
         self.data['KE']=0.5*(self.vx**2+self.vy**2+self.vz**2)
         
@@ -249,6 +246,11 @@ class Surface(object):
 #        tensorW= np.empty(self.data['Ux'].shape)
 #        tensorS= 0.5*[[dudx+dudx,dudy+dvdx],[dvdx+dudy,dvdy+dvdy]]
 #        tensor2= 0.5*[[0.0,dudy-dvdx],[dvdx-dudy,0.0]]
+
+    def computeDivergence(self,postfix=''):
+        dudx=self.data['dudx'+postfix]
+        dvdy=self.data['dvdy'+postfix]
+        self.data['Div2D'+postfix]=dudx+dvdy
         
     def computeGradients(self,method='numpy'):
         if method=='numpy':
@@ -260,16 +262,49 @@ class Surface(object):
             self.data['dvdx']=dvdx
         elif method=='r':
             dudx_r = np.zeros(self.data['Ux'].shape)
+            dvdy_r = np.zeros(self.data['Uy'].shape)
+            dudy_r = np.zeros(self.data['Ux'].shape)
+            dvdx_r = np.zeros(self.data['Uy'].shape)
+            
             for i in range(2,self.data['Ux'].shape[0]-2):
                 for j in range(2,self.data['Ux'].shape[1]-2):
                     dudx_r[i,j]=(self.data['Ux'][i,j-2]-8.0*self.data['Ux'][i,j-1]+8.0*self.data['Ux'][i,j+1]-self.data['Ux'][i,j+2])/(12.0*self.dx/1000.0)
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdy_r[i,j]=(self.data['Uy'][i-2,j]-8.0*self.data['Uy'][i-1,j]+8.0*self.data['Uy'][i+1,j]-self.data['Uy'][i+2,j])/(12.0*-self.dy/1000.0)
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdx_r[i,j]=(self.data['Uy'][i,j-2]-8.0*self.data['Uy'][i,j-1]+8.0*self.data['Uy'][i,j+1]-self.data['Uy'][i,j+2])/(12.0*self.dx/1000.0)
+            for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudy_r[i,j]=(self.data['Ux'][i-2,j]-8.0*self.data['Ux'][i-1,j]+8.0*self.data['Ux'][i+1,j]-self.data['Ux'][i+2,j])/(12.0*-self.dy/1000.0)
             self.data['dudx_r']=dudx_r
+            self.data['dvdy_r']=dvdy_r
+            self.data['dvdx_r']=dvdx_r
+            self.data['dudy_r']=dudy_r
+        
         elif method=='ls':
             dudx_ls = np.zeros(self.data['Ux'].shape)
+            dudy_ls = np.zeros(self.data['Ux'].shape)
+            dvdy_ls = np.zeros(self.data['Uy'].shape)
+            dvdx_ls = np.zeros(self.data['Uy'].shape)
             for i in range(2,self.data['Ux'].shape[0]-2):
                 for j in range(2,self.data['Ux'].shape[1]-2):
                     dudx_ls[i,j]=(2.0*self.data['Ux'][i,j+2]+self.data['Ux'][i,j+1]-self.data['Ux'][i,j-1]-2.0*self.data['Ux'][i,j-2])/(10.0*self.dx/1000.0)
+            for i in range(2,self.data['Ux'].shape[0]-2):
+                for j in range(2,self.data['Ux'].shape[1]-2):
+                    dudy_ls[i,j]=(2.0*self.data['Ux'][i+2,j]+self.data['Ux'][i+1,j]-self.data['Ux'][i-1,j]-2.0*self.data['Ux'][i-2,j])/(10.0*-self.dy/1000.0)
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdy_ls[i,j]=(2.0*self.data['Uy'][i+2,j]+self.data['Uy'][i+1,j]-self.data['Uy'][i-1,j]-2.0*self.data['Uy'][i-2,j])/(10.0*-self.dy/1000.0)
+            for i in range(2,self.data['Uy'].shape[0]-2):
+                for j in range(2,self.data['Uy'].shape[1]-2):
+                    dvdx_ls[i,j]=(2.0*self.data['Uy'][i,j+2]+self.data['Uy'][i,j+1]-self.data['Uy'][i,j-1]-2.0*self.data['Uy'][i,j-2])/(10.0*self.dx/1000.0)
+                    
             self.data['dudx_ls']=dudx_ls
+            self.data['dudy_ls']=dudy_ls
+            self.data['dvdx_ls']=dvdx_ls
+            self.data['dvdy_ls']=dvdy_ls
             
     def removeGradients(self):
         for k in self.data.keys():
@@ -398,6 +433,30 @@ class Surface(object):
             self.data['vw']=self.data['uy']*self.data['uz']
             self.data['TKE']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
 
+    def addQuadrants(self):
+        '''
+        
+        '''
+        ux_pos=self.data['ux'].copy()
+        ux_neg=self.data['ux'].copy()
+        ux_pos[ux_pos<0]=np.nan
+        ux_neg[ux_neg>0]=np.nan
+
+        uy_pos=self.data['uy'].copy()
+        uy_neg=self.data['uy'].copy()
+        uy_pos[uy_pos<0]=np.nan
+        uy_neg[uy_neg>0]=np.nan
+
+        quadrant0=ux_pos*uy_pos
+        quadrant1=ux_neg*uy_pos
+        quadrant2=ux_neg*uy_neg
+        quadrant3=ux_pos*uy_neg
+        
+        self.data['Q0_out']=quadrant0
+        self.data['Q1_ejection']=quadrant1
+        self.data['Q2_in']=quadrant2
+        self.data['Q3_sweep']=quadrant3
+            
     def readFromVC7(self,filename,v=False):
         '''
         reads PIV vector data in tha Davis format, using the 64bit windows DLL
@@ -559,7 +618,21 @@ class Surface(object):
         zi=zi_ma.filled(np.nan)
 
         return zi
+    def setExtentFromBounds(self):
+        '''
+        sets self.extent using cell centers minX,maxX,minY,maxY and self.dx/dy
+        '''
+        self.extent=[self.minX-(self.dx/2),self.maxX+(self.dx/2),self.minY-(self.dy/2),self.maxY+(self.dy/2)]
         
+    def setBoundsFromExtent(self):
+        '''
+        sets cell centers minX,maxX,minY,maxY using self.extent and self.dx/dy
+        '''
+        self.minX=self.extent[0]+(self.dx/2)
+        self.maxX=self.extent[1]-(self.dx/2)
+        self.minY=self.extent[2]+(self.dy/2)
+        self.maxY=self.extent[3]-(self.dy/2)
+    
     def getMeshgrid(self,offset=[0,0]):
         '''
         returns X and Y meshgrid, usable for contour plotting etc.
