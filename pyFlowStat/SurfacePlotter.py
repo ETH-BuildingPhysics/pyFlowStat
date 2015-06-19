@@ -54,10 +54,10 @@ def PlotColoredStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0]):
     return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 #    return ax.streamplot(X,Y,surface.data['Ux'],surface.data['Uy'],density=density,norm=cnorm,color=u)
 
-def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0],spacing=1,**kwargs):
+def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0],spacing=1,UxKey='Ux',UyKey='Uy',**kwargs):
  
     if 'width' not in kwargs:
         kwargs['width']=0.1
         
     X,Y = surface.getMeshgrid(offset=offset)
-    return plt.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data['Ux'][::spacing,::spacing],surface.data['Uy'][::spacing,::spacing],scale=scale,angles='uv',units='xy',**kwargs)
+    return plt.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data[UxKey][::spacing,::spacing],surface.data[UyKey][::spacing,::spacing],scale=scale,angles='uv',units='xy',**kwargs)
