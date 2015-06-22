@@ -253,6 +253,22 @@ class Surface(object):
         self.data['Div2D'+postfix]=dudx+dvdy
         
     def computeGradients(self,method='numpy'):
+        '''
+        Compute the gradient for the velocity componant Ux and Uy. The gradients
+        are stored in self.data with the key "dudx", "dudy", "dvdx", "dvdy".
+        If method is set to "ls" or "r", the new keys have a trailing "_ls" or
+        "_r" respectively.
+            
+        Arguments:          
+            *method*: string
+             Method use to compute the gradient. "numpy" uses the function
+             numpy.gradient. "ls" is a least-square method. "r" is something
+             else. Default: method='numpy'
+             
+        Returns:
+            None
+             
+        '''
         if method=='numpy':
             dudy,dudx=np.gradient(self.vx,-self.dy/1000,self.dx/1000)
             dvdy,dvdx=np.gradient(self.vy,-self.dy/1000,self.dx/1000)
@@ -305,7 +321,7 @@ class Surface(object):
             self.data['dudy_ls']=dudy_ls
             self.data['dvdx_ls']=dvdx_ls
             self.data['dvdy_ls']=dvdy_ls
-            
+
     def removeGradients(self):
         for k in self.data.keys():
             if k.startswith('dudx'):

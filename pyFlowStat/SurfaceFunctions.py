@@ -121,15 +121,20 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
             * 'dimExtent' (DATASET)
 
     Arguments:
-        * hdf5file: [str] path to source file.
-        * keyrange: [str] defines which keys will be loaded from the hdf5 file:
+        *hdf5file*: string 
+          path to the source file.
+        *keyrange*: string
+          Defines which keys will be loaded from the hdf5 file:
               * 'raw' = only vx,vy, vz, (default)
               * 'full' = 'raw' plus every keys from the hdf5 file.
-        * createDict: [bool] create data dict. Usefull if the hdf5 contains
-          only the raw data (vx, vy and vz).
+        *createDict*: bool
+         Create data dict. Usefull if the hdf5 contains
+         only the raw data (vx, vy and vz). If keyrange='full', createDict
+         is set to False, whatever the user selects.
 
     Returns:
-        * surfaceList: [python list] list of Surface object.
+        *surfaceList*: python list
+         List of Surface object.
     '''
     surfaceList = []
     fr = h5py.File(hdf5file, 'r')
@@ -170,10 +175,10 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
                     else:
                         surfaceList[i].data[str(key)] = fr[gName][key].value
 
-            if createDict==False:
-                pass
-            else:
+            if createDict==True and keyrange=='raw':
                 surfaceList[i].createDataDict()
+            else:
+                pass
     finally:
         fr.close()
     return surfaceList
