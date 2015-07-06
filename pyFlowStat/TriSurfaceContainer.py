@@ -198,25 +198,28 @@ class TriSurfaceContainer(object):
             scalarFields=glob.glob(os.path.join(surfacepath,'scalarField','*'))
             vectorFields=glob.glob(os.path.join(surfacepath,'vectorField','*'))
             symmTensorFields=glob.glob(os.path.join(surfacepath,'symmTensorField','*'))
+            namesToLoad = []
             if len(names)<1:
                 for name in scalarFields:
-                    names.append(os.path.basename(name))
+                    namesToLoad.append(os.path.basename(name))
                 for name in vectorFields:
-                    names.append(os.path.basename(name))
+                    namesToLoad.append(os.path.basename(name))
                 for name in symmTensorFields:
-                    names.append(os.path.basename(name))
+                    namesToLoad.append(os.path.basename(name))
+            else:
+                namesToLoad=[n for n in names]           
             
             for field in scalarFields:
                 key=os.path.basename(field)
-                if key in names:
+                if key in namesToLoad:
                     self.addFoamScalarField(field,key,time)
             for field in vectorFields:
                 key=os.path.basename(field)
-                if key in names:
+                if key in namesToLoad:
                     self.addFoamVectorField(field,key,time)
             for field in symmTensorFields:
                 key=os.path.basename(field)
-                if key in names:
+                if key in namesToLoad:
                     self.addFoamSymmTensorField(field,key,time)
         else:
             raise IOError("Folder does not exist")
