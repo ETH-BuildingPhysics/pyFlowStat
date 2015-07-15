@@ -604,7 +604,7 @@ def loadTriSurfaceContainerList_hdf5(hdf5FileName,
     
     tsContainerList=[]
     # open the hdf5 parser
-    fr = h5py.File(hdf5fileName, 'r')
+    fr = h5py.File(hdf5FileName, 'r')
     try:
         tsContainerList=loadTriSurfaceContainerList_hdf5Parser(hdf5Parser=fr,
                                            varNames=varNames,
@@ -680,4 +680,33 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
         tsc.addFieldFromHdf5(hdf5Parser,names=varNames,key=str(ts),projectedField=projectedField)
         tscList.append(tsc)
         
-    return tscList                                        
+    return tscList
+
+def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
+    '''
+    returns times of the surfaces stored in h5 file, by reading the keys
+    
+    Arguments:
+        *asFloat: bool
+        return original keys if false, else convert to float np.array
+    '''
+    
+    hdf5Parser = h5py.File(hdf5fileName, 'r')
+    allTsorted=[]
+    try:
+        allTs = []
+        allTs = hdf5Parser.keys()
+        try:
+            allTs.pop(allTs.index('mesh'))
+        except:
+            pass
+        allTsorted = func.sortNumStrList(allTs)
+        
+        if asFloat:
+            return np.array(allTsorted,dtype=float)
+        else:
+            return allTsorted
+    except e:
+        print e
+    finally:
+        hdf5Parser.close()
