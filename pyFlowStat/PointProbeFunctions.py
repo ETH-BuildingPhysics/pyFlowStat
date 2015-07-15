@@ -241,5 +241,6 @@ def createFromArray(dt,u,v,w,doDetrend=True):
     endtime=(len(u)-1)*dt
     pt.probeTimes=np.linspace(0,endtime,nrpoints)
     pt.createDataDict()
+    pt.addVectorMagnitude() 
     pt.generateStatistics(doDetrend=doDetrend)
     return pt
