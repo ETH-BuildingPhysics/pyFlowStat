@@ -1,6 +1,6 @@
 import numpy as np
 
-def sortNumStrList(numStrList,minVal=None,maxVal=None,step=None):
+def sortNumStrList(numStrList,minVal=None,maxVal=None,step=1):
     '''
     Sort a list of number stored as a list of string. StrNumList is the list of
     number as string.
