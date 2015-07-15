@@ -32,6 +32,8 @@ import numpy as np
 import matplotlib.tri as tri
 import matplotlib.path as mplPath
 
+import pyFlowStat
+
 #import pyFlowStat.CoordinateTransformation as coorTrans
 import pyFlowStat.TriSurface as TriSurface
 import pyFlowStat.TriSurfaceMesh as TriSurfaceMesh
@@ -40,6 +42,7 @@ import pyFlowStat.TriSurfaceVector as TriSurfaceVector
 import pyFlowStat.TriSurfaceSymmTensor as TriSurfaceSymmTensor
 import pyFlowStat.Functions as func
 import pyFlowStat.TriSurfaceContainer as TriSurfaceContainer
+
 
 
 
@@ -689,7 +692,7 @@ def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
     returns times of the surfaces stored in h5 file, by reading the keys
     
     Arguments:
-        *asFloat: bool
+        *asFloat*: bool
         return original keys if false, else convert to float np.array
     '''
     
@@ -714,3 +717,47 @@ def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
         print e
     finally:
         hdf5Parser.close()
+        
+def twoPointCorr(tContList,field,x_ref,y_ref,comp=0):
+    '''
+    Given a list of TriSurfaceContainers, computes the two point correleation wrt to a reference position x_ref,y_ref.
+    
+    Arguments:
+        *tContList*: list of TriSurfaceContainer
+        
+        *field*: string, key to field to compute cross correlation on
+        
+        *x_ref*: float
+        
+        *y_ref*: float
+        
+        *comp*: int
+        component to use
+        
+    Returns:
+        *CCorr_u*: numpy array
+        
+        *i_ref*: int, index of reference position
+        
+        *x*:     float, actual x reference position
+        
+        *y*:     float, actual y reference position
+    '''
+    
+    tCont=tContList[0]
+    
+    r_list=np.abs(tCont.triSurfaceMesh.x-x_ref)+np.abs(tCont.triSurfaceMesh.y-y_ref)
+    i_ref= np.argmin(r_list)
+    x=tCont.triSurfaceMesh.x[i_ref]
+    y=tCont.triSurfaceMesh.y[i_ref]
+    
+    
+    U_ref=[tc[field](comp)[i_ref] for tc in tContList]
+    CCorr_u=[]
+
+    for i in range(len(tCont.triSurfaceMesh.x)):
+        U_i=[tc[field](comp)[i] for tc in tContList]
+        cc=pyFlowStat.TurbulenceTools.twoPointCorr(U_ref,U_i,subtractMean=True,norm=True)
+        CCorr_u.append(cc)
+    CCorr_u=np.array(CCorr_u)
+    return CCorr_u,i_ref,x,y
