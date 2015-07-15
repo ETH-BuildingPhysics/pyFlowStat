@@ -288,7 +288,7 @@ class TriSurfaceContainer(object):
                                   'scalar, not a vector, not a symmTensor.')
             
             except KeyError as e:
-                'time "'+gTime+'" and/or name "'+name+'" does not exist as key in the HDF5 parser. Not read, but continuing')
+                'time "'+gTime+'" and/or name "'+name+'" does not exist as key in the HDF5 parser. Not read, but continuing'
                 print e
             except KeyboardInterrupt as e:
                 print e

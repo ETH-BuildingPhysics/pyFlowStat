@@ -705,7 +705,9 @@ def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
         allTsorted = func.sortNumStrList(allTs)
         
         if asFloat:
-            return np.array(allTsorted,dtype=float)
+            allTsorted=np.array(allTsorted,dtype=float)
+            print '#:',len(allTsorted),'min:',np.min(allTsorted),'max:',np.max(allTsorted)
+            return allTsorted
         else:
             return allTsorted
     except e:
