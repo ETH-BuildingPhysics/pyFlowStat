@@ -718,7 +718,7 @@ def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
     finally:
         hdf5Parser.close()
         
-def twoPointCorr(tContList,field,x_ref,y_ref,comp=0):
+def twoPointCorr(tContList,field,x_ref,y_ref,comp=0,idx_lst=[]):
     '''
     Given a list of TriSurfaceContainers, computes the two point correleation wrt to a reference position x_ref,y_ref.
     
@@ -733,6 +733,9 @@ def twoPointCorr(tContList,field,x_ref,y_ref,comp=0):
         
         *comp*: int
         component to use
+        
+        *idx_lst*: list of int
+        indices of where the two-point correleation will be computed. Has to include i_ref
         
     Returns:
         *CCorr_u*: numpy array
@@ -754,8 +757,13 @@ def twoPointCorr(tContList,field,x_ref,y_ref,comp=0):
     
     U_ref=[tc[field](comp)[i_ref] for tc in tContList]
     CCorr_u=[]
-
-    for i in range(len(tCont.triSurfaceMesh.x)):
+    
+    if len(idx_lst)<1:
+        idx_lst=range(len(tCont.triSurfaceMesh.x))
+    if i_ref not in idx_lst:
+        raise ValueError('i_ref not in list')
+    
+    for i in idx_lst:
         U_i=[tc[field](comp)[i] for tc in tContList]
         cc=pyFlowStat.TurbulenceTools.twoPointCorr(U_ref,U_i,subtractMean=True,norm=True)
         CCorr_u.append(cc)
