@@ -280,16 +280,25 @@ class TriSurfaceContainer(object):
                     tsst = TriSurfaceSymmTensor.readFromHdf5(hdf5Parser=hdf5Parser,
                                                              varName=name,
                                                              triSurfaceMesh=self.triSurfaceMesh,
-                                                             ley=key,
+                                                             key=key,
                                                              projectedField=projectedField)
                     self.fields[name] = tsst
                 else:
                     raise IOError('variable of name "'+name+'" is not a'
                                   'scalar, not a vector, not a symmTensor.')
+            
             except KeyError as e:
+                'time "'+gTime+'" and/or name "'+name+'" does not exist as key in the HDF5 parser. Not read, but continuing')
                 print e
-                print gTime,name
+            except KeyboardInterrupt as e:
+                print e
+                return False
+            except MemoryError as e:
+                print e
+                return False
             except:
                 print "Unexpected error:", sys.exc_info()[0]
                 #raise IOError('time "'+gTime+'" and/or name "'+name+'" does not '
                               #'exist as key in the HDF5 parser.')
+                return False
+        return True

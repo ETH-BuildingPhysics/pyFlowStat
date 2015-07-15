@@ -677,7 +677,9 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
     # TriSurfaceContainer list
     for ts in allTsorted:
         tsc = TriSurfaceContainer.TriSurfaceContainer(tsm)                                  
-        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,key=str(ts),projectedField=projectedField)
+        res=tsc.addFieldFromHdf5(hdf5Parser,names=varNames,key=str(ts),projectedField=projectedField)
+        if not res:
+            return tscList
         tscList.append(tsc)
         
     return tscList

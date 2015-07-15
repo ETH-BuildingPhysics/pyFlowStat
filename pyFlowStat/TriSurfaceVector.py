@@ -366,6 +366,9 @@ class TriSurfaceVector(TriSurface.TriSurface):
     def addInterpolator(self,interpolation='cubic', kind='geom'):
         '''
         Add interpolator Object to the vector field.
+        
+        Arguments:
+            *interpolation: string. 'cubic' or 'linear'
         '''
         self.interType = interpolation
         self.interKind = kind
