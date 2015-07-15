@@ -2,7 +2,7 @@
 TriSurfaceContainer.py
 '''
 import numpy as np
-import os
+import os,sys
 import glob
 #import matplotlib.tri as tri
 import matplotlib.tri as tri
@@ -74,6 +74,7 @@ class TriSurfaceContainer(object):
         '''
         pointsFile=os.path.join(pathname,'points')
         facesFile=os.path.join(pathname,'faces')
+
         tsm=TriSurfaceMesh.readFromFoamFile(pointsFile=pointsFile,
                                            facesFile=facesFile,
                                            viewAnchor=viewAnchor,
@@ -224,7 +225,7 @@ class TriSurfaceContainer(object):
         else:
             raise IOError("Folder does not exist")
             
-    def addFieldFromHdf5(self,hdf5Parser,time,names=[],projectedField=False):
+    def addFieldFromHdf5(self,hdf5Parser,key,names=[],projectedField=False):
         '''
         Add a list field stored in a hdf5 to the TriSurfaceContainer.
         
@@ -232,8 +233,8 @@ class TriSurfaceContainer(object):
             *hdf5Parser*: h5py parser object.
              Parser object of the source hdf5 file.
              
-            *time*: python float.
-             The time to extract from the HDF5. If it does not exist, IOError
+            *key*: python string.
+             The time (as a key) to extract from the HDF5. If it does not exist, IOError
              is returned.
              
             *names*: python list of string.
@@ -251,7 +252,8 @@ class TriSurfaceContainer(object):
             >>> tsc = TriSurfaceContainer.createFromHdf5(parser,xViewBasis=[1,0,0])
             >>> tsc.addFieldFromHdf5(parser,time=1.5,names=['U','S'])
         '''
-        gTime = str(time)
+        gTime = key
+        time=float(key)
         if len(names)==0:
             names = hdf5Parser[gTime].keys()
             names.pop(names.index('time'))
@@ -264,26 +266,30 @@ class TriSurfaceContainer(object):
                     tss = TriSurfaceScalar.readFromHdf5(hdf5Parser=hdf5Parser,
                                                         varName=name,
                                                         triSurfaceMesh=self.triSurfaceMesh,
-                                                        time=time,
+                                                        key=key,
                                                         projectedField=projectedField)
                     self.fields[name] = tss
                 elif len(dataShape)==2 and dataShape[1]==3:  #data is a vector
                     tsv = TriSurfaceVector.readFromHdf5(hdf5Parser=hdf5Parser,
                                                         varName=name,
                                                         triSurfaceMesh=self.triSurfaceMesh,
-                                                        time=time,
+                                                        key=key,
                                                         projectedField=projectedField)
                     self.fields[name] = tsv
                 elif len(dataShape)==2 and dataShape[1]==6:  #data is a symmtensor
                     tsst = TriSurfaceSymmTensor.readFromHdf5(hdf5Parser=hdf5Parser,
                                                              varName=name,
                                                              triSurfaceMesh=self.triSurfaceMesh,
-                                                             time=time,
+                                                             ley=key,
                                                              projectedField=projectedField)
                     self.fields[name] = tsst
                 else:
                     raise IOError('variable of name "'+name+'" is not a'
                                   'scalar, not a vector, not a symmTensor.')
+            except KeyError as e:
+                print e
+                print gTime,name
             except:
-                raise IOError('time "'+gTime+'" and/or name "'+name+'" does not '
-                              'exist as key in the HDF5 parser.')
+                print "Unexpected error:", sys.exc_info()[0]
+                #raise IOError('time "'+gTime+'" and/or name "'+name+'" does not '
+                              #'exist as key in the HDF5 parser.')

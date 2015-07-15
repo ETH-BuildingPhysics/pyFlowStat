@@ -86,7 +86,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
             *varsFile*: python string.
              Path to the file holding the scalar field.
              
-            *time*: python float
+            *key*: python string
              timestep of the surface. If this information does not matter,
              use 0.
              
@@ -116,17 +116,16 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                      hdf5Parser,
                      varName,
                      triSurfaceMesh,
-                     time,
+                     key,
                      projectedField=False):
         '''
         '''
-        gTime = str(time)
-        time = hdf5Parser[gTime]['time'].value
-        slrsTgt = hdf5Parser[gTime][varName].value
+        time = hdf5Parser[key]['time'].value
+        slrsTgt = hdf5Parser[key][varName].value
         
         # update class member variables
         return cls(s=slrsTgt,
-                   time=time,
+                   time=float(time),
                    triSurfaceMesh=triSurfaceMesh,
                    projectedField=projectedField,
                    interpolation=None,

@@ -158,13 +158,12 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
                      hdf5Parser,
                      varName,
                      triSurfaceMesh,
-                     time,
+                     key,
                      projectedField=False):
         '''
         '''
-        gTime = str(time)
-        time = hdf5Parser[gTime]['time'].value
-        stensSrc = hdf5Parser[gTime][varName].value
+        time = hdf5Parser[key]['time'].value
+        stensSrc = hdf5Parser[key][varName].value
         stensTgt = np.zeros((stensSrc.shape[0],stensSrc.shape[1]))
         if projectedField==True:
             for i in range(stensSrc.shape[0]):
@@ -180,7 +179,7 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
                    tyy=stensTgt[:,3],
                    tyz=stensTgt[:,4],
                    tzz=stensTgt[:,5],
-                   time=time,
+                   time=float(time),
                    triSurfaceMesh=triSurfaceMesh,
                    projectedField=projectedField,
                    interpolation=None,

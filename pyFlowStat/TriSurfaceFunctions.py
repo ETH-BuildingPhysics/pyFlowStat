@@ -422,71 +422,8 @@ def saveTriSurfaceContainerList_hdf5(triSurfaceContainerList,hdf5fileName,names=
     finally:
         fwm.close()
     
-def loadTriSurfaceContainerList_hdf5(hdf5fileName,
-                                  xViewBasis,
-                                  yViewBasis=None,
-                                  viewAnchor=(0,0,0),
-                                  names=[],
-                                  srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                                  projectedField=False):
-    '''
-    Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
-    object associated to the surfaces is also returned.
-    
-    Arguments:
-        *hdf5file*: python string.
-         Name or path to the source hdf5 file.
-         
-        *varName*: python string.
-         Name of the variable to load.
-         
-        *xViewBasis*: python array of shape=3.
-         X direction of the surface, defined in the source base.
-         
-        *viewAnchor*: python array of shape=3.
-         Origin of the surface coordinate system, defined in the source base.
-         Default=(0,0,0)
-         
-        *srcBasisSrc*: python array of shape=3x3.
-         Default=[[1,0,0],[0,1,0],[0,0,1]].
-         
-        *projectedField*: bool.
-         Default=False.
-    
-    Returns:
-        *tsvList*: python list with N entries
-         List filled with TriSurfaceVector objects.
-         
-        *tsm* TriSurfaceMesh object
-    '''
-    tsContainerList=[]
-    # open the hdf5 parser
-    fr = h5py.File(hdf5fileName, 'r')
-    try:
-        # load the mesh
-        tsContainer0=TriSurfaceContainer.TriSurfaceContainer.createFromHdf5(fr,
-                                                                            xViewBasis=xViewBasis,
-                                                                            yViewBasis=yViewBasis,
-                                                                            viewAnchor=viewAnchor,
-                                                                            srcBasisSrc=srcBasisSrc)
-        keys = fr.keys()
-        keys.sort()
-        try:
-            keys.pop(keys.index('mesh'))
-        except:
-            pass
-            
-        for key in keys:
-            tCont_tmp=TriSurfaceContainer.TriSurfaceContainer(tsContainer0.triSurfaceMesh)
-            tCont_tmp.time=float(key)
-            tCont_tmp.addFieldFromHdf5(fr,tCont_tmp.time,names=names)
-            tsContainerList.append(tCont_tmp)
 
-    finally:
-        fr.close()    
-    return tsContainerList
-     
-   
+
 def saveTriSurfaceList_hdf5(triSurfaceList,varName,hdf5file,extraVar=[],indexingMode='time'):
     '''
     Save a list of TriSurface<type> in a hdf5 file.
@@ -628,15 +565,95 @@ def loadTriSurfaceVectorList_hdf5(hdf5file,
         fr.close()    
     return tsvList, tsm
 
+def loadTriSurfaceContainerList_hdf5(hdf5FileName,
+                                           varNames,
+                                           xViewBasis,
+                                           yViewBasis=None,
+                                           viewAnchor=(0,0,0),
+                                           srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
+                                           projectedField=False,
+                                           minVal=None,maxVal=None,step=None):
+    '''
+    Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
+    object associated to the surfaces is also returned.
+    
+    Arguments:
+        *hdf5FileName*: python string.
+         Name or path to the source hdf5 file.
+         
+        *varNames*: python list of strings.
+         Name of the variable to load. set to [] to load all fields
+         
+        *xViewBasis*: python array of shape=3.
+         X direction of the surface, defined in the source base.
+         
+        *viewAnchor*: python array of shape=3.
+         Origin of the surface coordinate system, defined in the source base.
+         Default=(0,0,0)
+         
+        *srcBasisSrc*: python array of shape=3x3.
+         Default=[[1,0,0],[0,1,0],[0,0,1]].
+         
+        *projectedField*: bool.
+         Default=False.
+    
+    Returns:
+        *tsContainerList*: python list with N entries
+         List filled with TriSurfaceContainer objects.
+    '''
+    
+    tsContainerList=[]
+    # open the hdf5 parser
+    fr = h5py.File(hdf5fileName, 'r')
+    try:
+        tsContainerList=loadTriSurfaceContainerList_hdf5Parser(hdf5Parser=fr,
+                                           varNames=varNames,
+                                           xViewBasis=xViewBasis,
+                                           yViewBasis=yViewBasis,
+                                           viewAnchor=viewAnchor,
+                                           srcBasisSrc=srcBasisSrc,
+                                           projectedField=projectedField,
+                                           minVal=minVal,maxVal=maxVal,step=step)
 
+    finally:
+        fr.close()    
+    return tsContainerList
+ 
+    
 def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
                                            varNames,
                                            xViewBasis,
                                            yViewBasis=None,
                                            viewAnchor=(0,0,0),
                                            srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
-                                           projectedField=False):
+                                           projectedField=False,
+                                           minVal=None,maxVal=None,step=None):
     '''
+    Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
+    object associated to the surfaces is also returned.
+    
+    Arguments:
+        *hdf5Parser*: h5File object.
+         
+        *varNames*: python list of strings.
+         Name of the variable to load. set to [] to load all fields
+         
+        *xViewBasis*: python array of shape=3.
+         X direction of the surface, defined in the source base.
+         
+        *viewAnchor*: python array of shape=3.
+         Origin of the surface coordinate system, defined in the source base.
+         Default=(0,0,0)
+         
+        *srcBasisSrc*: python array of shape=3x3.
+         Default=[[1,0,0],[0,1,0],[0,0,1]].
+         
+        *projectedField*: bool.
+         Default=False.
+    
+    Returns:
+        *tsContainerList*: python list with N entries
+         List filled with TriSurfaceContainer objects.
     '''
     # create the TriSurfaceContainer list
     tscList = []
@@ -648,7 +665,7 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
         allTs.pop(allTs.index('mesh'))
     except:
         pass
-    allTs = func.sortNumStrList(allTs)
+    allTsorted = func.sortNumStrList(allTs,minVal=minVal,maxVal=maxVal,step=step)
     
     # load the mesh
     tsm = TriSurfaceMesh.TriSurfaceMesh.readFromHdf5(hdf5Parser=hdf5Parser,
@@ -658,9 +675,9 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
                                                      srcBasisSrc=srcBasisSrc)
     
     # TriSurfaceContainer list
-    for ts in allTs: 
+    for ts in allTsorted:
         tsc = TriSurfaceContainer.TriSurfaceContainer(tsm)                                  
-        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,time=ts,projectedField=projectedField)
+        tsc.addFieldFromHdf5(hdf5Parser,names=varNames,key=str(ts),projectedField=projectedField)
         tscList.append(tsc)
         
     return tscList                                        

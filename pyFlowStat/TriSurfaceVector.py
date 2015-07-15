@@ -159,13 +159,12 @@ class TriSurfaceVector(TriSurface.TriSurface):
                      hdf5Parser,
                      varName,
                      triSurfaceMesh,
-                     time,
+                     key,
                      projectedField=False):
         '''
         '''
-        gTime = str(time)
-        time = hdf5Parser[gTime]['time'].value
-        vecsSrc = hdf5Parser[gTime][varName].value
+        time = hdf5Parser[key]['time'].value
+        vecsSrc = hdf5Parser[key][varName].value
         vecsTgt = np.zeros((vecsSrc.shape[0],vecsSrc.shape[1]))  
         if projectedField==True:
             for i in range(vecsSrc.shape[0]):
@@ -177,7 +176,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
         return cls(vx=vecsTgt[:,0],
                    vy=vecsTgt[:,1],
                    vz=vecsTgt[:,2],
-                   time=time,
+                   time=float(time),
                    triSurfaceMesh=triSurfaceMesh,
                    projectedField=projectedField,
                    interpolation=None,
