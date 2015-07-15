@@ -419,6 +419,30 @@ def func_gauss_correlation(x, a):
     #print res
     return res
     
+def func_dblExp_correlation(x,a):
+    if len(np.unique(np.diff(x)))>1:
+        warnings.warn('x has to be evenly spaced')
+    def _func_dblExp_correlation(x,a):
+                if len(x)>1:
+                    x=np.r_[x,x[-1]+np.diff(x)[-1]]
+                    k_exp=func_exp_correlation(x,a)
+                    kk_exp=spsig.fftconvolve(k_exp,k_exp, mode="full")
+                    res,_=xcorr_fft(kk_exp)
+                    return res[::2]
+                else:
+                    return []
+                
+    if np.any(x<0):
+        x_plus=x[x>=0]
+        x_neg=np.abs(x[x<=0])[::-1]
+
+        res_plus=_func_dblExp_correlation(x_plus,a)
+        res_neg=_func_dblExp_correlation(x_neg,a)
+        res=np.r_[res_neg[::-1],res_plus[1:]]
+    else:
+        res=_func_dblExp_correlation(x,a)
+    return res
+    
 def fit_exp_correlation(xdata,ydata):
     '''
     Fits an exponential function of shape exp(-x/a) to the data and returns a
@@ -434,6 +458,24 @@ def fit_exp_correlation(xdata,ydata):
     '''
     
     popt, pcov = curve_fit(func_exp_correlation,xdata,ydata)
+    a=popt[0]
+    return a,pcov
+    
+def fit_gauss_correlation(xdata,ydata):
+    '''
+    Fits an exponential function of shape exp(-x/a) to the data and returns a
+    
+    Arguments:
+        * xdata: x-values (e.g lags)
+        * ydata: y-values (e.g auto correlation coefficient)
+        
+    returns:
+        * a: fitter parameter a
+        * pcov: The estimated covariance of a.
+    
+    '''
+    
+    popt, pcov = curve_fit(func_gauss_correlation,xdata,ydata)
     a=popt[0]
     return a,pcov
     
