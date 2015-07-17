@@ -15,26 +15,21 @@ def PlotField(ax,surface,field,vmin,vmax,offset=[0,0],interpolation='nearest',mo
         im=ax.imshow(modifier(surface.data[field]),vmin=vmin,vmax=vmax,interpolation=interpolation,extent=extent,**kwargs)
     return im
     
-def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11,**kwargs):
+def PlotContour(ax,surface,field,vmin,vmax,offset=[0,0], contourlevels=21, contourlabels=11,alpha=.75,**kwargs):
 
     X,Y = surface.getMeshgrid(offset=offset)
     contour_levels = np.linspace(vmin, vmax, contourlevels)
-    contour_levels_label = np.linspace(vmin, vmax, contourlabels)
+    if contourlabels==0:
+        pass
+    else:
+        contour_levels_label = np.linspace(vmin, vmax, contourlabels)
+        C = ax.contour(X,Y,surface.data[field], contour_levels_label, colors='black', linewidth=.5)
+        ax.clabel(C, inline=1, fontsize=10)
     print field
-    cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=.75,**kwargs)
-#    ax.colorbar()
-
-    C = ax.contour(X,Y,surface.data[field], contour_levels_label, colors='black', linewidth=.5)
-    ax.clabel(C, inline=1, fontsize=10)
+    cts=ax.contourf(X,Y,surface.data[field],contour_levels,alpha=alpha,**kwargs)
     ax.set_aspect('equal')
     return cts
 
-#    xfill=[-100,0,0,100,100,200,200,-100]
-#    yfill=[0,0,-100,-100,0,0,-120,-120]
-#    fill(xfill,yfill,'k')
-#    
-#    xlim([-30,130])
-#    ylim([-105,130])
 def PlotStreamLine(ax,surface,vmin,vmax,density=10,offset=[0,0],**kwargs):
     X,Y = surface.getMeshgrid(offset=offset)
 

@@ -634,6 +634,26 @@ class Surface(object):
         zi=zi_ma.filled(np.nan)
 
         return zi
+        
+    def scaleCoordinates(self,factor):
+        self.dx=self.dx*factor
+        self.dy=self.dy*factor
+        self.extent=np.array(self.extent)*factor
+        self.minX=self.minX*factor
+        self.maxY=self.maxY*factor
+        self.maxX=self.maxX*factor
+        self.minY=self.minY*factor
+        
+    def offsetCoordinates(self,offset=[0,0]):
+        self.extent[0]=self.extent[0]-offset[0]
+        self.extent[1]=self.extent[1]-offset[0]
+        self.extent[2]=self.extent[2]-offset[1]
+        self.extent[3]=self.extent[3]-offset[1]
+        self.minX=self.minX-offset[0]
+        self.maxY=self.maxY-offset[1]
+        self.maxX=self.maxX-offset[0]
+        self.minY=self.minY-offset[1]
+        
     def setExtentFromBounds(self):
         '''
         sets self.extent using cell centers minX,maxX,minY,maxY and self.dx/dy
@@ -653,8 +673,8 @@ class Surface(object):
         '''
         returns X and Y meshgrid, usable for contour plotting etc.
         '''
-        ysteps=int((self.maxY-self.minY)/self.dy)+1
-        xsteps=int((self.maxX-self.minX)/self.dy)+1
+        ysteps=int(np.round((self.maxY-self.minY)/self.dy))+1
+        xsteps=int(np.round((self.maxX-self.minX)/self.dy))+1
         yrange=np.linspace(self.minY,self.maxY,ysteps)
         yrange=np.flipud(yrange)
         xrange = np.linspace(self.minX,self.maxX,xsteps)
