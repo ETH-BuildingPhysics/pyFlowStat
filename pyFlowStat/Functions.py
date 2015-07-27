@@ -9,6 +9,8 @@ def sortNumStrList(numStrList,minVal=None,maxVal=None,step=1):
         *numStrList*
     '''
     #tsListNum=[]
+    if len(numStrList)==1:
+        return numStrList
     numFltList = []
     for nb in numStrList:
         if is_number(nb)==True:
