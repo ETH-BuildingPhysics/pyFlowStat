@@ -43,3 +43,11 @@ def loadDict(filename,keyList=[],dictName='dict'):
     finally:
         fwm.close()
     return dictionary
+    
+def printKeys(filename):
+    fwm = h5py.File(filename, 'r')
+    try:
+        return fwm.keys()
+    finally:
+        fwm.close()
+    
