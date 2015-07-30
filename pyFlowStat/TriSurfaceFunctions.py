@@ -31,6 +31,7 @@ import numpy as np
 
 import matplotlib.tri as tri
 import matplotlib.path as mplPath
+import matplotlib.pyplot as plt
 
 import pyFlowStat
 
@@ -42,6 +43,8 @@ import pyFlowStat.TriSurfaceVector as TriSurfaceVector
 import pyFlowStat.TriSurfaceSymmTensor as TriSurfaceSymmTensor
 import pyFlowStat.Functions as func
 import pyFlowStat.TriSurfaceContainer as TriSurfaceContainer
+
+from pyFlowStat import TurbulenceTools as tt
 
 
 
@@ -713,11 +716,18 @@ def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
             return allTsorted
         else:
             return allTsorted
-    except e:
+    except Exception as e:
         print e
     finally:
         hdf5Parser.close()
-        
+
+def getIndex(tCont,x_ref,y_ref):
+    r_list=np.abs(tCont.triSurfaceMesh.x-x_ref)+np.abs(tCont.triSurfaceMesh.y-y_ref)
+    i_ref= np.argmin(r_list)
+    x=tCont.triSurfaceMesh.x[i_ref]
+    y=tCont.triSurfaceMesh.y[i_ref]
+    return i_ref,(x,y)
+
 def twoPointCorr(tContList,field,x_ref,y_ref,comp=0,idx_lst=[]):
     '''
     Given a list of TriSurfaceContainers, computes the two point correleation wrt to a reference position x_ref,y_ref.
@@ -748,11 +758,7 @@ def twoPointCorr(tContList,field,x_ref,y_ref,comp=0,idx_lst=[]):
     '''
     
     tCont=tContList[0]
-    
-    r_list=np.abs(tCont.triSurfaceMesh.x-x_ref)+np.abs(tCont.triSurfaceMesh.y-y_ref)
-    i_ref= np.argmin(r_list)
-    x=tCont.triSurfaceMesh.x[i_ref]
-    y=tCont.triSurfaceMesh.y[i_ref]
+    i_ref,(x,y)=getIndex(tCont,x_ref,y_ref)
     
     
     U_ref=[tc[field](comp)[i_ref] for tc in tContList]
@@ -769,3 +775,214 @@ def twoPointCorr(tContList,field,x_ref,y_ref,comp=0,idx_lst=[]):
         CCorr_u.append(cc)
     CCorr_u=np.array(CCorr_u)
     return CCorr_u,i_ref,x,y
+    
+    
+def getCCorrHorizontal(tContList,comp,x_ref,y_ref):
+    tCont=tContList[0]
+
+    i_ref,(x,y)=tCont.triSurfaceMesh.getIndex(x_ref,y_ref)
+    x_pos,idx_x=tCont.triSurfaceMesh.getHorizontalLine(x_ref,y_ref)
+    
+    idx_x_r=idx_x[x_pos>=x]
+    idx_x_l=idx_x[x_pos<=x]
+    x_pos_r=tCont.triSurfaceMesh.x[idx_x_r]
+    x_pos_l=tCont.triSurfaceMesh.x[idx_x_l]
+    
+    ccorr_x_r,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_x_r)
+    ccorr_x_l,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_x_l)
+    #ccorr_y,idx,x,y=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_y)
+
+    x_r=np.abs(x_pos_r-x)
+    x_l=np.abs(x_pos_l[::-1]-x)
+    #x_r=x_pos[len(x_pos)//2:]-x_ref
+    #x_l=x_pos[:len(x_pos)//2+1][::-1]-x_ref
+    #ccorr_x_r=ccorr_x[len(ccorr_x)//2:]
+    #ccorr_x_l=ccorr_x[:len(ccorr_x)//2+1][::-1]
+    return x_l,ccorr_x_l[::-1],x_r,ccorr_x_r
+
+def getMeanCCorrHorizontal(tContList,comp,x_ref_list,y_ref,doPlot=False):
+    x_l_lst=[]
+    ccorr_x_l_lst=[]
+    x_r_lst=[]
+    ccorr_x_r_lst=[]
+    for x_ref in x_ref_list:
+        x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,comp,x_ref,y_ref)
+        
+        x_l_lst.append(x_l)
+        ccorr_x_l_lst.append(ccorr_x_l)
+        x_r_lst.append(x_r)
+        ccorr_x_r_lst.append(ccorr_x_r)
+
+    x_l_lst=np.array(x_l_lst)
+    ccorr_x_l_lst=np.array(ccorr_x_l_lst)
+    x_r_lst=np.array(x_r_lst)
+    ccorr_x_r_lst=np.array(ccorr_x_r_lst)
+    
+    minidx_l=np.min([len(x) for x in x_l_lst])
+    minidx_r=np.min([len(x) for x in x_r_lst])
+    minidx=np.min([minidx_l,minidx_r])
+
+    ccorr_m=np.mean(np.array([cc[:minidx] for cc in ccorr_x_l_lst]),axis=0)
+    x_m=x_l_lst[0][:minidx]
+    
+    if doPlot:
+        fig=plt.figure(figsize=(8.27,11.69/2))
+        ax=plt.subplot(1,1,1)
+        for i,x in enumerate(x_l_lst):
+            ax.plot(x_l_lst[i][:minidx],ccorr_x_l_lst[i][:minidx],lw=0.5)
+            ax.plot(x_r_lst[i][:minidx],ccorr_x_r_lst[i][:minidx],lw=0.5)
+            ax.plot(x_m,ccorr_m,'r--',lw=4.0)
+        plt.tight_layout()
+
+    return x_m,ccorr_m#x_l_lst,ccorr_x_l_lst,x_r_lst,ccorr_x_r_lst
+
+def getMeanHorizontalScale(tContList,comp,x_lst,ylist):
+    #cmap=Plotting.getColorMap(ylist[0],ylist[-1],'parula')
+    Lz=[]
+
+    fig=plt.figure(figsize=(8.27,11.69/4))
+    ax=plt.subplot(1,1,1)
+    for h in ylist:
+        tCont=tContList[0]
+        y_ref=h
+        
+        x_m,ccorr_m=getMeanCCorrHorizontal(tContList,comp,x_lst,y_ref)
+        #x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,x_ref,y_ref)
+
+        l=tt.fit_gauss_correlation(x_m/1000.0,ccorr_m)
+        Lz.append(l[0]*1000)
+        ax.plot(x_m,ccorr_m)
+        ax.plot(x_m,tt.func_gauss_correlation(x_m,l[0]*1000.0),'k--')
+        #ax.plot(x_pos-1500,ccorr_x,label='h='+str(h)+' m',c=cmap.to_rgba(h))
+
+    ax.legend(loc=2)
+    #ax.set_xlim([0,400])
+    #ax.set_ylim([0,1.1])
+    plt.tight_layout()
+    return Lz
+    
+def getCCorrVertical(tContList,comp,x_ref,y_ref):
+    tCont=tContList[0]
+    
+    i_ref,(x,y)=tCont.triSurfaceMesh.getIndex(x_ref,y_ref)
+    y_pos,idx_y=tCont.triSurfaceMesh.getVerticalLine(x_ref,y_ref)
+    
+    idx_y_up=idx_y[y_pos>=y]
+    idx_y_down=idx_y[(y_pos<=y) & (y_pos>0)]
+    
+    y_pos_up=y_pos[y_pos>=y]
+    y_pos_down=y_pos[(y_pos<=y) & (y_pos>0)]
+    
+    ccorr_y_up,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_y_up)
+    ccorr_y_down,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_y_down)
+    #ccorr_y,idx,x,y=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_y)
+    
+    y_up=np.abs(y_pos_up-y)
+    y_down=np.abs(y_pos_down[::-1]-y)
+    
+    return y_down,ccorr_y_down[::-1],y_up,ccorr_y_up
+
+def getMeanCCorrVertical(tContList,comp,x_ref_list,y_ref,doPlot=False):
+    x_l_lst=[]
+    ccorr_x_l_lst=[]
+    x_r_lst=[]
+    ccorr_x_r_lst=[]
+    for x_ref in x_ref_list:
+        x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrVertical(tContList,comp,x_ref,y_ref)
+        
+        x_l_lst.append(x_l)
+        ccorr_x_l_lst.append(ccorr_x_l)
+        x_r_lst.append(x_r)
+        ccorr_x_r_lst.append(ccorr_x_r)
+
+    x_l_lst=np.array(x_l_lst)
+    ccorr_x_l_lst=np.array(ccorr_x_l_lst)
+    x_r_lst=np.array(x_r_lst)
+    ccorr_x_r_lst=np.array(ccorr_x_r_lst)
+    
+    minidx_l=np.min([len(x) for x in x_l_lst])
+    minidx_r=np.min([len(x) for x in x_r_lst])
+
+    #l = down
+    #r = up
+    
+    ccorr_m_down=np.mean(np.array([cc[:minidx_l] for cc in ccorr_x_l_lst]),axis=0)
+    ccorr_m_up=np.mean(np.array([cc[:minidx_r] for cc in ccorr_x_r_lst]),axis=0)
+    
+    
+    x_m_down=x_l_lst[0][:minidx_l]
+    x_m_up=x_r_lst[0][:minidx_r]
+    
+    if doPlot:
+        fig=plt.figure(figsize=(8.27,11.69/2))
+        ax=plt.subplot(1,2,1)
+        for i,x in enumerate(x_l_lst):
+            ax.plot(x_l_lst[i][:minidx_l],ccorr_x_l_lst[i][:minidx_l],lw=0.5)
+            ax.plot(x_m_down,ccorr_m_down,'r--',lw=4.0)
+            
+        ax=plt.subplot(1,2,2)
+        for i,x in enumerate(x_r_lst):
+            ax.plot(x_r_lst[i][:minidx_r],ccorr_x_r_lst[i][:minidx_r],lw=0.5)
+            ax.plot(x_m_up,ccorr_m_up,'r--',lw=4.0)
+        plt.tight_layout()
+
+    return x_m_down,ccorr_m_down,x_m_up,ccorr_m_up
+
+def getMeanVerticalScale(tContList,comp,x_lst,ylist):
+    #cmap=Plotting.getColorMap(ylist[0],ylist[-1],'parula')
+    Ly=[]
+
+    fig=plt.figure(figsize=(8.27,11.69/4))
+    ax=plt.subplot(1,1,1)
+    for h in ylist:
+        tCont=tContList[0]
+        y_ref=h
+        
+        x_m_down,ccorr_m_down,x_m_up,ccorr_m_up=getMeanCCorrVertical(tContList,comp,x_lst,y_ref,doPlot=False)
+        #x_m,ccorr_m=getMeanCCorrHorizontal(tContList,comp,x_lst,y_ref)
+        #x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,x_ref,y_ref)
+
+        l=tt.fit_gauss_correlation(x_m_up[:-1]/1000.0,ccorr_m_up[:-1])
+        Ly.append(l[0]*1000)
+        ax.plot(x_m_up,ccorr_m_up)
+        ax.plot(x_m_up,tt.func_gauss_correlation(x_m_up,l[0]*1000.0),'k--')
+        #ax.plot(x_pos-1500,ccorr_x,label='h='+str(h)+' m',c=cmap.to_rgba(h))
+
+    ax.legend(loc=2)
+    #ax.set_xlim([0,400])
+    #ax.set_ylim([0,1.1])
+    plt.tight_layout()
+    return Ly
+    
+def getMeanVerticalLine(tContList):
+    tCont=tContList[0]
+    tsm=tCont.triSurfaceMesh
+    x_pos_top,_=tsm.getHorizontalLine(0,np.max(tsm.y))
+
+    U_lst=[]
+    cov_list=[]
+    y_pos,idx_y=tsm.getVerticalLine(0,0)
+    for y in y_pos:
+        U_lst_t=[]
+        for x in x_pos_top:
+            j,_=tsm.getIndex(x,y)
+            Ux=np.array([tc['U'](0)[j] for tc in tContList])
+            Uy=np.array([tc['U'](1)[j] for tc in tContList])
+            Uz=np.array([tc['U'](2)[j] for tc in tContList])
+            U=np.vstack([Ux,Uy,Uz]).T
+            U_lst_t.append(U)
+        U_lst_t=np.array(U_lst_t)
+        U_lst_t=U_lst_t.reshape((U_lst_t.shape[0]*U_lst_t.shape[1],U_lst_t.shape[2]))
+
+        c_tmp=np.cov(U_lst_t.T)
+        cov_list.append([c_tmp[0,0],c_tmp[0,1],c_tmp[0,2],c_tmp[1,1],c_tmp[1,2],c_tmp[2,2]])
+        #cov_list_t=np.array(cov_list_t)
+
+        #cov_list.extend(cov_list_t)
+        U_lst.append(U_lst_t)
+    U_lst=np.array(U_lst)
+    cov_list=np.array(cov_list)
+    
+    UMean=np.mean(U_lst,axis=1)
+    
+    return y_pos,UMean,cov_list

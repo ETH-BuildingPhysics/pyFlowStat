@@ -295,6 +295,43 @@ class TriSurfaceMesh(object):
         return np.sum( 0.5*( (xtri[:,1]+xtri[:,0])*(ytri[:,1]-ytri[:,0])
                             +(xtri[:,2]+xtri[:,1])*(ytri[:,2]-ytri[:,1])
                             +(xtri[:,0]+xtri[:,2])*(ytri[:,0]-ytri[:,2])) )
+    
+    def getIndex(self,x_ref,y_ref):
+        r_list=np.abs(self.x-x_ref)+np.abs(self.y-y_ref)
+        i_ref= np.argmin(r_list)
+        x=self.x[i_ref]
+        y=self.y[i_ref]
+        return i_ref,(x,y)
+    
+    def getHorizontalLine(self,x_ref,y_ref):
+        '''
+        get the position and indices of a horizontal line through x_ref,y_ref
+        
+        Returns
+            x_pos,idx_x
+        '''
+
+        i_ref,(x,y)=self.getIndex(x_ref,y_ref)
+        
+        idx_x=np.arange(len(self.y))[(self.y-y)==0]
+        x_pos=self.x[idx_x]
+        
+        return x_pos,idx_x
+
+    def getVerticalLine(self,x_ref,y_ref):
+        '''
+        get the position and indices of a vertical line through x_ref,y_ref
+        
+        Returns
+            y_pos,idx_y
+        '''
+        i_ref,(x,y)=self.getIndex(x_ref,y_ref)
+        
+        idx_y=np.arange(len(self.x))[(self.x-x)==0]
+
+        y_pos=self.y[idx_y]
+
+        return y_pos,idx_y
 
                             
 # helper functions #
