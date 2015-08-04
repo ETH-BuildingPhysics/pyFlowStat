@@ -5,7 +5,7 @@ purpose:
     Python tools for statistical analyses of flow data.
 
 version:
-    3.0
+    4.0
     
 Authors:
     Marc Immer   (aaa.aaa@aaa.com)
