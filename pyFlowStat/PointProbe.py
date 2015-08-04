@@ -60,13 +60,19 @@ class PointProbe(object):
     def Umag(self):
         return self.data['Umag']
     def ux(self):
-        return self.data['u'][:,0]
+        return self.UPrime()[:,0]
     def uy(self):
-        return self.data['u'][:,1]
+        return self.UPrime()[:,1]
     def uz(self):
-        return self.data['u'][:,2]
+        return self.UPrime()[:,2]
     def Umean(self):
-        return np.mean(self.data['Umag'])
+        return np.mean(self.Umag())
+        
+    def UPrime(self):
+        if 'UPrime' in self.data:
+            return self.data['UPrime']
+        else:
+            return self.data['U']-self.data['UMean']
 
     def uu_bar(self):
         return np.mean(pow(signal.detrend(self.ux()),2))
@@ -353,9 +359,8 @@ class PointProbe(object):
             self.probeVar=self.probeVar[np.array(indices),:]
                       
         self.createDataDict(action=createDict)
-            
-            
 
+        
     def createVectorDict(self):
         '''
         Creates the "data" dictionnary from member variable probeLoc,
@@ -369,14 +374,12 @@ class PointProbe(object):
         pt['myNewKey'] = myWiredNewEntry
 
         By default, the following keys are included in data:
-            pos:  [numpy.array. shape=(3)] Probe location
-            frq:  [float] Sample frequence
-            U:    [numpy.array. shape=(N,3)] Vector variable U
-            t:    [numpy.array. shape=(N)]   Time t
-            u:    [numpy.array. shape=(N,3)] variable fluctuation u
-            Umag: [numpy.array. shape=(N)]   variable magnitute Umag
-            umag: [numpy.array. shape=(N)]   Fluctuating variable magnitute umag
-            Uoo:  [numpy.array. shape=(N,3)] Mean variable with infinit window size
+            pos:   [numpy.array. shape=(3)] Probe location
+            frq:   [float] Sample frequence
+            U:     [numpy.array. shape=(N,3)] Vector variable U
+            t:     [numpy.array. shape=(N)]   Time t
+            UMean: [numpy.array. shape=(3)] Mean of U
+            UStd:  [numpy.array. shape=(3)] Standard devation of U
         '''
         
         self.data = dict()
@@ -388,31 +391,23 @@ class PointProbe(object):
         # timestep, sample frequence
         self.data['dt']=self.data['t'][1]-self.data['t'][0]
         self.data['frq'] = 1/self.data['dt']
+        
+        self.data['UMean'] = np.mean(self.data['U'],axis=0)
+        self.data['UStd'] = np.std(self.data['U'],axis=0)
 
+    def addVectorMagnitude(self):
+        '''
+        adds 'Umag' key to dict
+        '''
         #Umag
-        Umag = np.zeros(self.data['U'].shape[0])
-        for i in range(self.data['U'].shape[0]):
-            a=self.data['U'][i,:]
-            nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
-            Umag[i] = nrm2(a)
-            #Umag[i] = np.linalg.norm(self.data['U'][i,:])
-        self.data['Umag']=Umag
-        #mean
-        Uoo = np.zeros((self.data['U'].shape))
-        Uoo[:,0] = np.mean(self.data['U'][:,0])
-        Uoo[:,1] = np.mean(self.data['U'][:,1])
-        Uoo[:,2] = np.mean(self.data['U'][:,2])
-        self.data['Uoo'] = Uoo
-        # fluctuation
-        self.data['u'] = self.data['U']-self.data['Uoo']
-        #umag
-#        umag = np.zeros(self.data['u'].shape[0])
-#        for i in range(self.data['u'].shape[0]):
-#            a=self.data['u'][i,:]
-#            nrm2, = sp.linalg.get_blas_funcs(('nrm2',), (a,))
-#            umag[i] = nrm2(a)
-            #umag[i] = np.linalg.norm(self.data['u'][i,:])
-
+        self.data['Umag'] = np.linalg.norm(self.data['U'], axis=1)
+        
+    def addFluctuations(self):
+        '''
+        adds 'UPrime' key to dict
+        '''
+        self.data['UPrime']=self.data['U']-self.data['UMean']
+        
     def createScalarDict(self):
         '''
         Creates the "data" dictionnary from member variable probeLoc, probeTimes and probeVar
@@ -509,11 +504,15 @@ class PointProbe(object):
             Rii:    [numpy.array of shape=(?)] Auto-correlation Rii. For i=1,2,3
             tauRii: [numpy.array of shape=(?)] Time lags for Rii. For i=1,2,3
 
-            uifrq:  [numpy.array of shape=(?)] u1 in frequency domain. For i=1,2,3
-            uiamp:  [numpy.array of shape=(?)] amplitude of u1 in frequency domain. For i=1,2,3
-            Seiifrq:[numpy.array of shape=(?)] Frequencies for energy spectrum Seii. For i=1,2,3
-            Seii:   [numpy.array of shape=(?)] Energy spectrum Seii derived from Rii. For i=1,2,3
+
         '''
+        
+        self.generateCorrelations(doDetrend=doDetrend)
+        self.generateSpectra(doDetrend=doDetrend)
+
+
+        
+    def generateCorrelations(self,doDetrend=True):
         # auto correlation corefficient of u
         if doDetrend:
             ux=signal.detrend(self.ux());
@@ -536,11 +535,40 @@ class PointProbe(object):
         self.data['r23'],self.data['taur23'] = tt.xcorr_fft(uy,y=uz, maxlags=None, norm='coeff')
         self.data['rmag'],self.data['taurmag'] = tt.xcorr_fft(umag, maxlags=None, norm='coeff')
         # auto correlation of u
-        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='none')
-        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='none')
-        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='none')
+        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='biased')
+        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='biased')
+        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='biased')
+    
+    def generateAutoCorrelations(self,doDetrend=True):
+        # auto correlation corefficient of u
+        if doDetrend:
+            ux=signal.detrend(self.ux());
+            uy=signal.detrend(self.uy());
+            uz=signal.detrend(self.uz());
+        else:
+            ux=self.ux();
+            uy=self.uy();
+            uz=self.uz();
 
-
+        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=None, norm='coeff')
+        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=None, norm='coeff')
+        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=None, norm='coeff')
+        
+    def generateSpectra(self,doDetrend=True):
+        '''
+        uifrq:  [numpy.array of shape=(?)] u1 in frequency domain. For i=1,2,3
+        uiamp:  [numpy.array of shape=(?)] amplitude of u1 in frequency domain. For i=1,2,3
+        Seiifrq:[numpy.array of shape=(?)] Frequencies for energy spectrum Seii. For i=1,2,3
+        Seii:   [numpy.array of shape=(?)] Energy spectrum Seii derived from Rii. For i=1,2,3
+        '''
+        if doDetrend:
+            ux=signal.detrend(self.ux());
+            uy=signal.detrend(self.uy());
+            uz=signal.detrend(self.uz());
+        else:
+            ux=self.ux();
+            uy=self.uy();
+            uz=self.uz();
         #u in frequency domain
         self.data['u1frq'],self.data['u1amp'] = tt.dofft(sig=ux,samplefrq=self.data['frq'])
         self.data['u2frq'],self.data['u2amp'] = tt.dofft(sig=uy,samplefrq=self.data['frq'])
@@ -549,7 +577,7 @@ class PointProbe(object):
         self.data['Se11frq'],self.data['Se11'] = tt.dofft(sig=self.data['R11'],samplefrq=self.data['frq'])
         self.data['Se22frq'],self.data['Se22'] = tt.dofft(sig=self.data['R22'],samplefrq=self.data['frq'])
         self.data['Se33frq'],self.data['Se33'] = tt.dofft(sig=self.data['R33'],samplefrq=self.data['frq'])
-
+    
     def generateDiagnosticStatistics(self):
         '''
         Generate diagnostic statistics. Add following entries to the data
@@ -564,21 +592,13 @@ class PointProbe(object):
 
 
         '''
-        self.data['Uoo_c']=np.zeros(self.data['U'].shape)
-
-        self.data['Uoo_c'][0,0]=self.data['U'][0,0]
-        self.data['Uoo_c'][0,1]=self.data['U'][0,1]
-        self.data['Uoo_c'][0,2]=self.data['U'][0,2]
-
-        for i in range(1,len(self.probeTimes)):
-            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i-1,0]+self.data['U'][i,0]
-            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i-1,1]+self.data['U'][i,1]
-            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i-1,2]+self.data['U'][i,2]
-
-        for i in range(1,len(self.probeTimes)):
-            self.data['Uoo_c'][i,0]=self.data['Uoo_c'][i,0]/(i+1)
-            self.data['Uoo_c'][i,1]=self.data['Uoo_c'][i,1]/(i+1)
-            self.data['Uoo_c'][i,2]=self.data['Uoo_c'][i,2]/(i+1)
+        N = self.probeTimes.shape[0]
+        div = np.linspace(1,N,N)
+        div = np.asarray(div,dtype=int)
+        self.data['UMean_c'] = np.cumsum(self.probeVar,axis=0)
+        for i in range(3):
+            self.data['UMean_c'][:,i] = self.data['UMean_c'][:,i]/div
+            
 
     def lengthScale(self):
         '''
@@ -639,7 +659,7 @@ class PointProbe(object):
                     #self.data['Txx']=abs(popt[0])*np.sqrt(np.pi)*0.5*self.data['dt']
                     self.data[Tkey]=popt*self.data['dt']
                     if Lkey:
-                        self.data[Lkey]=self.data[Tkey]*self.Umean()
+                        self.data[Lkey]=self.data[Tkey]*np.mean(self.Umag())
                 except RuntimeError:
                     print("Error - curve_fit failed")
                     self.data[Tkey]=0
@@ -652,8 +672,8 @@ class PointProbe(object):
 
         corr_keys=['taur11','taur22','taur33','r11','r22','r33']
         if len(set(corr_keys) & set(self.data.keys()))!=len(corr_keys):
-            self.generateStatistics()
-            print "Generating Missing Statistics"
+            self.generateCorrelations()
+            print "Generating Missing Correleation Statistics"
 
         threshold=0.1
 

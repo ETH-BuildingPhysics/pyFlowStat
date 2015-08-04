@@ -11,7 +11,7 @@ Functions included:
 #=============================================================================#
 # load modules
 #=============================================================================#
-#import sys
+import sys
 #import re
 #import os
 #import csv
@@ -65,21 +65,23 @@ def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
         * None
     '''
     fwm = h5py.File(hdf5file, 'w-')
-    for i in range(len(ppList)):
-        # group name
-        gName = 'pointProbe'+str(i)
-        #print('save '+str(gName))
-        gppi = fwm.create_group(gName)
-        # iter dict keys
-        gppi.create_dataset('probeVar',data=ppList[i].probeVar)
-        gppi.create_dataset('probeTimes',data=ppList[i].probeTimes)
-        gppi.create_dataset('probeLoc',data=ppList[i].probeLoc)
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in ppList[i].data.keys():
-                gppi.create_dataset(key,data=ppList[i][key])
-    fwm.close()
+    try:
+        for i in range(len(ppList)):
+            # group name
+            gName = 'pointProbe'+str(i)
+            #print('save '+str(gName))
+            gppi = fwm.create_group(gName)
+            # iter dict keys
+            gppi.create_dataset('probeVar',data=ppList[i].probeVar)
+            gppi.create_dataset('probeTimes',data=ppList[i].probeTimes)
+            gppi.create_dataset('probeLoc',data=ppList[i].probeLoc)
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in ppList[i].data.keys():
+                    gppi.create_dataset(key,data=ppList[i][key])
+    finally:
+        fwm.close()
 
 
 def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
@@ -112,30 +114,77 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
     '''
     ppList = []
     fr = h5py.File(hdf5file, 'r')
-    for i in range(len(fr.keys())):
-        gName = 'pointProbe'+str(i)
-        #print('load '+str(gName))
-        ppList.append(pp.PointProbe())
-        ppList[i].probeVar = fr[gName]['probeVar'].value
-        ppList[i].probeTimes = fr[gName]['probeTimes'].value
-        ppList[i].probeLoc = fr[gName]['probeLoc'].value
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'pointProbe'+str(i)
+            #print('load '+str(gName))
+            ppList.append(pp.PointProbe())
+            ppList[i].probeVar = fr[gName]['probeVar'].value
+            ppList[i].probeTimes = fr[gName]['probeTimes'].value
+            ppList[i].probeLoc = fr[gName]['probeLoc'].value
 
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in fr[gName].keys():
-                if (key=='probeVar' or key=='probeTimes' or key=='probeLoc'):
-                    pass
-                else:
-                    ppList[i].data[str(key)] = fr[gName][key].value
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in fr[gName].keys():
+                    if (key=='probeVar' or key=='probeTimes' or key=='probeLoc'):
+                        pass
+                    else:
+                        ppList[i].data[str(key)] = fr[gName][key].value
 
-        if createDict==False:
-            pass
-        else:
-            ppList[i].createDataDict()
-    fr.close()
+            if createDict==False:
+                pass
+            else:
+                ppList[i].createDataDict()
+    finally:
+        fr.close()
     return ppList
 
+def actionPPlist_hdf5(hdf5file,actionFunction):
+    '''
+    Load and return a point probe list from a hdf5 data file. eager evaluation
+    only. The hdf5 file must have the following minimal structure:
+
+    myData.hdf5:
+        * pointProbe1  (GROUP)
+            * 'probeVar'   (DATASET)
+            * 'probeTimes' (DATASET)
+            * 'probeLoc'   (DATASET)
+        * pointProbei  (GROUP)
+            * 'probeVar'   (DATASET)
+            * 'probeTimes' (DATASET)
+            * 'probeLoc'   (DATASET)
+
+    Arguments:
+        * hdf5file: [str] path to source file.
+        * keyrange: [str] keys included in the pointProbe which will be
+          saved in the hdf5 file.
+              * 'raw' = only probeVar, probeTimes and probeLoc (default)
+              * 'full' = 'raw', plus all the other keys included in ppList[i].data
+        * createDict: [bool] create data dict. Usefull if the hdf5 contains
+          only the raw data or if you load only the raw data from a full
+          hdf5.
+
+    Returns:
+        * ppList: [python list] list of PointProbe object.
+    '''
+    ppList = []
+    resultList=[]
+    
+    fr = h5py.File(hdf5file, 'r')
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'pointProbe'+str(i)
+            #print('load '+str(gName))
+            probe=pp.PointProbe()
+            probe.probeVar = fr[gName]['probeVar'].value
+            probe.probeTimes = fr[gName]['probeTimes'].value
+            probe.probeLoc = fr[gName]['probeLoc'].value
+            resultList.append(actionFunction(probe))
+            probe=None
+    finally:
+        fr.close()
+    return resultList
   
 def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True,createDict=True,genStat=True):
     '''
@@ -165,10 +214,12 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
         pt.probeLoc=[i,j]
         pt.createDataDict(action=createDict)
         if genStat==True:
+            pt.addVectorMagnitude()
             pt.generateStatistics(doDetrend=doDetrend)
 
         return pt
     except:
+        print "Unexpected error:", sys.exc_info()[0]
         return None
  
 def createFromArray(dt,u,v,w,doDetrend=True):
@@ -190,5 +241,6 @@ def createFromArray(dt,u,v,w,doDetrend=True):
     endtime=(len(u)-1)*dt
     pt.probeTimes=np.linspace(0,endtime,nrpoints)
     pt.createDataDict()
+    pt.addVectorMagnitude() 
     pt.generateStatistics(doDetrend=doDetrend)
     return pt

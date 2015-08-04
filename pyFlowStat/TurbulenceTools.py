@@ -72,9 +72,11 @@ import numpy as np
 import scipy.fftpack as spfft
 import scipy.signal as spsig
 import scipy as sp
-import pylab as pl
+#import pylab as pl
 from scipy.optimize import curve_fit
 from scipy.integrate import simps
+
+from pyFlowStat import Statistics as stat
 
 #===========================================================================#
 # functions
@@ -100,7 +102,7 @@ def nextpow2(i):
     return int(math.pow(2,buf))
 
 
-def dofft(sig,samplefrq,nperseg=512):
+def dofft(sig,samplefrq,nperseg=512,detrend='constant'):
     """
     Estimate power spectral density using Welch's method. For more informations
     on the Welch's method implemented in python, visit:
@@ -129,7 +131,7 @@ def dofft(sig,samplefrq,nperseg=512):
     #amp = 2*abs(amp[:NFFT/2+1])
     #return frq,amp
 
-    frq, psd = spsig.welch(sig,fs=samplefrq, window='hanning', noverlap=None, nperseg=nperseg, return_onesided=True, scaling='density', axis=-1)
+    frq, psd = spsig.welch(sig,fs=samplefrq, window='hanning', noverlap=None, nperseg=nperseg, return_onesided=True, scaling='density', axis=-1,detrend=detrend)
     return frq, psd
 
 def movingave(x, window_len):
@@ -151,21 +153,21 @@ def movingave(x, window_len):
     return np.convolve(x,w,'same')
 
 def smooth(x,window_len=5,window='hanning'):
-        if x.ndim != 1:
-                raise ValueError, "smooth only accepts 1 dimension arrays."
-        if x.size < window_len:
-                raise ValueError, "Input vector needs to be bigger than window size."
-        if window_len<3:
-                return x
-        if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-                raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
-        s=np.r_[2*x[0]-x[window_len-1::-1],x,2*x[-1]-x[-1:-window_len:-1]]
-        if window == 'flat': #moving average
-                w=np.ones(window_len,'d')
-        else:
-                w=eval('np.'+window+'(window_len)')
-        y=np.convolve(w/w.sum(),s,mode='same')
-        return y[window_len:-window_len+1]
+    if x.ndim != 1:
+            raise ValueError, "smooth only accepts 1 dimension arrays."
+    if x.size < window_len:
+            raise ValueError, "Input vector needs to be bigger than window size."
+    if window_len<3:
+            return x
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+            raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+    s=np.r_[2*x[0]-x[window_len-1::-1],x,2*x[-1]-x[-1:-window_len:-1]]
+    if window == 'flat': #moving average
+            w=np.ones(window_len,'d')
+    else:
+            w=eval('np.'+window+'(window_len)')
+    y=np.convolve(w/w.sum(),s,mode='same')
+    return y[window_len:-window_len+1]
 #def movingavesmart(x,window_len,window='flat'):
 #    '''
 #    smooth the data using a window with requested size.
@@ -278,7 +280,7 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
         res = res[lags] / (float(N)-abs(np.arange(-N+1, N)))[lags]
     elif norm == 'coeff':
         Nf = float(N)
-        rms = pl.rms_flat(x) * pl.rms_flat(y)
+        rms = stat.rms(x) * stat.rms(y)
         #rms = (np.mean(x**2)*np.mean(y**2))**(0.5)
         res = res[lags] / rms / Nf
     else:
@@ -288,7 +290,7 @@ def xcorr(x, y=None, maxlags=None, norm='ceoff',doDetrend=False):
     return res, lags
 
 
-def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
+def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False,oneSided=True):
     '''
     Cross-correlation using scipy.fftconvolve. Similar returns as TurbulenceTools.xcorr()
     but faster with fftconvolve.
@@ -358,16 +360,16 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False):
         res = res[lags] / (float(N)-abs(np.arange(-N+1, N)))[lags]
     elif norm == 'coeff':
         Nf = float(N)
-        rms = pl.rms_flat(x) * pl.rms_flat(y)
+        rms = stat.rms(x) * stat.rms(y)
         if rms==0:
             rms=1
         #rms = (np.mean(x**2)*np.mean(y**2))**(0.5)
         res = res[lags] / rms / Nf
     else:
         res = res[lags]
-
-    res=res[(len(res)-1)/2:-1]
-    lags = np.arange(0, maxlags)
+    if oneSided:
+        res=res[(len(res)-1)/2:-1]
+        lags = np.arange(0, maxlags)
     return res, lags
     
 def twoPointCorr(x,y,subtractMean=True,norm=False):
@@ -395,7 +397,14 @@ def twoPointCorr(x,y,subtractMean=True,norm=False):
     else:
         return cc
     #return np.correlate(x_prime,y_prime)
-        
+    
+def twoPointCorr_fast(x_prime,y_prime,cc_max):
+    '''
+    dot product of two vectors to claculate normalized two point correlation
+    '''
+    cc=np.dot(x_prime,y_prime)
+    return cc/cc_max
+    
 def func_exp_correlation(x, a):
     np.seterr('ignore')
     res = np.exp(-x/a)
@@ -408,6 +417,30 @@ def func_gauss_correlation(x, a):
     res = np.exp(-np.pi*x**2/(a**2*4))
 
     #print res
+    return res
+    
+def func_dblExp_correlation(x,a):
+    if len(np.unique(np.diff(x)))>1:
+        warnings.warn('x has to be evenly spaced')
+    def _func_dblExp_correlation(x,a):
+                if len(x)>1:
+                    x=np.r_[x,x[-1]+np.diff(x)[-1]]
+                    k_exp=func_exp_correlation(x,a)
+                    kk_exp=spsig.fftconvolve(k_exp,k_exp, mode="full")
+                    res,_=xcorr_fft(kk_exp)
+                    return res[::2]
+                else:
+                    return []
+                
+    if np.any(x<0):
+        x_plus=x[x>=0]
+        x_neg=np.abs(x[x<=0])[::-1]
+
+        res_plus=_func_dblExp_correlation(x_plus,a)
+        res_neg=_func_dblExp_correlation(x_neg,a)
+        res=np.r_[res_neg[::-1],res_plus[1:]]
+    else:
+        res=_func_dblExp_correlation(x,a)
     return res
     
 def fit_exp_correlation(xdata,ydata):
@@ -425,6 +458,24 @@ def fit_exp_correlation(xdata,ydata):
     '''
     
     popt, pcov = curve_fit(func_exp_correlation,xdata,ydata)
+    a=popt[0]
+    return a,pcov
+    
+def fit_gauss_correlation(xdata,ydata):
+    '''
+    Fits an exponential function of shape exp(-x/a) to the data and returns a
+    
+    Arguments:
+        * xdata: x-values (e.g lags)
+        * ydata: y-values (e.g auto correlation coefficient)
+        
+    returns:
+        * a: fitter parameter a
+        * pcov: The estimated covariance of a.
+    
+    '''
+    
+    popt, pcov = curve_fit(func_gauss_correlation,xdata,ydata)
     a=popt[0]
     return a,pcov
     
@@ -466,7 +517,7 @@ def calcIntegralScale(rho_i,dx=1.0,method=None):
 
 
 #-----------------------------------------------------------------------------#
-def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False):
+def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Bandpass Filter.
 
@@ -497,13 +548,13 @@ def bandpass(data, freqmin, freqmax, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, [low, high], btype='band',
                        ftype='butter', output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
-def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False):
+def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Bandstop Filter.
 
@@ -535,13 +586,13 @@ def bandstop(data, freqmin, freqmax, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, [low, high],
                        btype='bandstop', ftype='butter', output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
-def lowpass(data, freq, df, corners=4, zerophase=False):
+def lowpass(data, freq, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Lowpass Filter.
 
@@ -568,13 +619,13 @@ def lowpass(data, freq, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, f, btype='lowpass', ftype='butter',
                        output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 
 
-def highpass(data, freq, df, corners=4, zerophase=False):
+def highpass(data, freq, df, corners=4, zerophase=False,axis=-1):
     """
     Butterworth-Highpass Filter.
 
@@ -599,8 +650,8 @@ def highpass(data, freq, df, corners=4, zerophase=False):
     [b, a] = spsig.iirfilter(corners, f, btype='highpass', ftype='butter',
                        output='ba')
     if zerophase:
-        firstpass = spsig.lfilter(b, a, data)
-        return spsig.lfilter(b, a, firstpass[::-1])[::-1]
+        firstpass = spsig.lfilter(b, a, data,axis=axis)
+        return spsig.lfilter(b, a, firstpass[::-1],axis=axis)[::-1]
     else:
-        return spsig.lfilter(b, a, data)
+        return spsig.lfilter(b, a, data,axis=axis)
 #-----------------------------------------------------------------------------#

@@ -35,7 +35,7 @@ import pyFlowStat.Surface as sr
 # functions
 #=============================================================================#
 
-def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
+def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw',mode='w-'):
     '''
     Save a surface list in a hdf5 data file. The hdf5 file will have the
     following minimal structure:
@@ -55,45 +55,50 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
             * 'dimExtent' (DATASET)
 
     Arguments:
-        * surfaceList: [python list] a list of surfaces
-        * hdf5file: [str] path to the target file.
-        * keyrange: [str] defines which keys will be be saved the hdf5 file:
-              * 'raw' = only vx,vy and vz (default)
-              * 'full' =  'raw' plus every keys in the surface.
-
+        *surfaceList*: python list.
+         A list of surfaces.
+        *hdf5file*: python string.
+         Path to the target file.
+        *keyrange*: python string.
+         defines which keys will be be saved the hdf5 file. if keyrange='raw',
+         only vx,vy and vz are saved, if keyrange='full', 'raw' plus every keys
+         in the surface are saved. Default='raw'.
+         
     Returns:
-        * surfaceList: [python list] list of Surface object.
+        None
     '''
-    fwm = h5py.File(hdf5file, 'w-')
-    for i in range(len(surfaceList)):
-        # group name
-        gName = 'Surface'+str(i)
-        gsurfi = fwm.create_group(gName)
+    fwm = h5py.File(hdf5file, mode)
+    try:
+        for i in range(len(surfaceList)):
+            # group name
+            gName = 'Surface'+str(i)
+            gsurfi = fwm.create_group(gName)
 
-        # save minimal data
-        gsurfi.create_dataset('vx',data=surfaceList[i].vx)
-        gsurfi.create_dataset('vy',data=surfaceList[i].vy)
-        gsurfi.create_dataset('vz',data=surfaceList[i].vz)
+            # save minimal data
+            gsurfi.create_dataset('vx',data=surfaceList[i].vx)
+            gsurfi.create_dataset('vy',data=surfaceList[i].vy)
+            gsurfi.create_dataset('vz',data=surfaceList[i].vz)
 
-        gsurfi.create_dataset('dx',data=surfaceList[i].dx)
-        gsurfi.create_dataset('dy',data=surfaceList[i].dy)
+            gsurfi.create_dataset('dx',data=surfaceList[i].dx)
+            gsurfi.create_dataset('dy',data=surfaceList[i].dy)
 
-        dim=[surfaceList[i].minX, surfaceList[i].minY, surfaceList[i].maxX, surfaceList[i].maxY]
-        gsurfi.create_dataset('dim',data=dim)
-        gsurfi.create_dataset('dimExtent',data=surfaceList[i].extent)
+            dim=[surfaceList[i].minX, surfaceList[i].minY, surfaceList[i].maxX, surfaceList[i].maxY]
+            gsurfi.create_dataset('dim',data=dim)
+            gsurfi.create_dataset('dimExtent',data=surfaceList[i].extent)
 
-        # save extra data if specified:
-        #save nothing more
-        if keyrange=='raw':
-            pass
-        #add all data from the dictionnary
-        elif keyrange=='full':
-            for key in surfaceList[i].data.keys():
-                if (key=='dx' or key=='dy' or key=='Ux' or key=='Uy' or key=='Uz'):
-                    pass
-                else:
-                    gsurfi.create_dataset(key,data=surfaceList[i].data[key])
-    fwm.close()
+            # save extra data if specified:
+            #save nothing more
+            if keyrange=='raw':
+                pass
+            #add all data from the dictionnary
+            elif keyrange=='full':
+                for key in surfaceList[i].data.keys():
+                    if (key=='dx' or key=='dy' or key=='Ux' or key=='Uy' or key=='Uz'):
+                        pass
+                    else:
+                        gsurfi.create_dataset(key,data=surfaceList[i].data[key])
+    finally:
+        fwm.close()
 
 
 def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
@@ -116,59 +121,66 @@ def loadSurfaceList_hdf5(hdf5file,keyrange='raw',createDict=False):
             * 'dimExtent' (DATASET)
 
     Arguments:
-        * hdf5file: [str] path to source file.
-        * keyrange: [str] defines which keys will be loaded from the hdf5 file:
+        *hdf5file*: string 
+          path to the source file.
+        *keyrange*: string
+          Defines which keys will be loaded from the hdf5 file:
               * 'raw' = only vx,vy, vz, (default)
               * 'full' = 'raw' plus every keys from the hdf5 file.
-        * createDict: [bool] create data dict. Usefull if the hdf5 contains
-          only the raw data (vx, vy and vz).
+        *createDict*: bool
+         Create data dict. Usefull if the hdf5 contains
+         only the raw data (vx, vy and vz). If keyrange='full', createDict
+         is set to False, whatever the user selects.
 
     Returns:
-        * surfaceList: [python list] list of Surface object.
+        *surfaceList*: python list
+         List of Surface object.
     '''
     surfaceList = []
     fr = h5py.File(hdf5file, 'r')
-    for i in range(len(fr.keys())):
-        gName = 'Surface'+str(i)
-        surfaceList.append(sr.Surface())
+    try:
+        for i in range(len(fr.keys())):
+            gName = 'Surface'+str(i)
+            surfaceList.append(sr.Surface())
 
-        # load minimum data
-        surfaceList[i].vx = fr[gName]['vx'].value
-        surfaceList[i].vy = fr[gName]['vy'].value
-        surfaceList[i].vz = fr[gName]['vz'].value
+            # load minimum data
+            surfaceList[i].vx = fr[gName]['vx'].value
+            surfaceList[i].vy = fr[gName]['vy'].value
+            surfaceList[i].vz = fr[gName]['vz'].value
 
-        surfaceList[i].dx = fr[gName]['dx'].value
-        surfaceList[i].dy = fr[gName]['dy'].value
+            surfaceList[i].dx = fr[gName]['dx'].value
+            surfaceList[i].dy = fr[gName]['dy'].value
 
-        dim = fr[gName]['dim'].value
-        surfaceList[i].minX = dim[0]
-        surfaceList[i].minY = dim[1]
-        surfaceList[i].maxX = dim[2]
-        surfaceList[i].maxY = dim[3]
-        surfaceList[i].extent = fr[gName]['dimExtent'].value
+            dim = fr[gName]['dim'].value
+            surfaceList[i].minX = dim[0]
+            surfaceList[i].minY = dim[1]
+            surfaceList[i].maxX = dim[2]
+            surfaceList[i].maxY = dim[3]
+            surfaceList[i].extent = fr[gName]['dimExtent'].value
 
-        # load extra data if specified:
-        #load nothing more
-        if keyrange=='raw':
-            pass
-        elif keyrange=='full':
-            for key in fr[gName].keys():
-                if (key=='dim' or key=='dimExtent'):
-                    pass
-                elif (key=='vx'):
-                    surfaceList[i].data[str('Ux')] = fr[gName][key].value
-                elif (key=='vy'):
-                    surfaceList[i].data[str('Uy')] = fr[gName][key].value
-                elif (key=='vz'):
-                    surfaceList[i].data[str('Uz')] = fr[gName][key].value
-                else:
-                    surfaceList[i].data[str(key)] = fr[gName][key].value
+            # load extra data if specified:
+            #load nothing more
+            if keyrange=='raw':
+                pass
+            elif keyrange=='full':
+                for key in fr[gName].keys():
+                    if (key=='dim' or key=='dimExtent'):
+                        pass
+                    elif (key=='vx'):
+                        surfaceList[i].data[str('Ux')] = fr[gName][key].value
+                    elif (key=='vy'):
+                        surfaceList[i].data[str('Uy')] = fr[gName][key].value
+                    elif (key=='vz'):
+                        surfaceList[i].data[str('Uz')] = fr[gName][key].value
+                    else:
+                        surfaceList[i].data[str(key)] = fr[gName][key].value
 
-        if createDict==False:
-            pass
-        else:
-            surfaceList[i].createDataDict()
-    fr.close()
+            if createDict==True and keyrange=='raw':
+                surfaceList[i].createDataDict()
+            else:
+                pass
+    finally:
+        fr.close()
     return surfaceList
 
 
@@ -336,7 +348,30 @@ def loadPPfromSurf_hdf5(hdf5fileObj,pixloc,keyrange='raw',createDict=False,dt=1.
     
 def corrField(f1,f2=None,i_ref=0,j_ref=0,norm=True):
     '''
-    f1,f2: SurfaceList velocity component
+    Two point correlation of an entire field with the point pt(i_ref,j_ref) as
+    reference. The field has the dimension of NxM with T time realization.
+    
+    Arguments:
+        *f1*: np.array of shape (T,N,M).
+         In general, one of the fields (vx,vy or vz) of a 
+         pyFlowStat.SurfaceTimeSeries object.
+    
+        *f2*: np.array of shape (T,N,M).
+         Same as f1. If None, then f1 is used has second field. Default=None
+         
+        *i_ref*: python int.
+         Horizontal location of the reference point. Default=0
+         
+        *j_ref*: python int.
+         Vertical location of the reference point. Default=0
+         
+        *Norm*: python bool.
+         Normalization of the correlation. Default=True.
+         
+         
+    Returns:
+        *res*: np.array of shape (N,M).
+         the two point horizontal correlation. 
     '''
     f1sum=np.sum(f1,axis=0)
     if f2==None:
@@ -364,7 +399,28 @@ def corrField(f1,f2=None,i_ref=0,j_ref=0,norm=True):
         
 def corrFieldHorz(f1,f2=None,j_ref=0,norm=True):
     '''
-    f1,f2: SurfaceList velocity component
+    Do the two point horizontal correlation of an entire field along a vertical
+    line. Each points of the line is used as a reference for the two point 
+    correlation. the field has dimension of NxM with T time realization.
+    
+    Arguments:
+        *f1*: np.array of shape (T,N,M).
+         In general, one of the fields (vx,vy or vz) of a 
+         pyFlowStat.SurfaceTimeSeries object.
+    
+        *f2*: np.array of shape (T,N,M).
+         Same as f1. If None, then f1 is used has second field. Default=None
+         
+        *j_ref*: python int.
+         Horizontal location of the vertical line. Default=0
+         
+        *Norm*: python bool.
+         Normalization of the correlation. Default=True.
+         
+         
+    Returns:
+        *res*: np.array of shape (N,M).
+         the two point horizontal correlation. 
     '''
     f1sum=np.sum(f1,axis=0)
     if f2==None:
@@ -392,7 +448,28 @@ def corrFieldHorz(f1,f2=None,j_ref=0,norm=True):
     
 def corrFieldVert(f1,f2=None,i_ref=0,norm=True):
     '''
-    f1,f2: SurfaceList velocity component
+    Do the two point vertical correlation of an entire field along an
+    horizontal line. Each points of the line is used as a reference for the two
+    point correlation. the field has dimension of NxM with T time realization.
+    
+    Arguments:
+        *f1*: np.array of shape (T,N,M).
+         In general, one of the fields (vx,vy or vz) of a 
+         pyFlowStat.SurfaceTimeSeries object.
+    
+        *f2*: np.array of shape (T,N,M).
+         Same as f1. If None, then f1 is used has second field. Default=None
+         
+        *i_ref*: python int.
+         Vertical location of the horizontal line. Default=0
+         
+        *Norm*: python bool.
+         Normalization of the correlation. Default=True.
+         
+         
+    Returns:
+        *res*: np.array of shape (N,M).
+         the two point vertical correlation. 
     '''
     f1sum=np.sum(f1,axis=0)
     if f2==None:
@@ -420,7 +497,39 @@ def corrFieldVert(f1,f2=None,i_ref=0,norm=True):
     
 def corrVert(f1,f2=None,i_ref=0,j_ref=0,norm=True):
     '''
-    f1,f2: SurfaceList velocity component
+    Do the two point vertical correlation from a reference point
+    pt(i_ref,j_ref). The field has dimension of NxM with T time realization.
+    
+    Arguments:
+        *f1*: np.array of shape (T,N,M).
+         In general, one of the fields (vx,vy or vz) of a 
+         pyFlowStat.SurfaceTimeSeries object.
+    
+        *f2*: np.array of shape (T,N,M).
+         Same as f1. If None, then f1 is used has second field. Default=None
+         
+        *i_ref*: python int.
+         Vertical location of the horizontal line. Default=0
+         
+        *j_ref*: python int.
+         Vertical location of the horizontal line. Default=0
+         
+        *Norm*: python bool.
+         Normalization of the correlation. Default=True.
+         
+         
+    Returns:
+        *lags_l*: numpy array.
+         Array of left/negative lags.
+        
+        *res_l*: numpy array.
+         Array of left/negative results.
+        
+        *lags_r*: numpy array.
+         Array of right/positive lags.
+        
+        *res_r*: numpy array.
+         Array of right/positive results.       
     '''
     f1sum=np.sum(f1,axis=0)
     if f2==None:
