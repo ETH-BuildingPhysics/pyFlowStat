@@ -208,6 +208,7 @@ class DMD(object):
         self.vecs=vecs
         self.result=dict()
         self.dt=dt
+        self.result['dt']=self.dt
         
     def decompose(self,nMode=0,method='snap',subtractMean=False):
         '''
@@ -404,8 +405,8 @@ class DMD(object):
             if verbose:
                 print 'getFrqSortedIdx: Not same length! Pos:', len(frq_idx_pos),'Neg:',len(frq_idx_neg)
             l=min(len(frq_idx_pos),len(frq_idx_neg))
-            frq_idx_pos=frq_idx_pos[:l+1]
-            frq_idx_neg=frq_idx_neg[:l+1]
+            frq_idx_pos=frq_idx_pos[:l]
+            frq_idx_neg=frq_idx_neg[:l]
         return frq_idx_pos,frq_idx_neg,self.getFrqList(frq_idx_pos)
             
     def getNorm(self,idx=None):

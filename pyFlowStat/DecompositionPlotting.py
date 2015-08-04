@@ -74,9 +74,11 @@ def plotSpectrum(myDMD,ax,k=1,idx=None,width=1.0,alpha=0.5,cmap=plt.cm.jet):
     ax.set_xlabel(r'$f [Hz]$')
     ax.set_ylabel(r'$||\Phi||$')
 
-def plotGrowth(myDMD,ax,k=1,dt=1.0,idx=None):
-    log_ritz = np.log(myDMD.result['ritz_vals']**k)/dt
-    
+def plotGrowth(myDMD,ax,k=1,dt=1.0,idx=None,reverseAxis=False):
+    '''
+    plots the real and imaginary part of lambda=log(ritz_val)/dt
+    '''
+    log_ritz = np.log(myDMD.result['ritz_vals'])/dt#/(2.0*np.pi)
     norms = np.sqrt(myDMD.result['mode_norms'])
 
     norms_val=np.sqrt(norms)
@@ -91,10 +93,19 @@ def plotGrowth(myDMD,ax,k=1,dt=1.0,idx=None):
     cmax=np.max(norms_val[idx_sorted])
 
     #ax.scatter(np.imag(log_ritz)[idx_sorted],np.real(log_ritz)[idx_sorted],c=norms_val[idx_sorted],edgecolors='none',s=np.sqrt(norms_val[idx_sorted])*10)
-    ax.scatter(np.imag(log_ritz)[idx_sorted],np.real(log_ritz)[idx_sorted],c=norms_val[idx_sorted],norm=mpl.colors.Normalize(vmin=cmin,vmax=cmax),edgecolors='none',s=np.sqrt(norms_val[idx_sorted])*10)
+    if not reverseAxis:
+        ax.scatter(np.imag(log_ritz)[idx_sorted]/(2.0*np.pi),np.real(log_ritz)[idx_sorted],c=norms_val[idx_sorted],norm=mpl.colors.Normalize(vmin=cmin,vmax=cmax),edgecolors='none',s=np.sqrt(norms_val[idx_sorted])*10)
+    else:
+        ax.scatter(np.real(log_ritz)[idx_sorted],np.imag(log_ritz)[idx_sorted]/(2.0*np.pi),c=norms_val[idx_sorted],norm=mpl.colors.Normalize(vmin=cmin,vmax=cmax),edgecolors='none',s=np.sqrt(norms_val[idx_sorted])*10)
+    
     #ax.set_aspect('equal')
-    ax.set_xlabel(r'$ln(\lambda)_i$')
-    ax.set_ylabel(r'$ln(\lambda)_r$')
+    if not reverseAxis: 
+        ax.set_xlabel(r'$ln(\lambda)_i$')
+        ax.set_ylabel(r'$ln(\lambda)_r$')
+    else:
+        ax.set_xlabel(r'$\gamma$ $[1/s]$')
+        #ax.set_ylabel(r'$Im(\lambda)$ $[\omega/2\pi]$')
+        ax.set_ylabel(r'$f$ $[Hz]$')
     #ax.set_xlim([-1.2,1.2])
     #ax.set_ylim([-1.2,1.2])
 

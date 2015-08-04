@@ -145,12 +145,12 @@ def modeAnalyzerGrowth(myDMD_Uy,k=(0,100),m=(0,500),vmin=-0.1,vmax=0.1,xscale='l
             #ax4.plot(f,normList)
             flist=myDMD_Uy.getFrqList()
             if sorting==4 or sorting==0:
-                DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,idx=idx_sel[::-1])
+                DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,idx=idx_sel[::-1],dt=myDMD_Uy.result['dt'])
             else:
                 #DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,idx=idx_sel[::-1])
-                DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k)
-            ritz_sel=np.log(myDMD_Uy.result['ritz_vals'][idx[0]]**k)
-            ax4.plot(np.imag(ritz_sel),np.real(ritz_sel),'rx')
+                DecompositionPlotting.plotGrowth(myDMD_Uy,ax4,k,dt=myDMD_Uy.result['dt'])
+            ritz_sel=np.log(myDMD_Uy.result['ritz_vals'][idx[0]]**k)/myDMD_Uy.result['dt']
+            ax4.plot(np.imag(ritz_sel)/(2.0*np.pi),np.real(ritz_sel),'rx')
             #ax4.plot(flist[idx_pos],10*np.log10(stabList[idx_pos]))
             #ax4.plot(flist[idx_pos[m]],10*np.log10(stabList[idx_pos[m]]),'ro')
             
