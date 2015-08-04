@@ -55,4 +55,4 @@ def PlotVelocityVectors(ax,surface,scale=1,offset=[0,0],spacing=1,UxKey='Ux',UyK
         kwargs['width']=0.1
         
     X,Y = surface.getMeshgrid(offset=offset)
-    return plt.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data[UxKey][::spacing,::spacing],surface.data[UyKey][::spacing,::spacing],scale=scale,angles='uv',units='xy',**kwargs)
+    return ax.quiver(X[::spacing,::spacing],Y[::spacing,::spacing],surface.data[UxKey][::spacing,::spacing],surface.data[UyKey][::spacing,::spacing],scale=scale,angles='uv',units='xy',**kwargs)

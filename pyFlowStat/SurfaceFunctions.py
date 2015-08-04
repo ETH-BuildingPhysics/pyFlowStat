@@ -35,7 +35,7 @@ import pyFlowStat.Surface as sr
 # functions
 #=============================================================================#
 
-def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
+def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw',mode='w-'):
     '''
     Save a surface list in a hdf5 data file. The hdf5 file will have the
     following minimal structure:
@@ -67,7 +67,7 @@ def saveSurfaceList_hdf5(surfaceList,hdf5file,keyrange='raw'):
     Returns:
         None
     '''
-    fwm = h5py.File(hdf5file, 'w-')
+    fwm = h5py.File(hdf5file, mode)
     try:
         for i in range(len(surfaceList)):
             # group name
