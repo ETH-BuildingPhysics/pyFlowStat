@@ -64,6 +64,7 @@ def getSubTriSurfaceMesh(tsmSource, poly, op='in', mode='mid'):
          list of N points of the polygon. Example for a square made by the
          points pt1, pt2, pt3 and pt4:
          >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         If poly ist set to None, it uses an already existing masked trinagulation.
          
         *op*: python string ('in' or 'out'). Default='in'
          Keep the triangles inside or outside the polygon
@@ -74,43 +75,46 @@ def getSubTriSurfaceMesh(tsmSource, poly, op='in', mode='mid'):
         *node_renum*: 
          Node renumbering. Useful for the compression of the data
     '''
-    # create a boundBox from the polygon
-    maskedTri = np.zeros(tsmSource.triangles.shape[0])
-    bb = mplPath.Path(poly)
-    
-    # define the operation
-    inPoly = None
-    outPoly = None
-    if op=='in':
-        inPoly = 0
-        outPoly = 1
-    elif op=='out':
-        inPoly = 1
-        outPoly = 0
-    else:
-        raise ValueError('Argument "op" must be "in" or "out".')
+    if poly:
+        # create a boundBox from the polygon
+        maskedTri = np.zeros(tsmSource.triangles.shape[0])
+        bb = mplPath.Path(poly)
+        
+        # define the operation
+        inPoly = None
+        outPoly = None
+        if op=='in':
+            inPoly = 0
+            outPoly = 1
+        elif op=='out':
+            inPoly = 1
+            outPoly = 0
+        else:
+            raise ValueError('Argument "op" must be "in" or "out".')
 
-    # define the mask and apply it.
-    if mode=='each':
-        xtri = tsmSource.x[tsmSource.triangles]
-        ytri = tsmSource.y[tsmSource.triangles]
-        for i in range(maskedTri.shape[0]):
-            if np.sum(bb.contains_points(np.vstack((xtri[i],ytri[i])).T))>0:
-                maskedTri[i] = inPoly
-            else:
-                maskedTri[i] = outPoly
-    elif mode=='mid':
-        xmid = tsmSource.x[tsmSource.triangles].mean(axis=1)
-        ymid = tsmSource.y[tsmSource.triangles].mean(axis=1)
-        for i in range(maskedTri.shape[0]):
-            if bb.contains_point([xmid[i],ymid[i]])==1:
-                maskedTri[i] = inPoly
-            else:
-                maskedTri[i] = outPoly
+        # define the mask and apply it.
+        if mode=='each':
+            xtri = tsmSource.x[tsmSource.triangles]
+            ytri = tsmSource.y[tsmSource.triangles]
+            for i in range(maskedTri.shape[0]):
+                if np.sum(bb.contains_points(np.vstack((xtri[i],ytri[i])).T))>0:
+                    maskedTri[i] = inPoly
+                else:
+                    maskedTri[i] = outPoly
+        elif mode=='mid':
+            xmid = tsmSource.x[tsmSource.triangles].mean(axis=1)
+            ymid = tsmSource.y[tsmSource.triangles].mean(axis=1)
+            for i in range(maskedTri.shape[0]):
+                if bb.contains_point([xmid[i],ymid[i]])==1:
+                    maskedTri[i] = inPoly
+                else:
+                    maskedTri[i] = outPoly
+        else:
+            raise ValueError('Argument "mode" must be "each" or "mid".')
+        
+        tsmSource.triangulation.set_mask(maskedTri)
     else:
-        raise ValueError('Argument "mode" must be "each" or "mid".')
-    
-    tsmSource.triangulation.set_mask(maskedTri)
+        print 'no poly specified. Using existing triangulation'
     
     #compress the triangles and create a new TriSurface mesh
     trianalyzer = tri.TriAnalyzer(tsmSource.triangulation)
@@ -211,42 +215,9 @@ def getSubTriSurfaceVector(tsvSource, poly, op='in', mode='mid',return_node_renu
     elif return_node_renum==True:
         return subTsm, subTsv, node_renum
 
+def _getSubTriSurfaceContainer(tscSource,subTsm,node_renum):
 
-def getSubTriSurfaceContainer(tscSource, poly, op='in', mode='mid',return_node_renum=False):
-    '''
-    Return a sub TriSurfaceContainer (subTsc) from a source TriSurfaceContainer.
-    The sub part is cut out of a polygon. The part inside or ouside the 
-    polygon can be kept. IF you want to compressed other fields based on the
-    mesh stored in tscSource, switch "return_node_renum" to True, and
-    use the output to feed the function compressArray.
-    
-    Arguments:
-        *tscSource*: TriSurfaceContainer Object
-        
-        *poly*: numpy array of shape (N,2)
-         list of N points of the polygon. Example for a square made by the
-         points pt1, pt2, pt3 and pt4:
-         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
-         
-        *op*: python string ('in' or 'out'). Default='in'
-         Keep the triangles inside or outside the polygon
-         
-        *return_node_renum*: python bool. Default=False
-         If True, returns the node renumbering. Useful to compress array with
-         TriSurfaceFunctions.compressArray()
-         
-    Returns:
-        *subTsc*: TriSurfacContainer object
-        
-        *node_renum*: numpy array. Returned only if return_node_renum=True        
-    '''
-    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tscSource.triSurfaceMesh,
-                                             poly=poly,
-                                             op=op,
-                                             mode=mode)
-    
     subTsc = TriSurfaceContainer.TriSurfaceContainer(subTsm)
-    
     for fname,fdata in tscSource.fields.iteritems():
         if isinstance(fdata,TriSurfaceVector.TriSurfaceVector):
             comp_vx = compressArray(fdata.vx,node_renum)
@@ -294,13 +265,91 @@ def getSubTriSurfaceContainer(tscSource, poly, op='in', mode='mid',return_node_r
                                                               interpolation=None,
                                                               kind=None)                                              
             subTsc.addTriSurface(subTs,fname)
-           
+    return subTsc
+
+def getSubTriSurfaceContainer(tscSource, poly, op='in', mode='mid',return_node_renum=False):
+    '''
+    Return a sub TriSurfaceContainer (subTsc) from a source TriSurfaceContainer.
+    The sub part is cut out of a polygon. The part inside or ouside the 
+    polygon can be kept. IF you want to compressed other fields based on the
+    mesh stored in tscSource, switch "return_node_renum" to True, and
+    use the output to feed the function compressArray.
+    
+    Arguments:
+        *tscSource*: TriSurfaceContainer Object
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+         
+        *return_node_renum*: python bool. Default=False
+         If True, returns the node renumbering. Useful to compress array with
+         TriSurfaceFunctions.compressArray()
+         
+    Returns:
+        *subTsc*: TriSurfacContainer object
+        
+        *node_renum*: numpy array. Returned only if return_node_renum=True        
+    '''
+    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tscSource.triSurfaceMesh,
+                                             poly=poly,
+                                             op=op,
+                                             mode=mode)
+    subTsc = _getSubTriSurfaceContainer(tscSource,subTsm,node_renum)
+
     if return_node_renum==False:
         return subTsc
     elif return_node_renum==True:
         return subTsc, node_renum
 
+def getSubTriSurfaceContainerList(tscSourceList, poly, op='in', mode='mid',return_node_renum=False):
+    '''
+    Return a sub TriSurfaceContainerList (subTscList) from a source TriSurfaceContainerList.
+    The sub part is cut out of a polygon. The part inside or ouside the 
+    polygon can be kept. IF you want to compressed other fields based on the
+    mesh stored in tscSource, switch "return_node_renum" to True, and
+    use the output to feed the function compressArray.
+    
+    Arguments:
+        *tscSource*: TriSurfaceContainer Object
+        
+        *poly*: numpy array of shape (N,2)
+         list of N points of the polygon. Example for a square made by the
+         points pt1, pt2, pt3 and pt4:
+         >>> poly = np.array([[x1,y1],[x2,y2],[x3,y3],[x4,y4]])
+         
+        *op*: python string ('in' or 'out'). Default='in'
+         Keep the triangles inside or outside the polygon
+         
+        *return_node_renum*: python bool. Default=False
+         If True, returns the node renumbering. Useful to compress array with
+         TriSurfaceFunctions.compressArray()
+         
+    Returns:
+        *subTsc*: TriSurfacContainer object
+        
+        *node_renum*: numpy array. Returned only if return_node_renum=True        
+    '''
+    tscSource=tscSourceList[0]
+    subTsm,node_renum = getSubTriSurfaceMesh(tsmSource=tscSource.triSurfaceMesh,
+                                             poly=poly,
+                                             op=op,
+                                             mode=mode)
+    
+    
+    subTscList=[]
+    for tscSource in tscSourceList:
+        subTsc = _getSubTriSurfaceContainer(tscSource,subTsm,node_renum)
+        subTscList.append(subTsc)
 
+    if return_node_renum==False:
+        return subTscList
+    elif return_node_renum==True:
+        return subTscList, node_renum
 
 def getSubTriSurfaceVectorList(tsvListSource,
                                poly,
