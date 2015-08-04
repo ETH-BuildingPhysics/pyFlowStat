@@ -449,19 +449,19 @@ class Surface(object):
             self.data['vw']=self.data['uy']*self.data['uz']
             self.data['TKE']=0.5*(self.data['uu']+self.data['vv']+self.data['ww'])
 
-    def addQuadrants(self):
+    def addQuadrants(self,thr=0.0):
         '''
         
         '''
         ux_pos=self.data['ux'].copy()
         ux_neg=self.data['ux'].copy()
-        ux_pos[ux_pos<0]=np.nan
-        ux_neg[ux_neg>0]=np.nan
+        ux_pos[ux_pos<thr]=np.nan
+        ux_neg[ux_neg>thr]=np.nan
 
         uy_pos=self.data['uy'].copy()
         uy_neg=self.data['uy'].copy()
-        uy_pos[uy_pos<0]=np.nan
-        uy_neg[uy_neg>0]=np.nan
+        uy_pos[uy_pos<thr]=np.nan
+        uy_neg[uy_neg>thr]=np.nan
 
         quadrant0=ux_pos*uy_pos
         quadrant1=ux_neg*uy_pos
