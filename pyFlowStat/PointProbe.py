@@ -760,6 +760,35 @@ def getDataPoints(filepath):
 
     return pointlist
 
+def getOFPointProbeListFast(filename,reshape=True,createDict=True):
+
+    pointlist=getDataPoints(filename)
+    with open(filename, 'r') as content_file:
+        headerx = content_file.readline()
+        headery = content_file.readline()
+        headerz = content_file.readline()
+        content_file.readline()
+        data_pos=content_file.tell()
+        data0=content_file.readline()
+        content_file.seek(data_pos)
+        content = content_file.read()
+    data0 = np.array(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', data0),dtype=np.float)
+    #headermatch = re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', headerx)
+    data = np.array(re.findall('[-+]?\d*\.?\d+e*[-+]?\d*', content),dtype=np.float)
+    varLength=(len(data0)-1)/len(pointlist)
+    nPoints=pointlist.shape[0]
+    npdata=data.reshape(len(data)/(nPoints*varLength+1),(nPoints*varLength+1))
+
+    pts=[PointProbe()]*len(pointlist)
+
+    for i,pt in enumerate(pts):
+        pts[i]=PointProbe()
+        pts[i].probeLoc=pointlist[i]
+        pts[i].probeTimes=npdata[:,0]
+        pts[i].probeVar=npdata[:,i*varLength+1:(i+1)*varLength+1]
+        if createDict:
+            pts[i].createDataDict()
+    return pts
 
 def getOFPointProbeList(filename,reshape=True,createDict=True):
     '''
