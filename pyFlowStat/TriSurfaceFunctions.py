@@ -627,7 +627,7 @@ def loadTriSurfaceContainerList_hdf5(hdf5FileName,
                                            viewAnchor=(0,0,0),
                                            srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                                            projectedField=False,
-                                           minVal=None,maxVal=None,step=None):
+                                           minVal=None,maxVal=None,step=1):
     '''
     Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
     object associated to the surfaces is also returned.
@@ -682,7 +682,7 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
                                            viewAnchor=(0,0,0),
                                            srcBasisSrc=[[1,0,0],[0,1,0],[0,0,1]],
                                            projectedField=False,
-                                           minVal=None,maxVal=None,step=None):
+                                           minVal=None,maxVal=None,step=1):
     '''
     Load all (N) TriSurfaceVectors stored in "hdf5file". the TriSurfaceMesh
     object associated to the surfaces is also returned.
