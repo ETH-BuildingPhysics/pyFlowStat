@@ -739,6 +739,86 @@ def loadTriSurfaceContainerList_hdf5Parser(hdf5Parser,
         
     return tscList
 
+
+def computeVectorStatistics(tscl,field,start=None,stop=None,step=None,fieldOnly=False):
+    '''
+    Compute the mean and the covariance of a time dependent vector field.
+    The snapshot of the vector field are stored into a TriSrufaceContainerList.
+    The range and the number of snapshot used for
+    the statistics can be defined with start, stop and step.
+    
+    Arguments:
+        *tsvl*: list of triSurfaceContainer
+         Such list can be easily generate with the functions
+         "loadTriSurfaceContainerList_hdf5".
+        
+        *field*: string
+         Name of the field.
+         
+        *start*: integer
+         Begin of the list used for the statistics. Default: start=None.
+         
+        *stop*: integer
+         End of the list used for the statistics. Default: end=None.
+         
+        *step*: integer
+         Subsampling of the list. Default: step=None.
+         
+        *fieldOnly*: bool
+         If True, only the Mean field and the covariance field are returned as
+         two numpy array. If False, the mean field and the covariance field are
+         returned in a TriSurfaceVector and TriSurfaceSymmTensor object
+         respectively. Default: fieldOnly=False
+    '''
+    # create a big multi dimentional array with the following structure
+        # 1st dim = time
+        # 2nd dim = data
+        # 3rd dim = componant
+    tsvTimeSeries = np.zeros([ len(tscl[start:stop:step]), tscl[0][field](0).shape[0] ,  3  ])
+    for i in range(tsvTimeSeries.shape[0]):
+        tsvTimeSeries[i,:,0] = tscl[i][field](0)
+        tsvTimeSeries[i,:,1] = tscl[i][field](1)
+        tsvTimeSeries[i,:,2] = tscl[i][field](2)
+        
+    # compute Mean and covariances.
+    # np.cov has no axis parameter, therefore a for loop is needed...
+    vMean = np.mean(tsvTimeSeries,axis=0)
+    vCov = np.zeros([vMean.shape[0],6])
+    for pt in range(tsvTimeSeries.shape[0]):
+        Uxt = tsvTimeSeries[:,pt,0]
+        Uyt = tsvTimeSeries[:,pt,0]
+        Uzt = tsvTimeSeries[:,pt,0]
+        data = np.vstack((Uxt,Uyt,Uzt))
+        covdata = np.cov(data)
+        vCov[pt,0] =  covdata[0,0]
+        vCov[pt,1] =  covdata[0,1]
+        vCov[pt,2] =  covdata[0,2]
+        vCov[pt,3] =  covdata[1,1]
+        vCov[pt,4] =  covdata[1,2]
+        vCov[pt,5] =  covdata[2,2]
+        
+    #create a new triSurfaceContainer with the new data vMean and vCov
+    if fieldOnly==False:
+        tsvMean = TriSurfaceVector.TriSurfaceVector(
+                                   vx=vMean[:,0],
+                                   vy=vMean[:,1],
+                                   vz=vMean[:,2],
+                                   time=tscl[0][field].time,
+                                   triSurfaceMesh=tscl[0][field].triSurfaceMesh)
+        tsstCov = TriSurfaceSymmTensor.TriSurfaceSymmTensor(
+                                        txx=vCov[:,0],
+                                        txy=vCov[:,1],
+                                        txz=vCov[:,2],
+                                        tyy=vCov[:,3],
+                                        tyz=vCov[:,4],
+                                        tzz=vCov[:,5],
+                                        time=tscl[0][field].time,
+                                        triSurfaceMesh=tscl[0][field].triSurfaceMesh)
+        return tsvMean, tsstCov
+    else:
+        return vMean,vCov
+
+
 def getSortedTimes_hdf5(hdf5fileName,asFloat=True):
     '''
     returns times of the surfaces stored in h5 file, by reading the keys
