@@ -784,10 +784,10 @@ def computeVectorStatistics(tscl,field,start=None,stop=None,step=None,fieldOnly=
     # np.cov has no axis parameter, therefore a for loop is needed...
     vMean = np.mean(tsvTimeSeries,axis=0)
     vCov = np.zeros([vMean.shape[0],6])
-    for pt in range(tsvTimeSeries.shape[0]):
+    for pt in range(tsvTimeSeries.shape[1]):
         Uxt = tsvTimeSeries[:,pt,0]
-        Uyt = tsvTimeSeries[:,pt,0]
-        Uzt = tsvTimeSeries[:,pt,0]
+        Uyt = tsvTimeSeries[:,pt,1]
+        Uzt = tsvTimeSeries[:,pt,2]
         data = np.vstack((Uxt,Uyt,Uzt))
         covdata = np.cov(data)
         vCov[pt,0] =  covdata[0,0]
