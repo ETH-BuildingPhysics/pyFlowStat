@@ -315,8 +315,8 @@ class TriSurfaceMesh(object):
         
         idx_x=np.arange(len(self.y))[(self.y-y)==0]
         x_pos=self.x[idx_x]
-        
-        return x_pos,idx_x
+        jsort=np.argsort(x_pos)
+        return x_pos[jsort],idx_x[jsort]
 
     def getVerticalLine(self,x_ref,y_ref):
         '''
@@ -330,8 +330,8 @@ class TriSurfaceMesh(object):
         idx_y=np.arange(len(self.x))[(self.x-x)==0]
 
         y_pos=self.y[idx_y]
-
-        return y_pos,idx_y
+        jsort=np.argsort(y_pos)
+        return y_pos[jsort],idx_y[jsort]
 
                             
 # helper functions #
