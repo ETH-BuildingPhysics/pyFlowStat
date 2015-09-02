@@ -906,7 +906,7 @@ def twoPointCorr(tContList,field,x_ref,y_ref,comp=0,idx_lst=[]):
     return CCorr_u,i_ref,x,y
     
     
-def getCCorrHorizontal(tContList,comp,x_ref,y_ref):
+def getCCorrHorizontal(tContList,comp,x_ref,y_ref,field='U'):
     tCont=tContList[0]
 
     i_ref,(x,y)=tCont.triSurfaceMesh.getIndex(x_ref,y_ref)
@@ -917,8 +917,8 @@ def getCCorrHorizontal(tContList,comp,x_ref,y_ref):
     x_pos_r=tCont.triSurfaceMesh.x[idx_x_r]
     x_pos_l=tCont.triSurfaceMesh.x[idx_x_l]
     
-    ccorr_x_r,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_x_r)
-    ccorr_x_l,_,_,_=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_x_l)
+    ccorr_x_r,_,_,_=twoPointCorr(tContList,field,x_ref,y_ref,comp=comp,idx_lst=idx_x_r)
+    ccorr_x_l,_,_,_=twoPointCorr(tContList,field,x_ref,y_ref,comp=comp,idx_lst=idx_x_l)
     #ccorr_y,idx,x,y=twoPointCorr(tContList,'U',x_ref,y_ref,comp=comp,idx_lst=idx_y)
 
     x_r=np.abs(x_pos_r-x)
@@ -929,13 +929,13 @@ def getCCorrHorizontal(tContList,comp,x_ref,y_ref):
     #ccorr_x_l=ccorr_x[:len(ccorr_x)//2+1][::-1]
     return x_l,ccorr_x_l[::-1],x_r,ccorr_x_r
 
-def getMeanCCorrHorizontal(tContList,comp,x_ref_list,y_ref,doPlot=False):
+def getMeanCCorrHorizontal(tContList,comp,x_ref_list,y_ref,doPlot=False,field='U'):
     x_l_lst=[]
     ccorr_x_l_lst=[]
     x_r_lst=[]
     ccorr_x_r_lst=[]
     for x_ref in x_ref_list:
-        x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,comp,x_ref,y_ref)
+        x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,comp,x_ref,y_ref,field=field)
         
         x_l_lst.append(x_l)
         ccorr_x_l_lst.append(ccorr_x_l)
@@ -965,7 +965,7 @@ def getMeanCCorrHorizontal(tContList,comp,x_ref_list,y_ref,doPlot=False):
 
     return x_m,ccorr_m#x_l_lst,ccorr_x_l_lst,x_r_lst,ccorr_x_r_lst
 
-def getMeanHorizontalScale(tContList,comp,x_lst,ylist):
+def getMeanHorizontalScale(tContList,comp,x_lst,ylist,field='U',scale=1000.0):
     #cmap=Plotting.getColorMap(ylist[0],ylist[-1],'parula')
     Lz=[]
 
@@ -975,13 +975,13 @@ def getMeanHorizontalScale(tContList,comp,x_lst,ylist):
         tCont=tContList[0]
         y_ref=h
         
-        x_m,ccorr_m=getMeanCCorrHorizontal(tContList,comp,x_lst,y_ref)
+        x_m,ccorr_m=getMeanCCorrHorizontal(tContList,comp,x_lst,y_ref,field=field)
         #x_l,ccorr_x_l,x_r,ccorr_x_r=getCCorrHorizontal(tContList,x_ref,y_ref)
 
-        l=tt.fit_gauss_correlation(x_m/1000.0,ccorr_m)
-        Lz.append(l[0]*1000)
+        l=tt.fit_gauss_correlation(x_m/scale,ccorr_m)
+        Lz.append(l[0]*scale)
         ax.plot(x_m,ccorr_m)
-        ax.plot(x_m,tt.func_gauss_correlation(x_m,l[0]*1000.0),'k--')
+        ax.plot(x_m,tt.func_gauss_correlation(x_m,l[0]*scale),'k--')
         #ax.plot(x_pos-1500,ccorr_x,label='h='+str(h)+' m',c=cmap.to_rgba(h))
 
     ax.legend(loc=2)
