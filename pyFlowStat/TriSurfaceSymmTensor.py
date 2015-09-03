@@ -269,27 +269,37 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
         except:
             raise ValueError('this method needs interpolators. Please run',
                                  'method "addInterpolator" first.')
+                                 
+    
+    def rawVars(self):
+        '''
+        Return the symmTensor field defined the source coordinate system.
+        
+        Returns:
+            *rawData*: numpy array of shape (N,6)
+        '''
+        surfaceData = self.surfaceVars()
+        rawData = np.zeros((surfaceData.shape[0],surfaceData.shape[1]))
+        if self.projectedField==True:
+            for i in range(surfaceData.shape[0]):
+                rawData[i,:] = self.linTrans.tgtToSrc(surfaceData[i,:])
+        else:
+            rawData = surfaceData
+        return rawData
+        
+        
+    def surfaceVars(self):
+        '''
+        Return the vector field as saved in the TriSurfaceVector object.
+        
+        Returns:
+            *surfaceVars*: numpy array of shape (N,6)
+        '''
+        return np.vstack((self.txx,self.txy,self.txz,
+                                   self.tyy,self.tyz,
+                                            self.tzz)).T
 
-#    def rawVars(self):
-#        '''
-#        Return the scalar field defined in the source coordinate system.
-#        
-#        Returns:
-#            *rawData*: numpy array of shape (N,)
-#        '''
-#        return self.s
-#        
-#
-#    def surfaceVars(self):
-#        '''
-#        Return the scalar field as saved in the TriSurfaceScalar object.
-#        
-#        Returns:
-#            *surfaceVars*: numpy array of shape (N,)
-#        '''
-#        return self.s
-#
-#
+
 #    def gradientxy(self,x,y):
 #        '''
 #        Calculate the gradient at the point pt(x,y) and return it. The method
