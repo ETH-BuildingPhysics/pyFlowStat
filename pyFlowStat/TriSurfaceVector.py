@@ -104,7 +104,7 @@ class TriSurfaceVector(TriSurface.TriSurface):
         self.vx=np.asarray(vx)
         self.vy=np.asarray(vy)
         self.vz=np.asarray(vz)
-        
+        self.dim=3
         self.vx_i = None
         self.vy_i = None
         self.vz_i = None

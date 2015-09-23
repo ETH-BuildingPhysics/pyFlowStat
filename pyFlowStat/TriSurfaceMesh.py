@@ -321,7 +321,7 @@ class TriSurfaceMesh(object):
     def getVerticalLine(self,x_ref,y_ref):
         '''
         get the position and indices of a vertical line through x_ref,y_ref
-        
+            
         Returns
             y_pos,idx_y
         '''
@@ -332,7 +332,48 @@ class TriSurfaceMesh(object):
         y_pos=self.y[idx_y]
         jsort=np.argsort(y_pos)
         return y_pos[jsort],idx_y[jsort]
+    
+    def getMeshGrid(self,dx=None,dy=None,eps=0.0001,quadratic=False):
+        '''
+        creates a equally spaced grid
+        
+        Arguments:
+            dx,dy: grid spacing (optional)
+            eps: pertubation value (optional)
+            quadratic: forced dx,dy=min(dx,dy) (optional)
+            
+        returns
+            X,Y,extent
+        '''
 
+        if not dx:
+            dxlist=[a for a in np.abs(np.diff(self.triangulation.x)) if a>0]
+            dx=np.min(dxlist)
+        if not dy:
+            dylist=[a for a in np.abs(np.diff(self.triangulation.y)) if a>0]
+            dy=np.min(dylist)
+        #print 'dx',dx,'dy',dy
+        if quadratic:
+            dx=min(dx,dy)
+            dy=dx
+        
+        MaxX=np.max(self.triangulation.x)
+        MinX=np.min(self.triangulation.x)
+        MaxY=np.max(self.triangulation.y)
+        MinY=np.min(self.triangulation.y)
+        extent=[MinX-dx/2.0,MaxX+dx/2.0,MinY-dy/2.0,MaxY+dy/2.0]
+        #extent=[MinX,MaxX,MinY,MaxY]
+        
+        cellsX=int((MaxX-MinX)/dx)+1
+        cellsY=int((MaxY-MinY)/dy)+1
+
+        eps=eps
+        x=np.linspace(MinX+eps,MaxX-eps,cellsX)
+        y=np.linspace(MinY+eps,MaxY-eps,cellsY)
+        X,Y=np.meshgrid(x,y)
+        Y=Y[::-1]
+        
+        return X,Y,extent,dx,dy
                             
 # helper functions #
 #------------------#      

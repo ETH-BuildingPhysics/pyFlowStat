@@ -94,7 +94,7 @@ class TriSurfaceSymmTensor(TriSurface.TriSurface):
         self.tyy = np.asarray(tyy)
         self.tyz = np.asarray(tyz)
         self.tzz = np.asarray(tzz)
-        
+        self.dim=6
         self.txx_i = None
         self.txy_i = None 
         self.txz_i = None 

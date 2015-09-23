@@ -68,7 +68,7 @@ class TriSurfaceScalar(TriSurface.TriSurface):
                                         projectedField=projectedField,
                                         interpolation=interpolation,
                                         kind=kind)
-
+        self.dim=1
         self.s = np.asarray(s)     
         self.s_i = None
 

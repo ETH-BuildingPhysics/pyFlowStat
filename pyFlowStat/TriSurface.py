@@ -30,7 +30,7 @@ class TriSurface(object):
         base constructor.
         '''
         self.triSurfaceMesh = triSurfaceMesh
-        
+        self.dim=None
         self.data = dict()
         self.data_i = dict()
         
