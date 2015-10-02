@@ -420,27 +420,8 @@ def func_gauss_correlation(x, a):
     return res
     
 def func_dblExp_correlation(x,a):
-    if len(np.unique(np.diff(x)))>1:
-        warnings.warn('x has to be evenly spaced')
-    def _func_dblExp_correlation(x,a):
-                if len(x)>1:
-                    x=np.r_[x,x[-1]+np.diff(x)[-1]]
-                    k_exp=func_exp_correlation(x,a)
-                    kk_exp=spsig.fftconvolve(k_exp,k_exp, mode="full")
-                    res,_=xcorr_fft(kk_exp)
-                    return res[::2]
-                else:
-                    return []
-                
-    if np.any(x<0):
-        x_plus=x[x>=0]
-        x_neg=np.abs(x[x<=0])[::-1]
-
-        res_plus=_func_dblExp_correlation(x_plus,a)
-        res_neg=_func_dblExp_correlation(x_neg,a)
-        res=np.r_[res_neg[::-1],res_plus[1:]]
-    else:
-        res=_func_dblExp_correlation(x,a)
+    np.seterr('ignore')
+    res=(np.exp(-2.0/a*np.abs(x))*(2.0/a*np.abs(x)+1.0))
     return res
     
 def fit_exp_correlation(xdata,ydata):

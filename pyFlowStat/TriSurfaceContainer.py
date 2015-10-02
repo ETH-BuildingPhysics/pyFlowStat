@@ -13,6 +13,8 @@ from pyFlowStat.TriSurfaceScalar import TriSurfaceScalar
 from pyFlowStat.TriSurfaceSymmTensor import TriSurfaceSymmTensor
 from pyFlowStat.TriSurfaceMesh import TriSurfaceMesh
 
+from pyFlowStat.Surface import Surface
+
 
 class TriSurfaceContainer(object):
     '''
@@ -258,6 +260,7 @@ class TriSurfaceContainer(object):
             names = hdf5Parser[gTime].keys()
             names.pop(names.index('time'))
 
+
         for name in names:
             try:
                 
@@ -302,3 +305,20 @@ class TriSurfaceContainer(object):
                               #'exist as key in the HDF5 parser.')
                 return False
         return True
+        
+    def createSurface(self,dx=None,dy=None,eps=0.0001,method='cubic',kind='geom'):
+
+        X,Y,extent,dx,dy=self.triSurfaceMesh.getMeshGrid(dx=dx,dy=dy,eps=eps)
+        s=Surface()
+        s.extent=extent
+        s.dx=dx
+        s.dy=dy
+        s.setBoundsFromExtent()
+        
+        for key in self.fields:
+            print 'converting field',key
+            self[key].addInterpolator()
+            for i in range(self[key].dim):
+                data=s.interpolateField(self[key](i),X,Y,self.triangulation,method=method,kind=kind)
+                s.data[key+'_'+str(i)]=data
+        return s
