@@ -510,9 +510,8 @@ class PointProbe(object):
         self.generateCorrelations(doDetrend=doDetrend)
         self.generateSpectra(doDetrend=doDetrend)
 
-
-        
-    def generateCorrelations(self,doDetrend=True):
+      
+    def generateCorrelations(self,doDetrend=True,maxlags=None):
         # auto correlation corefficient of u
         if doDetrend:
             ux=signal.detrend(self.ux());
@@ -527,19 +526,20 @@ class PointProbe(object):
         #ux=ux[-samples:-1]
         #uy=uy[-samples:-1]
         #uz=uz[-samples:-1]
-        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=None, norm='coeff')
-        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=None, norm='coeff')
-        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=None, norm='coeff')
-        self.data['r12'],self.data['taur12'] = tt.xcorr_fft(ux,y=uy, maxlags=None, norm='coeff')
-        self.data['r13'],self.data['taur13'] = tt.xcorr_fft(ux,y=uz, maxlags=None, norm='coeff')
-        self.data['r23'],self.data['taur23'] = tt.xcorr_fft(uy,y=uz, maxlags=None, norm='coeff')
-        self.data['rmag'],self.data['taurmag'] = tt.xcorr_fft(umag, maxlags=None, norm='coeff')
+        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=maxlags, norm='coeff')
+        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=maxlags, norm='coeff')
+        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=maxlags, norm='coeff')
+        self.data['r12'],self.data['taur12'] = tt.xcorr_fft(ux,y=uy, maxlags=maxlags, norm='coeff')
+        self.data['r13'],self.data['taur13'] = tt.xcorr_fft(ux,y=uz, maxlags=maxlags, norm='coeff')
+        self.data['r23'],self.data['taur23'] = tt.xcorr_fft(uy,y=uz, maxlags=maxlags, norm='coeff')
+        self.data['rmag'],self.data['taurmag'] = tt.xcorr_fft(umag, maxlags=maxlags, norm='coeff')
         # auto correlation of u
-        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=None, norm='biased')
-        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=None, norm='biased')
-        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=None, norm='biased')
+        self.data['R11'],self.data['tauR11'] = tt.xcorr_fft(ux, maxlags=maxlags, norm='biased')
+        self.data['R22'],self.data['tauR22'] = tt.xcorr_fft(uy, maxlags=maxlags, norm='biased')
+        self.data['R33'],self.data['tauR33'] = tt.xcorr_fft(uz, maxlags=maxlags, norm='biased')
+
     
-    def generateAutoCorrelations(self,doDetrend=True):
+    def generateAutoCorrelations(self,doDetrend=True,maxlags=None):
         # auto correlation corefficient of u
         if doDetrend:
             ux=signal.detrend(self.ux());
@@ -550,9 +550,9 @@ class PointProbe(object):
             uy=self.uy();
             uz=self.uz();
 
-        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=None, norm='coeff')
-        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=None, norm='coeff')
-        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=None, norm='coeff')
+        self.data['r11'],self.data['taur11'] = tt.xcorr_fft(ux, maxlags=maxlags, norm='coeff')
+        self.data['r22'],self.data['taur22'] = tt.xcorr_fft(uy, maxlags=maxlags, norm='coeff')
+        self.data['r33'],self.data['taur33'] = tt.xcorr_fft(uz, maxlags=maxlags, norm='coeff')
         
     def generateSpectra(self,doDetrend=True):
         '''

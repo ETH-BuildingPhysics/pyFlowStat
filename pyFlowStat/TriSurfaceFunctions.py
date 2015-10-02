@@ -966,6 +966,46 @@ def getMeanCCorrHorizontal(tContList,comp,x_ref_list,y_ref,doPlot=False,field='U
     return x_m,ccorr_m#x_l_lst,ccorr_x_l_lst,x_r_lst,ccorr_x_r_lst
 
 def getMeanHorizontalScale(tContList,comp,x_lst,ylist,field='U',scale=1000.0):
+    '''
+    Compute the vertical profile of the horizontal lengthscale of the velocity 
+    componant "comp". A list of triSurfaceContainer is used as the source
+    data. The vertical locations are defined with "ylist". To get a better 
+    estimation of the lengthscale, sevral x position can be defined with
+    "x_lst".
+    
+    The lengthscale is defined as the area under the two-point correlation
+    function. As the intergral can be tricky to compute with real data, an
+    gaussian function is fitted to the data and used to compute the intergral.
+    
+    A figure is generated with the two-point correlation and the fitted function
+    to check the fitting quality.
+    
+    Arguments:
+        *tContList*: a list TriSurfaceContainer object of length N.
+         The list of TriSurfaceContainer used to compute the lengthscale
+         
+        *comp*: int.
+         Componant of the velocity.
+         
+        *x_lst*: list of int.
+         x location of the vertical profile. x_lst are the index, not the
+         position in meter. If the list is longer than one, several vertical 
+         profile are averaged togther to get a better/smoother estimation of 
+         the lengthscale.
+         
+        *ylist*: list of int.
+         vertical location used for the vertical profile.
+         
+        *field*: string
+         The name of the field used to compute its lengthscale.
+         
+        *scale*: float.
+         Scaling factor for the plots
+         
+    Returns:
+        *Lz*: list of float
+         The horizontal lengthscale. ylist are the vertical positions.        
+    '''
     #cmap=Plotting.getColorMap(ylist[0],ylist[-1],'parula')
     Lz=[]
 
