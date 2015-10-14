@@ -372,6 +372,37 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False,oneSided=Tru
         lags = np.arange(0, maxlags)
     return res, lags
     
+def convertSpectrum(f,psd,U_inf,angular=True):
+    '''
+    converts spectrum to wavenumber space
+    returns k [1/m] ,PSD [m^3 s^-2]
+    '''
+    if angular:
+        k=f*2.0*np.pi/np.abs(U_inf)
+    else:
+        k=f/np.abs(U_inf)
+    return k,psd*U_inf
+    
+def PSDfromR11_FFT(R11,dt,one_sided=True):
+    '''
+    Returns the PSD from the autocorrelation R11
+    '''
+    R11_dbl=np.r_[R11[::-1],R11[1:]]
+    x=R11_dbl
+    N=len(x)
+    fft_R11=np.fft.fft(x,n=N)
+    f_range = np.fft.fftfreq(n=N, d=dt)
+    print dt,f_range[1]/N*2
+    #print fft_r11
+    pxx=np.absolute(fft_R11)*dt*2#/f_range[1]/N*2
+    idx_sort=np.argsort(f_range)
+    f_range=np.sort(f_range)
+    pxx=pxx[idx_sort]
+    if one_sided:
+        return f_range[f_range>0],pxx[f_range>0]
+    else:
+        return f_range,pxx
+        
 def twoPointCorr(x,y,subtractMean=True,norm=False):
     '''
     dot product of two vectors to claculate two point correlation
@@ -442,7 +473,7 @@ def fit_exp_correlation(xdata,ydata):
     a=popt[0]
     return a,pcov
     
-def fit_gauss_correlation(xdata,ydata):
+def fit_gauss_correlation(xdata,ydata,p0=[1]):
     '''
     Fits an exponential function of shape exp(-x/a) to the data and returns a
     
@@ -456,9 +487,9 @@ def fit_gauss_correlation(xdata,ydata):
     
     '''
     
-    popt, pcov = curve_fit(func_gauss_correlation,xdata,ydata)
-    a=popt[0]
-    return a,pcov
+    popt, pcov = curve_fit(func_gauss_correlation,xdata,ydata,p0)
+    a=np.abs(popt[0])
+    return a, pcov
     
 def calcInegralScale_expFit(rho_i,dx):
     lags=np.arange(len(rho_i))
