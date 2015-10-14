@@ -372,7 +372,7 @@ def xcorr_fft(x, y=None, maxlags=None, norm='coeff',doDetrend=False,oneSided=Tru
         lags = np.arange(0, maxlags)
     return res, lags
     
-def convertSpectrum(f,psd,U_inf,angular=True):
+def convertSpectrum(f,psd,U_inf,angular=False):
     '''
     converts spectrum to wavenumber space
     returns k [1/m] ,PSD [m^3 s^-2]
