@@ -26,7 +26,7 @@ import scipy as sp
 # special modules
 
 #from pyFlowStat.TurbulenceTools import TurbulenceTools as tt
-import pyFlowStat.PointProbe as pp
+import pyFlowStat.PointProbe as PointProbe
 import pyFlowStat.TurbulenceTools as tt
 import pyFlowStat.Surface as Surface
 
@@ -84,7 +84,7 @@ def savePPlist_hdf5(ppList,hdf5file,keyrange='raw'):
         fwm.close()
 
 
-def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
+def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False,step=1,indices=None,verbose=False):
     '''
     Load and return a point probe list from a hdf5 data file. eager evaluation
     only. The hdf5 file must have the following minimal structure:
@@ -115,13 +115,16 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
     ppList = []
     fr = h5py.File(hdf5file, 'r')
     try:
-        for i in range(len(fr.keys())):
+        if not indices:
+            indices=range(len(fr.keys()))
+        for i in indices:
             gName = 'pointProbe'+str(i)
-            #print('load '+str(gName))
-            ppList.append(pp.PointProbe())
-            ppList[i].probeVar = fr[gName]['probeVar'].value
-            ppList[i].probeTimes = fr[gName]['probeTimes'].value
-            ppList[i].probeLoc = fr[gName]['probeLoc'].value
+            if verbose:
+                print('load '+str(gName))
+            pp=PointProbe.PointProbe()
+            pp.probeVar = fr[gName]['probeVar'][::step,...]
+            pp.probeTimes = fr[gName]['probeTimes'][::step]
+            pp.probeLoc = fr[gName]['probeLoc'].value
 
             if keyrange=='raw':
                 pass
@@ -130,12 +133,13 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False):
                     if (key=='probeVar' or key=='probeTimes' or key=='probeLoc'):
                         pass
                     else:
-                        ppList[i].data[str(key)] = fr[gName][key].value
+                        pp.data[str(key)] = fr[gName][key].value
 
             if createDict==False:
                 pass
             else:
-                ppList[i].createDataDict()
+                pp.createDataDict()
+            ppList.append(pp)
     finally:
         fr.close()
     return ppList
@@ -176,7 +180,7 @@ def actionPPlist_hdf5(hdf5file,actionFunction):
         for i in range(len(fr.keys())):
             gName = 'pointProbe'+str(i)
             #print('load '+str(gName))
-            probe=pp.PointProbe()
+            probe=PointProbe.PointProbe()
             probe.probeVar = fr[gName]['probeVar'].value
             probe.probeTimes = fr[gName]['probeTimes'].value
             probe.probeLoc = fr[gName]['probeLoc'].value
@@ -208,7 +212,7 @@ def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=Tr
     vel=np.column_stack((surfaceTimeSeries.vx[:,i,j],surfaceTimeSeries.vy[:,i,j],surfaceTimeSeries.vz[:,i,j]))
     #if not np.isnan(vel).any():
     try:
-        pt=pp.PointProbe()
+        pt=PointProbe.PointProbe()
         pt.probeVar=vel
         pt.probeTimes=surfaceTimeSeries.t
         pt.probeLoc=[i,j]
@@ -235,7 +239,7 @@ def createFromArray(dt,u,v,w,doDetrend=True):
     Returns:
         * pt: [PointProbe] PointProbe object.
     '''
-    pt=pp.PointProbe()
+    pt=PointProbe.PointProbe()
     pt.probeVar=np.transpose(np.vstack((u,v,w)))
     nrpoints=len(u)
     endtime=(len(u)-1)*dt
