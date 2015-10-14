@@ -306,7 +306,7 @@ class TriSurfaceContainer(object):
                 return False
         return True
         
-    def createSurface(self,dx=None,dy=None,eps=0.0001,method='cubic',kind='geom'):
+    def createSurface(self,dx=None,dy=None,eps=0.0001,method='cubic',kind='geom',fields=[],verbose=False):
 
         X,Y,extent,dx,dy=self.triSurfaceMesh.getMeshGrid(dx=dx,dy=dy,eps=eps)
         s=Surface()
@@ -314,9 +314,11 @@ class TriSurfaceContainer(object):
         s.dx=dx
         s.dy=dy
         s.setBoundsFromExtent()
-        
-        for key in self.fields:
-            print 'converting field',key
+        if len(fields)<1:
+            fields=self.fields
+        for key in fields:
+            if verbose:
+                print 'converting field',key
             self[key].addInterpolator()
             for i in range(self[key].dim):
                 data=s.interpolateField(self[key](i),X,Y,self.triangulation,method=method,kind=kind)
