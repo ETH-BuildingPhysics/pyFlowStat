@@ -75,7 +75,7 @@ def getSubTriSurfaceMesh(tsmSource, poly, op='in', mode='mid'):
         *node_renum*: 
          Node renumbering. Useful for the compression of the data
     '''
-    if poly:
+    if len(poly)>0:
         # create a boundBox from the polygon
         maskedTri = np.zeros(tsmSource.triangles.shape[0])
         bb = mplPath.Path(poly)
