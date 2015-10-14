@@ -28,7 +28,7 @@ class LineContainer(object):
         self.time=0.0
         
     @classmethod
-    def createFromFoamFolder(cls,pathname,time=0.0,names=[],underscoreHeaders=[]):
+    def createFromFoamFolder(cls,pathname,time=0.0,names=[],underscoreHeaders=[],filterstr=''):
         '''
         Create a new LineContainer from the line stored in a foam folder. If
         the argument "name" is empty, all the lines are loaded. This 
@@ -62,7 +62,7 @@ class LineContainer(object):
         c.time=time
         c.addLinesFromFoamFolder(lineFolder=pathname,
                                  lnNames=names,
-                                 underscoreHeaders=underscoreHeaders)
+                                 underscoreHeaders=underscoreHeaders,filterstr=filterstr)
         return c
         
 
@@ -218,7 +218,7 @@ class LineContainer(object):
         
 
 
-    def addLinesFromFoamFolder(self,lineFolder,lnNames=[],underscoreHeaders=[]):
+    def addLinesFromFoamFolder(self,lineFolder,lnNames=[],underscoreHeaders=[],filterstr=''):
         '''
         Add all the lines specified by lnNames, of format *.xy,  included in a
         foam folder. Example of foam folder:
@@ -239,7 +239,7 @@ class LineContainer(object):
         '''
         # As it is coded now, this function works. But it is horrible code!!!
         if os.path.exists(lineFolder):
-            allFilePath = glob.glob(lineFolder+'/*.xy')
+            allFilePath = glob.glob(lineFolder+'/*'+filterstr+'*.xy')
             
             for filePath in allFilePath:
                 if len(lnNames)==0:
