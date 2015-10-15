@@ -144,7 +144,7 @@ def loadPPlist_hdf5(hdf5file,keyrange='raw',createDict=False,step=1,indices=None
         fr.close()
     return ppList
 
-def actionPPlist_hdf5(hdf5file,actionFunction):
+def actionPPlist_hdf5(hdf5file,actionFunction,loadVar=True,loadTime=True):
     '''
     Load and return a point probe list from a hdf5 data file. eager evaluation
     only. The hdf5 file must have the following minimal structure:
@@ -181,14 +181,22 @@ def actionPPlist_hdf5(hdf5file,actionFunction):
             gName = 'pointProbe'+str(i)
             #print('load '+str(gName))
             probe=PointProbe.PointProbe()
-            probe.probeVar = fr[gName]['probeVar'].value
-            probe.probeTimes = fr[gName]['probeTimes'].value
+            if loadVar:
+                probe.probeVar = fr[gName]['probeVar'].value
+            if loadTime:
+                probe.probeTimes = fr[gName]['probeTimes'].value
             probe.probeLoc = fr[gName]['probeLoc'].value
             resultList.append(actionFunction(probe))
             probe=None
     finally:
         fr.close()
     return resultList
+    
+def getPorbeLoc_hdf5(hdf5file):
+    def action(pp)
+        return pp.probeLoc
+    LocList=actionPPlist_hdf5(hdf5file,action,loadVar=False,loadTime=False)
+    return LocList
   
 def createPointProbeFromSurfaceTimeSeries(surfaceTimeSeries,frq,i,j,doDetrend=True,createDict=True,genStat=True):
     '''
