@@ -193,7 +193,7 @@ def actionPPlist_hdf5(hdf5file,actionFunction,loadVar=True,loadTime=True):
     return resultList
     
 def getPorbeLoc_hdf5(hdf5file):
-    def action(pp)
+    def action(pp):
         return pp.probeLoc
     LocList=actionPPlist_hdf5(hdf5file,action,loadVar=False,loadTime=False)
     return LocList
