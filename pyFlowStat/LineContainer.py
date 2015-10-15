@@ -260,7 +260,14 @@ class LineContainer(object):
         else:
             raise IOError("Folder does not exist")
             
-            
+    def getSortedLineKeys(self,dir=0,filter=None):
+        keys=sorted(self.lines, key=lambda key: self.lines[key].xyz[0,dir])
+        if filter:
+            keys=[k for k in keys if filter in k]
+        return keys
+        
+    def getFilteredLineDict(self,filter):
+        return {k:v for k,v in self.lines.iteritems() if filter in k}
     
 
          
